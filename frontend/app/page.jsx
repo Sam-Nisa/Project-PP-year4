@@ -1,16 +1,22 @@
 import GenresPage from "./component/GenresPage";
-import Navbar from "./component/Navbar";
 import BooksPage from "./component/BooksPage";
+import HeroBanner from "./component/HeroBanner";
+import Navbar from "./component/Navbar";
 import Footer from "./component/Footer";
 
 
 export default function Home() {
   return (
-    <>
+    <div>
+      
       <Navbar />
+      <HeroBanner />
+      <div>
+        <h2 className="text-2xl px-32 font-bold mb-4">New Arrival</h2>
+        <BooksPage />
+      </div>
       <GenresPage />
-      <BooksPage />
       <Footer />
-    </>
+    </div>
   );
 }

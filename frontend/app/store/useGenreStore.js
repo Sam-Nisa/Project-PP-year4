@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { request } from "../utils/request";
 import { useAuthStore } from "./authStore";
 
+
 export const useGenreStore = create((set, get) => ({
   genres: [],
   loading: false,

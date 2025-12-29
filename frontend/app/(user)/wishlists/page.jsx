@@ -3,8 +3,8 @@
 "use client";
 
 import Link from "next/link";
-import BookCard from "../../../component/BookCard";
-import { useWishlistStore } from "../../../store/useWishlistStore";
+import BookCard from "../../component/BookCard";
+import { useWishlistStore } from "../../store/useWishlistStore";
 import { Search } from "lucide-react";
 import { useEffect } from "react";
 

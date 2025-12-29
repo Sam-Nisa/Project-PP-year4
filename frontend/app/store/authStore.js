@@ -1,19 +1,43 @@
+"use client";
 import { create } from "zustand";
 import { request } from "../utils/request";
-import { useRouter } from "next/navigation";
 
 export const useAuthStore = create((set, get) => ({
   user: null,
-  token: typeof window !== "undefined" ? sessionStorage.getItem("token") : null, // sessionStorage
+  token: null,
   loading: false,
   error: null,
+
+  // Load token + user from sessionStorage (fixed)
+  initializeStore: () => {
+    if (typeof window !== "undefined") {
+      const storedToken = sessionStorage.getItem("token");
+      const storedUser = sessionStorage.getItem("user");
+
+      if (storedToken) {
+        set({
+          token: storedToken,
+          user: storedUser ? JSON.parse(storedUser) : null,
+        });
+
+        // Re-fetch profile to keep it fresh (optional)
+        get().fetchProfile();
+      }
+    }
+  },
 
   login: async (email, password) => {
     set({ loading: true, error: null });
     try {
       const data = await request("/api/login", "POST", { email, password });
+
       set({ user: data.user, token: data.token });
-      if (typeof window !== "undefined") sessionStorage.setItem("token", data.token);
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("token", data.token);
+        sessionStorage.setItem("user", JSON.stringify(data.user));
+      }
+
       return data;
     } catch (err) {
       set({ error: err.response?.data?.error || "Login failed" });
@@ -23,45 +47,55 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  logout: async (redirect = true) => {
+  logout: async () => {
     const token = get().token;
-    if (!token) return;
 
-    set({ loading: true, error: null });
     try {
       await request("/api/logout", "POST", {}, {}, token);
-
-      // Clear auth state
-      set({ user: null, token: null });
-      if (typeof window !== "undefined") sessionStorage.removeItem("token");
-
-      // Redirect to login page if requested
-      if (redirect && typeof window !== "undefined") {
-        window.location.href = "/login"; // Using window.location to ensure full page reset
-      }
     } catch (err) {
-      set({ error: "Logout failed" });
-    } finally {
-      set({ loading: false });
+      console.warn("Logout API failed, clearing client session anyway");
+    }
+
+    set({ user: null, token: null });
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
+    }
+
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
     }
   },
 
   fetchProfile: async () => {
     const token = get().token;
     if (!token) return;
-    set({ loading: true, error: null });
+
     try {
-      const response = await request("/api/profile", "GET", {}, {}, token);
-      set({ user: response.data }); // store only the 'data' object
+      const response = await request("/api/profile", "GET", null, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      set({ user: response.data });
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("user", JSON.stringify(response.data));
+      }
     } catch (err) {
-      set({ error: err?.message || "Failed to fetch profile" });
-    } finally {
-      set({ loading: false });
+      console.error("Invalid token → clearing session", err);
+
+      set({ user: null, token: null });
+
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("user");
+      }
     }
   },
 
   register: async (name, email, password, password_confirmation) => {
     set({ loading: true, error: null });
+
     try {
       const data = await request("/api/register", "POST", {
         name,
@@ -69,8 +103,14 @@ export const useAuthStore = create((set, get) => ({
         password,
         password_confirmation,
       });
+
       set({ user: data.user, token: data.token });
-      if (typeof window !== "undefined") sessionStorage.setItem("token", data.token);
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("token", data.token);
+        sessionStorage.setItem("user", JSON.stringify(data.user));
+      }
+
       return data;
     } catch (err) {
       set({ error: err.response?.data?.error || "Registration failed" });

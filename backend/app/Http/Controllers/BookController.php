@@ -4,33 +4,37 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Book;
-use Tymon\JWTAuth\Facades\JWTAuth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class BookController extends Controller
 {
-    // ✅ List all books (any logged-in user)
+    // ✅ List all books (any user)
     public function index()
     {
         $books = Book::with(['author', 'genre'])->get();
         return response()->json($books);
     }
 
-    // ✅ Get a single book (any logged-in user)
+    // ✅ Show a single book (any user)
     public function show($id)
     {
         $book = Book::with(['author', 'genre'])->find($id);
+
         if (!$book) {
-            return response()->json(['error' => 'Book not found'], 404);
+            return response()->json(['message' => 'Book not found'], 404);
         }
+
         return response()->json($book);
     }
 
-    // ✅ Create book (admin or author)
+    // ✅ Create a new book (only admin or author)
     public function store(Request $request)
     {
-        $currentUser = JWTAuth::parseToken()->authenticate();
-        if (!in_array($currentUser->role, ['admin', 'author'])) {
-            return response()->json(['error' => 'Unauthorized. Only admin or author can create books.'], 403);
+        $user = Auth::user();
+
+        if (!in_array($user->role, ['admin', 'author'])) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $request->validate([
@@ -38,90 +42,86 @@ class BookController extends Controller
             'genre_id' => 'required|exists:genres,id',
             'price' => 'required|numeric',
             'stock' => 'required|integer',
-            'cover_image' => 'sometimes|image|mimes:jpg,jpeg,png,gif|max:2048',
-            'description' => 'sometimes|string',
-            'status' => 'sometimes|in:pending,approved,rejected'
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'description' => 'nullable|string',
+            'status' => 'nullable|in:pending,approved,rejected',
+            'discount_type' => 'nullable|in:percentage,fixed', // NEW
+            'discount_value' => 'nullable|numeric|min:0',      // NEW
         ]);
 
-        $bookData = $request->only(['title', 'genre_id', 'price', 'stock', 'description', 'status']);
-        $bookData['author_id'] = $currentUser->id;
+        $data = $request->all();
+        $data['author_id'] = $user->id; 
+        $data['status'] = $data['status'] ?? 'pending'; 
 
-        // Handle cover image upload
         if ($request->hasFile('cover_image')) {
-            $file = $request->file('cover_image');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('books', $filename, 'public');
-            $bookData['cover_image'] = '/storage/' . $path;
+            $data['cover_image'] = $request->file('cover_image')->store('books', 'public');
         }
 
-        $book = Book::create($bookData);
+        $book = Book::create($data);
 
-        return response()->json([
-            'message' => 'Book created successfully',
-            'book' => $book
-        ]);
+        return response()->json($book, 201);
     }
 
-    // ✅ Update book (admin can update any book, author only their books)
+    // ✅ Update a book (only admin or the author of the book)
     public function update(Request $request, $id)
     {
-        $currentUser = JWTAuth::parseToken()->authenticate();
         $book = Book::find($id);
+        if (!$book) return response()->json(['message' => 'Book not found'], 404);
 
-        if (!$book) {
-            return response()->json(['error' => 'Book not found'], 404);
-        }
-
-        if ($currentUser->role !== 'admin' && $book->author_id !== $currentUser->id) {
-            return response()->json(['error' => 'Unauthorized. Only admin or book author can update.'], 403);
+        $user = Auth::user();
+        if ($user->role !== 'admin' && $book->author_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $request->validate([
-            'title' => 'sometimes|required|string|max:255',
-            'genre_id' => 'sometimes|required|exists:genres,id',
-            'price' => 'sometimes|required|numeric',
-            'stock' => 'sometimes|required|integer',
-            'cover_image' => 'sometimes|image|mimes:jpg,jpeg,png,gif|max:2048',
-            'description' => 'sometimes|string',
-            'status' => 'sometimes|in:pending,approved,rejected'
+            'title' => 'required|string|max:255',
+            'genre_id' => 'required|exists:genres,id',
+            'price' => 'required|numeric',
+            'stock' => 'required|integer',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'description' => 'nullable|string',
+            'status' => 'nullable|in:pending,approved,rejected',
+            'discount_type' => 'nullable|in:percentage,fixed', // NEW
+            'discount_value' => 'nullable|numeric|min:0',      // NEW
+            'publication_date' => 'nullable|date', // NEW
+            'page_count' => 'nullable|integer|min:1', // NEW
+            'about_author' => 'nullable|string', // NEW
+            'publisher' => 'nullable|string', // NEW
+            'author_name' => 'nullable|string', // NEW
+           
         ]);
 
-        $bookData = $request->only(['title', 'genre_id', 'price', 'stock', 'description', 'status']);
+        $data = $request->all();
 
-        // Handle cover image upload
         if ($request->hasFile('cover_image')) {
-            $file = $request->file('cover_image');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('books', $filename, 'public');
-            $bookData['cover_image'] = '/storage/' . $path;
+            if ($book->cover_image && Storage::disk('public')->exists($book->cover_image)) {
+                Storage::disk('public')->delete($book->cover_image);
+            }
+            $data['cover_image'] = $request->file('cover_image')->store('books', 'public');
         }
 
-        $book->update($bookData);
+        $book->update($data);
 
-        return response()->json([
-            'message' => 'Book updated successfully',
-            'book' => $book
-        ]);
+        return response()->json($book);
     }
 
-    // ✅ Delete book (admin can delete any book, author only their books)
+    // ✅ Delete a book (only admin or the author of the book)
     public function destroy($id)
     {
-        $currentUser = JWTAuth::parseToken()->authenticate();
         $book = Book::find($id);
+        if (!$book) return response()->json(['message' => 'Book not found'], 404);
 
-        if (!$book) {
-            return response()->json(['error' => 'Book not found'], 404);
+        $user = Auth::user();
+        if ($user->role !== 'admin' && $book->author_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        if ($currentUser->role !== 'admin' && $book->author_id !== $currentUser->id) {
-            return response()->json(['error' => 'Unauthorized. Only admin or book author can delete.'], 403);
+        if ($book->cover_image && Storage::disk('public')->exists($book->cover_image)) {
+            Storage::disk('public')->delete($book->cover_image);
         }
 
         $book->delete();
 
-        return response()->json([
-            'message' => 'Book deleted successfully'
-        ]);
+        return response()->json(['message' => 'Book deleted successfully']);
     }
 }

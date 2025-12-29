@@ -48,10 +48,10 @@ export default function Login() {
       <div className="flex w-full max-w-6xl bg-white rounded-2xl shadow-lg overflow-hidden">
 
         {/* Left Section */}
-        <div className="w-1/2 bg-gradient-to-br from-yellow-600 to-yellow-800 flex flex-col justify-start items-center p-10 text-white relative">
+        <div className="w-1/2 bg-gradient-to-br from-blue-600 to-pink-800 flex flex-col justify-start items-center p-10 text-white relative">
           <div className="absolute top-8 left-8 flex items-center space-x-2">
             <BookOpen className="h-8 w-8 text-yellow-400" />
-            <span className="text-2xl font-bold">BookHub</span>
+            <span className="text-2xl font-bold">BookHaven</span>
           </div>
 
           <div className="w-full flex justify-center mt-12">
@@ -120,27 +120,33 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="bg-yellow-600 hover:bg-yellow-800 text-white font-semibold py-3 px-8 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-blue-600 hover:bg-blue-800 text-white font-semibold py-3 px-8 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? "Logging in..." : "Log In"}
                 </button>
               </div>
             </form>
 
-            <div className="flex justify-center space-x-4 mb-8">
-              <button className="flex items-center border border-gray-300 rounded-lg px-6 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
-                <img src="/google-logo.svg" alt="Google" className="w-5 h-5 mr-2" />
-                Log In with Google
+           <div className="flex justify-center space-x-4 mb-8">
+              <button
+                onClick={() => {
+                  window.location.href = "http://localhost:8000/auth/google/redirect";
+                }}
+                className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <img src="/login/google.png" alt="Google" className="w-9 h-9 mr-2" />
+                Login with Google
               </button>
-              <button className="flex items-center border border-gray-300 rounded-lg px-6 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
-                <img src="/github-logo.svg" alt="GitHub" className="w-5 h-5 mr-2" />
-                Log In with GitHub
+
+              <button className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
+                <img src="/login/facebook.png" alt="GitHub" className="w-8 h-8 mr-2" />
+                login with facebook
               </button>
             </div>
 
             <p className="text-center text-gray-600">
               No account yet?{" "}
-              <Link href="/register" className="text-yellow-600 font-semibold hover:underline">
+              <Link href="/register" className="text-blue-600 font-semibold hover:underline">
                 SIGN UP
               </Link>
             </p>

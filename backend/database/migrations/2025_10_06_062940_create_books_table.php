@@ -17,6 +17,15 @@ return new class extends Migration
             $table->integer('stock');
             $table->string('cover_image')->nullable();
             $table->text('description')->nullable();
+
+              // NEW FIELDS
+            $table->date('publication_date')->nullable();
+            $table->integer('page_count')->nullable();
+            $table->text('about_author')->nullable();
+            $table->text('publisher')->nullable();
+            $table->text('author_name')->nullable();
+        
+
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->timestamps();
         });

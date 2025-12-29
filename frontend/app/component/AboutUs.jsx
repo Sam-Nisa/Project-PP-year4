@@ -32,7 +32,7 @@ const AboutUs = () => {
         </section>
 
         {/* Main Content Sections */}
-        <main className="container mx-auto px-4 py-12 md:py-16 max-w-4xl">
+        <main className="container mx-auto px-4 py-12 md:py-16 max-w-7xl">
 
           {/* Our Story */}
           <section className="mb-12 md:mb-16">

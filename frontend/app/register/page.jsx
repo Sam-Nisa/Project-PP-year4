@@ -47,10 +47,10 @@ const Register = () => {
     <div className="min-h-screen bg-gray-100 flex justify-center items-center p-10">
       <div className="flex w-full max-w-6xl bg-white rounded-2xl shadow-lg overflow-hidden">
         {/* Left Section */}
-        <div className="w-1/2 bg-gradient-to-br from-yellow-600 to-yellow-800 flex flex-col justify-start items-center p-10 text-white relative">
+        <div className="w-1/2 bg-gradient-to-br from-blue-600 to-pink-800 flex flex-col justify-start items-center p-10 text-white relative">
           <div className="absolute top-8 left-8 flex items-center space-x-2">
             <BookOpen className="h-8 w-8 text-yellow-400" />
-            <span className="text-2xl font-bold">BookHub</span>
+            <span className="text-2xl font-bold">BookHaven</span>
           </div>
 
           <div className="w-full flex justify-center mt-12">
@@ -143,11 +143,22 @@ const Register = () => {
                 </span>
               </div>
 
+           <div className="flex justify-center space-x-4 mb-8">
+              <button className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
+                <img src="/login/google.png" alt="Google" className="w-9 h-9 mr-2" />
+                sign up with Google
+              </button>
+              <button className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
+                <img src="/login/facebook.png" alt="GitHub" className="w-8 h-8 mr-2" />
+                login with facebook
+              </button>
+            </div>
+
               {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-yellow-600 hover:bg-yellow-800 text-white font-semibold py-3 rounded-lg transition-colors mb-6"
+                className="w-full bg-blue-600 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg transition-colors mb-6"
               >
                 {loading ? "Creating account..." : "Sign Up"}
               </button>
@@ -163,7 +174,7 @@ const Register = () => {
               Already have an account?{" "}
               <Link
                 href="/login"
-                className="text-yellow-600 font-semibold hover:underline"
+                className="text-blue-600 font-semibold hover:underline"
               >
                 Log In
               </Link>

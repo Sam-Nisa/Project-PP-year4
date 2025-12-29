@@ -13,7 +13,7 @@ import {
 
 const Footer = () => {
   return (
-    <footer className="bg-yellow-800 text-white py-10 px-6 md:px-20 lg:px-32">
+    <footer className="bg-blue-800 text-white py-10 px-6 md:px-20 lg:px-32">
       <div className="container mx-auto">
         <div className="flex flex-col md:flex-row justify-between gap-10">
           {/* Book Haven Section */}
@@ -32,26 +32,36 @@ const Footer = () => {
           {/* Quick Links Section */}
           <div>
             <h4 className="text-lg font-semibold mb-3">Quick Links</h4>
-            <ul className="space-y-2 text-gray-100">
-              <li className="flex items-center gap-2 hover:text-yellow-300 transition">
+           <ul className="space-y-2 text-gray-100">
+            <li>
+              <Link href="/" className="flex items-center gap-2 hover:text-yellow-300 transition">
                 <Home size={18} />
-                <a href="/">Home</a>
-              </li>
-              
-              <li className="flex items-center gap-2 hover:text-yellow-300 transition">
+                Home
+              </Link>
+            </li>
+
+            <li>
+              <Link href="/about-us" className="flex items-center gap-2 hover:text-yellow-300 transition">
                 <Info size={18} />
-                <a href="/about-us">About Us</a>
-              </li>
-          
-              <li className="flex items-center gap-2 hover:text-yellow-300 transition">
+                About Us
+              </Link>
+            </li>
+
+            <li>
+              <Link href="/shop" className="flex items-center gap-2 hover:text-yellow-300 transition">
                 <ShoppingBag size={18} />
-                <a href="/shop">Shop</a>
-              </li>
-              <li className="flex items-center gap-2 hover:text-yellow-300 transition">
+                Shop
+              </Link>
+            </li>
+
+            <li>
+              <Link href="/contact" className="flex items-center gap-2 hover:text-yellow-300 transition">
                 <Mail size={18} />
-                <a href="/contact">Contact</a>
-              </li>
-            </ul>
+                Contact
+              </Link>
+            </li>
+          </ul>
+
           </div>
 
           {/* Follow Us Section */}
@@ -60,19 +70,19 @@ const Footer = () => {
             <ul className="space-y-2 text-gray-100">
               <li className="flex items-center gap-2 hover:text-yellow-300 transition">
                 <Facebook size={18} />
-                <a href="#" target="_blank" rel="noopener noreferrer">
+                <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer">
                   Facebook
                 </a>
               </li>
               <li className="flex items-center gap-2 hover:text-yellow-300 transition">
                 <Twitter size={18} />
-                <a href="#" target="_blank" rel="noopener noreferrer">
+                <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer">
                   Twitter
                 </a>
               </li>
               <li className="flex items-center gap-2 hover:text-yellow-300 transition">
                 <Instagram size={18} />
-                <a href="#" target="_blank" rel="noopener noreferrer">
+                <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer">
                   Instagram
                 </a>
               </li>

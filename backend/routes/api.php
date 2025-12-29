@@ -14,6 +14,8 @@ use App\Http\Controllers\OrderCouponController;
 use App\Http\Controllers\InventoryLogController;
 use App\Http\Controllers\CartController;
 
+
+
 // Public API routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);

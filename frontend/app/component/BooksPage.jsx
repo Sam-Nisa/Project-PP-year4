@@ -19,8 +19,8 @@ export default function BooksPage() {
   }, [token]);
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">All Books</h2>
+    <div className="py-6 px-32">
+ 
 
       {loading && <p>Loading books...</p>}
       {error && <p className="text-red-500">{error}</p>}
