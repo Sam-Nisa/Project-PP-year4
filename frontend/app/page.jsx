@@ -12,7 +12,7 @@ export default function Home() {
       <Navbar />
       <HeroBanner />
       <div>
-        <h2 className="text-2xl px-32 font-bold mb-4">New Arrival</h2>
+        <h2 className="text-2xl px-52 font-bold mb-4">New Arrival</h2>
         <BooksPage />
       </div>
       <GenresPage />

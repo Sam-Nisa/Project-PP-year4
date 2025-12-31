@@ -1,24 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // Whitelist domains
+    domains: ['lh3.googleusercontent.com', 'localhost'],
     remotePatterns: [
-      {
-        protocol: 'http',
-        hostname: '**',
-        port: '**',
-        pathname: '**',
-      },
-      {
-        protocol: 'https',
-        hostname: '**',
-        port: '**',
-        pathname: '**',
-      },
       {
         protocol: 'http',
         hostname: 'localhost',
         port: '8000',
         pathname: '/storage/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**',
+        pathname: '**',
       },
     ],
   },

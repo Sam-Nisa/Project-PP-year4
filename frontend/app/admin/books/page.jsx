@@ -1,30 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
-// Assuming these are correctly located in the parent directory
+import { Pencil, Trash2, X, Plus, Loader2 } from "lucide-react";
 import { useBookStore } from "../../store/useBookStore";
 import { useGenreStore } from "../../store/useGenreStore";
 
-// --- Components ---
-
-/**
- * Reusable Modal Component for Editing a Book
- */
 const EditModal = ({ isOpen, onClose, book, onSave, genres, setBookData }) => {
   if (!isOpen) return null;
 
-  // Handle generic input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setBookData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle file input changes
   const handleFileChange = (e) => {
-    // Only capture the first file selected
     setBookData((prev) => ({ ...prev, cover_image: e.target.files[0] }));
   };
   
-  // Determine the URL for image preview (either a new file blob or the existing URL)
   const imagePreviewUrl = book.cover_image 
     ? URL.createObjectURL(book.cover_image) 
     : (book.cover_image_url || null);
@@ -600,23 +591,28 @@ export default function BooksPage() {
                   </td>
 
                   {/* Actions */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex flex-col space-y-2">
-                      <button
-                        onClick={() => handleEdit(book)}
-                        className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm transition"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        // Uses the new handler that opens the ConfirmationModal
-                        onClick={() => handleDeleteInitiate(book)}
-                        className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm transition"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <div className="flex justify-end gap-2">
+                    {/* Edit Icon */}
+                    <button
+                      onClick={() => handleEdit(book)}
+                      className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                      title="Edit Book"
+                    >
+                      <Pencil size={18} />
+                    </button>
+
+                    {/* Delete Icon */}
+                    <button
+                      onClick={() => handleDeleteInitiate(book)}
+                      className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
+                      title="Delete Book"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </td>
+
                 </tr>
               ))}
             </tbody>

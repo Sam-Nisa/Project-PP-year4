@@ -15,9 +15,14 @@ export const useAddToCartStore = create((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const data = await request("/api/cart", "GET", {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const data = await request(
+        "/api/cart",
+        "GET",
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       set({ cartItems: data.items || [] });
     } catch (err) {
@@ -36,7 +41,9 @@ export const useAddToCartStore = create((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const data = await request("/api/cart/add", "POST",
+      const data = await request(
+        "/api/cart/add",
+        "POST",
         { book_id: bookId, quantity },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -79,7 +86,7 @@ export const useAddToCartStore = create((set, get) => ({
     try {
       const data = await request(
         `/api/cart/item/${bookId}`,
-        "PUT",
+        "PATCH",
         { quantity },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -102,7 +109,7 @@ export const useAddToCartStore = create((set, get) => ({
   },
 
   // ---------------------- REMOVE ITEM ----------------------
- removeFromCart: async (cartItemId) => {
+  removeFromCart: async (cartItemId) => {
     const token = useAuthStore.getState().token;
     if (!token) return;
 
@@ -110,21 +117,25 @@ export const useAddToCartStore = create((set, get) => ({
 
     try {
       // FIX 1: Use the cartItemId in the URL parameter
-      await request(`/api/cart/item/${cartItemId}`, "DELETE", {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await request(
+        `/api/cart/item/${cartItemId}`,
+        "DELETE",
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       // FIX 2: Remove item from UI instantly using cartItemId
       set((state) => ({
         cartItems: state.cartItems.filter((item) => item.id !== cartItemId),
       }));
-
     } catch (err) {
       console.error("Failed to remove item:", err);
       // NOTE: We now log the error clearly for the user via the `error` state.
       set({ error: err.response?.data?.error || "Failed to remove item" });
       // Throwing the error here is optional but good for components that need to react.
-      throw err; 
+      throw err;
     } finally {
       set({ loading: false });
     }
@@ -138,9 +149,14 @@ export const useAddToCartStore = create((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      await request(`/api/cart/clear`, "DELETE", {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await request(
+        `/api/cart/clear`,
+        "DELETE",
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       set({ cartItems: [] });
     } catch (err) {

@@ -144,9 +144,14 @@ const Register = () => {
               </div>
 
            <div className="flex justify-center space-x-4 mb-8">
-              <button className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
+                <button
+                onClick={() => {
+                  window.location.href = "http://localhost:8000/auth/google/redirect";
+                }}
+                className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
                 <img src="/login/google.png" alt="Google" className="w-9 h-9 mr-2" />
-                sign up with Google
+                Login with Google
               </button>
               <button className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
                 <img src="/login/facebook.png" alt="GitHub" className="w-8 h-8 mr-2" />

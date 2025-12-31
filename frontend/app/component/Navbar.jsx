@@ -1,31 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, Search, Heart, Menu, X, ChevronDown } from "lucide-react";
+import {
+  ShoppingCart,
+  Search,
+  Heart,
+  Menu,
+  X,
+  ChevronDown,
+} from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "../store/authStore";
 import { useGenreStore } from "../store/useGenreStore";
+import { useAddToCartStore } from "../store/useAddToCardStore";
+import { useWishlistStore } from "../store/useWishlistStore";
 
 export default function Header() {
-  const [cartCount] = useState(3);
-  const [favoriteCount] = useState(5);
-  const { user, fetchProfile } = useAuthStore();
+  const { user, isInitialized, loading } = useAuthStore();
   const { genres, fetchGenres } = useGenreStore();
+  const { cartItems } = useAddToCartStore();
+  const { wishlists } = useWishlistStore();
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isGenresDropdownOpen, setIsGenresDropdownOpen] = useState(false);
 
   const dropdownRef = useRef(null);
 
-  // Fetch user profile
-  useEffect(() => {
-    if (user === undefined) fetchProfile();
-  }, [user, fetchProfile]);
-
-  // Fetch genres
+  // Fetch genres once on mount
   useEffect(() => {
     fetchGenres();
-  }, [fetchGenres]);
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -44,10 +49,9 @@ export default function Header() {
   }));
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-gradient-to-r from-blue-700 via-purple-800 to-pink-600 shadow-xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-1">
-        <div className="flex h-20 items-center justify-between">
-          
+    <header className="sticky top-0 z-50 w-full bg-gradient-to-r from-blue-700 via-purple-800 to-pink-600 shadow-xl lg:px-44">
+      <div className=" mx-auto px-4 sm:px-6">
+        <div className="flex h-20 items-center justify-between ">
           {/* Logo */}
           <Link
             href="/"
@@ -59,7 +63,7 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center pl-7 gap-6 lg:gap-10 font-inter text-white">
+          <nav className="hidden md:flex items-center pl-7 gap-4 lg:gap-16 font-inter text-white">
             <DropdownNavLink
               title="Genres"
               items={genresWithHref}
@@ -86,8 +90,7 @@ export default function Header() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 sm:gap-5">
-            
+          <div className="flex items-center gap-5 sm:gap-4">
             {/* Mobile Search */}
             <button
               className="p-2 rounded-full text-purple-200 hover:text-white hover:bg-purple-700 transition-all lg:hidden"
@@ -96,14 +99,20 @@ export default function Header() {
               <Search className="h-6 w-6" />
             </button>
 
-            {/* User/Login */}
-            {user ? (
+            {/* User/Login - Show skeleton while initializing or loading */}
+            {!isInitialized || loading ? (
+              <div className="w-10 h-10 rounded-full bg-purple-700/50 animate-pulse"></div>
+            ) : user ? (
               <Link
                 href={`/profile/${user.id}/myprofile`}
                 className="block w-10 h-10 relative rounded-full overflow-hidden border-2 border-pink-400 hover:border-white transition-all"
               >
                 {user.avatar ? (
-                  <img src={user.avatar_url} alt={user.name ?? "User"} className="object-cover w-full h-full" />
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name ?? "User"}
+                    className="object-cover w-full h-full"
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-blue-500 text-white font-semibold uppercase">
                     {user.name?.charAt(0).toUpperCase() ?? "?"}
@@ -119,9 +128,19 @@ export default function Header() {
               </Link>
             )}
 
-            {/* Wishlist & Cart */}
-            <IconWithBadge href="/wishlists" Icon={Heart} />
-            <IconWithBadge href="/add-to-cart" Icon={ShoppingCart} />
+            {/* Wishlist */}
+            <IconWithBadge
+              href="/wishlists"
+              Icon={Heart}
+              count={isInitialized && user ? wishlists.length : 0}
+            />
+
+            {/* Cart */}
+            <IconWithBadge
+              href="/add-to-cart"
+              Icon={ShoppingCart}
+              count={isInitialized && user ? cartItems.length : 0}
+            />
 
             {/* Mobile Menu */}
             <button
@@ -143,7 +162,10 @@ export default function Header() {
             placeholder="Search books..."
             className="flex-1 bg-transparent border-b border-purple-400 text-white placeholder-purple-300 focus:outline-none"
           />
-          <button onClick={() => setIsMobileSearchOpen(false)} className="text-white hover:text-pink-300">
+          <button
+            onClick={() => setIsMobileSearchOpen(false)}
+            className="text-white hover:text-pink-300"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -155,6 +177,10 @@ export default function Header() {
         onClose={() => setIsMobileMenuOpen(false)}
         genres={genresWithHref}
         user={user}
+        isInitialized={isInitialized}
+        loading={loading}
+        cartCount={cartItems.length}
+        wishlistCount={wishlists.length}
       />
     </header>
   );
@@ -165,36 +191,54 @@ export default function Header() {
 const NavLink = ({ href, children }) => (
   <Link
     href={href}
-    className="inline-flex items-center px-1 text-lg font-semibold text-white border-b-2 border-transparent hover:border-pink-300 hover:text-pink-100 transition"
+    className="inline-flex items-center px-1 text-xl font-semibold text-white border-b-2 border-transparent hover:border-pink-300 hover:text-pink-100 transition"
   >
     {children}
   </Link>
 );
 
-const DropdownNavLink = ({ title, items, isOpen, setIsOpen, dropdownRef, isLoading, error }) => (
+const DropdownNavLink = ({
+  title,
+  items,
+  isOpen,
+  setIsOpen,
+  dropdownRef,
+  isLoading,
+  error,
+}) => (
   <div className="relative" ref={dropdownRef}>
     <button
       onClick={() => setIsOpen(!isOpen)}
-      className="inline-flex items-center px-1 text-lg font-semibold text-white hover:text-pink-100"
+      className="inline-flex items-center px-2 text-lg font-semibold text-white hover:text-pink-100"
     >
       {title}
-      <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      <ChevronDown
+        className={`ml-2 h-4 w-4 transition-transform ${
+          isOpen ? "rotate-180" : ""
+        }`}
+      />
     </button>
 
     {isOpen && (
       <div className="absolute left-0 mt-3 w-60 rounded-lg shadow-xl bg-gradient-to-br from-purple-800 to-pink-700 z-50">
         <div className="px-4 py-3 border-b border-purple-600/50">
-          <p className="text-pink-200 text-xs uppercase font-bold">Explore by</p>
+          <p className="text-pink-200 text-xs uppercase font-bold">
+            Explore by
+          </p>
           <p className="text-white text-xl font-extrabold mt-1">Book Genres</p>
         </div>
 
         <div className="py-2 max-h-80 overflow-y-auto custom-scrollbar">
           {isLoading ? (
-            <div className="px-4 py-2 text-sm text-white animate-pulse">Loading genres...</div>
+            <div className="px-4 py-2 text-sm text-white animate-pulse">
+              Loading genres...
+            </div>
           ) : error ? (
             <div className="px-4 py-2 text-sm text-red-300">Error: {error}</div>
           ) : items.length === 0 ? (
-            <div className="px-4 py-2 text-sm text-white">No genres available.</div>
+            <div className="px-4 py-2 text-sm text-white">
+              No genres available.
+            </div>
           ) : (
             items.map((item) => (
               <Link
@@ -217,60 +261,125 @@ const MobileNavLink = ({ href, children, onClick }) => (
   <Link
     href={href}
     onClick={onClick}
-    className="block px-3 py-3 rounded-md text-base font-medium text-white hover:bg-purple-700 hover:text-pink-100 transition"
+    className="block px-3 py-3 rounded-md text-base font-medium text-white  hover:text-pink-100 transition"
   >
     {children}
   </Link>
 );
 
-const IconWithBadge = ({ href, Icon }) => (
-  <Link
-    href={href}
-    className="p-2 rounded-full text-purple-200 hover:text-white hover:bg-purple-700 transition-all transform hover:scale-105"
-  >
-    <Icon className="h-6 w-6" />
-  </Link>
+const IconWithBadge = ({ href, Icon, count = 0 }) => (
+  <div className="relative flex items-center justify-center">
+    <Link
+      href={href}
+      className="p-2 rounded-full text-purple-200 hover:text-white transition-all transform hover:scale-110"
+    >
+      <Icon className="h-7 w-7" />{" "}
+      {/* Increased size slightly to match the bell feel */}
+    </Link>
+
+    {count > 0 && (
+      <span
+        className="absolute top-3 right-3 flex h-5 w-5 min-w-[20px] items-center justify-center 
+                   rounded-full bg-[#e32626] text-white text-[11px] font-bold 
+                   border-[2.5px] border-white shadow-sm transform translate-x-1/2 -translate-y-1/2 px-1"
+      >
+        {count > 99 ? "99+" : count}
+      </span>
+    )}
+  </div>
 );
 
-const MobileMenu = ({ isOpen, onClose, genres, user }) => (
+const MobileMenu = ({
+  isOpen,
+  onClose,
+  genres,
+  user,
+  isInitialized,
+  loading,
+  cartCount,
+  wishlistCount,
+}) => (
   <>
     <div
-      className={`fixed inset-0 bg-black bg-opacity-70 z-40 transition-opacity duration-300 ${isOpen ? "opacity-100 block" : "opacity-0 hidden"}`}
+      className={`fixed inset-0 bg-black bg-opacity-70 z-40 transition-opacity duration-300 ${
+        isOpen ? "opacity-100 block" : "opacity-0 hidden"
+      }`}
       onClick={onClose}
     ></div>
 
     <div
-      className={`fixed top-0 right-0 h-full w-64 bg-purple-900 shadow-lg p-6 transform transition-transform duration-300 z-50 ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+      className={`fixed top-0 right-0 h-full w-64 bg-purple-900 shadow-lg p-6 transform transition-transform duration-300 z-50 ${
+        isOpen ? "translate-x-0" : "translate-x-full"
+      }`}
     >
       <div className="flex justify-between items-center mb-8 border-b border-purple-700 pb-4">
         <span className="text-white text-2xl font-bold">Menu</span>
-        <button onClick={onClose} className="text-white hover:text-pink-300">✕</button>
+        <button onClick={onClose} className="text-white hover:text-pink-300">
+          ✕
+        </button>
       </div>
 
       <nav className="flex flex-col space-y-4">
-        <MobileNavLink href="/browse" onClick={onClose}>Explore Books</MobileNavLink>
+        <MobileNavLink href="/browse" onClick={onClose}>
+          Explore Books
+        </MobileNavLink>
 
         {genres.map((item) => (
-          <MobileNavLink key={item.id || item.href} href={item.href} onClick={onClose}>
+          <MobileNavLink
+            key={item.id || item.href}
+            href={item.href}
+            onClick={onClose}
+          >
             {item.name}
           </MobileNavLink>
         ))}
 
-        <MobileNavLink href="/bestsellers" onClick={onClose}>Bestsellers</MobileNavLink>
-        <MobileNavLink href="/authors" onClick={onClose}>Authors</MobileNavLink>
+        <MobileNavLink href="/bestsellers" onClick={onClose}>
+          Bestsellers
+        </MobileNavLink>
+        <MobileNavLink href="/authors" onClick={onClose}>
+          Authors
+        </MobileNavLink>
 
         <div className="pt-6 border-t border-purple-700 mt-6">
-          {user ? (
+          {!isInitialized || loading ? (
+            <div className="px-3 py-3 text-white animate-pulse">Loading...</div>
+          ) : user ? (
             <>
-              <MobileNavLink href={`/profile/${user.id}/myprofile`} onClick={onClose}>
+              <MobileNavLink
+                href={`/profile/${user.id}/myprofile`}
+                onClick={onClose}
+              >
                 My Profile
               </MobileNavLink>
-              <MobileNavLink href="/wishlists" onClick={onClose}>My Wishlists</MobileNavLink>
-              <MobileNavLink href="/add-to-cart" onClick={onClose}>My Cart</MobileNavLink>
-              <MobileNavLink href="/logout" onClick={onClose}>Logout</MobileNavLink>
+              <div className="relative">
+                <MobileNavLink href="/wishlists" onClick={onClose}>
+                  My Wishlists
+                </MobileNavLink>
+                {wishlistCount > 0 && (
+                  <span className="absolute top-3 right-3 flex items-center justify-center min-w-[18px] h-[18px] text-xs font-bold text-white bg-red-500 rounded-full">
+                    {wishlistCount}
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <MobileNavLink href="/add-to-cart" onClick={onClose}>
+                  My Cart
+                </MobileNavLink>
+                {cartCount > 0 && (
+                  <span className="absolute top-3 right-3 flex items-center justify-center min-w-[18px] h-[18px] text-xs font-bold text-white bg-red-500 rounded-full">
+                    {cartCount}
+                  </span>
+                )}
+              </div>
+              <MobileNavLink href="/logout" onClick={onClose}>
+                Logout
+              </MobileNavLink>
             </>
           ) : (
-            <MobileNavLink href="/login" onClick={onClose}>Login / Register</MobileNavLink>
+            <MobileNavLink href="/login" onClick={onClose}>
+              Login / Register
+            </MobileNavLink>
           )}
         </div>
       </nav>

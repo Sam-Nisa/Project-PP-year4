@@ -13,9 +13,9 @@ export default function AdminSidebar() {
         {[
           { name: "Dashboard", href: "/admin/dashboard" },
           { name: "Users", href: "/admin/users" },
-          { name: "Settings", href: "/admin/settings" },
           { name: "Genres", href: "/admin/genres" },
           { name: "Books", href: "/admin/books" },
+           { name: "Settings", href: "/admin/settings" },
         ].map((link) => (
           <Link
             key={link.href}

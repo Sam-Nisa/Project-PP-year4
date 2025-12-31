@@ -7,10 +7,11 @@ export const useAuthStore = create((set, get) => ({
   token: null,
   loading: false,
   error: null,
+  isInitialized: false, // Track if store has loaded from sessionStorage
 
-  // Load token + user from sessionStorage (fixed)
+  // Load token + user from sessionStorage
   initializeStore: () => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && !get().isInitialized) {
       const storedToken = sessionStorage.getItem("token");
       const storedUser = sessionStorage.getItem("user");
 
@@ -18,10 +19,13 @@ export const useAuthStore = create((set, get) => ({
         set({
           token: storedToken,
           user: storedUser ? JSON.parse(storedUser) : null,
+          isInitialized: true,
         });
 
         // Re-fetch profile to keep it fresh (optional)
         get().fetchProfile();
+      } else {
+        set({ isInitialized: true });
       }
     }
   },
@@ -119,4 +123,42 @@ export const useAuthStore = create((set, get) => ({
       set({ loading: false });
     }
   },
+
+  // Handle Google OAuth login
+  handleGoogleLogin: async (token) => {
+    set({ loading: true, error: null });
+
+    try {
+      // Store token
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("token", token);
+      }
+
+      // Set token in state
+      set({ token });
+
+      // Fetch user profile
+      const response = await request("/api/profile", "GET", null, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      set({ user: response.data, isInitialized: true });
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("user", JSON.stringify(response.data));
+      }
+
+      return response.data;
+    } catch (err) {
+      set({ error: "Failed to fetch user profile" });
+      throw err;
+    } finally {
+      set({ loading: false });
+    }
+  },
 }));
+
+// Auto-initialize when the module loads (client-side only)
+if (typeof window !== "undefined") {
+  useAuthStore.getState().initializeStore();
+}

@@ -16,7 +16,7 @@ const HeroBanner = () => {
       ></div>
 
       {/* Content */}
-      <div className="relative z-10 md:w-1/2 mb-6 md:mb-0 text-center md:text-left animate-fade-in-up">
+      <div className="relative px-16 z-10 md:w-1/2 mb-6 md:mb-0 text-center md:text-left animate-fade-in-up">
         <h2 className="text-4xl pl-20 lg:text-4xl font-extrabold leading-tight tracking-tight mb-4 drop-shadow-lg">
           Unlock New Worlds, <br /> One Page at a Time
         </h2>

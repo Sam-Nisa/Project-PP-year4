@@ -1,10 +1,7 @@
-// components/Footer.js
-import React from "react";
 import Link from "next/link";
 import {
   Home,
   Info,
-  ShoppingBag,
   Mail,
   Facebook,
   Twitter,
@@ -13,8 +10,8 @@ import {
 
 const Footer = () => {
   return (
-    <footer className="bg-blue-800 text-white py-10 px-6 md:px-20 lg:px-32">
-      <div className="container mx-auto">
+    <footer className="bg-blue-800 text-white py-10 md:px-20 lg:px-32">
+      <div className="container mx-auto px-20">
         <div className="flex flex-col md:flex-row justify-between gap-10">
           {/* Book Haven Section */}
           <div className="text-center md:text-left">
@@ -44,13 +41,6 @@ const Footer = () => {
               <Link href="/about-us" className="flex items-center gap-2 hover:text-yellow-300 transition">
                 <Info size={18} />
                 About Us
-              </Link>
-            </li>
-
-            <li>
-              <Link href="/shop" className="flex items-center gap-2 hover:text-yellow-300 transition">
-                <ShoppingBag size={18} />
-                Shop
               </Link>
             </li>
 

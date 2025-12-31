@@ -14,9 +14,12 @@ export const useBookStore = create((set, get) => ({
     try {
       const data = await request("/api/books", "GET");
       set({ books: data || [] });
+      return data;
     } catch (err) {
       console.error("Failed to fetch books:", err);
-      set({ error: err.response?.data?.message || "Failed to fetch books" });
+      const errorMsg = err.response?.data?.message || err.message || "Failed to fetch books";
+      set({ error: errorMsg });
+      throw err;
     } finally {
       set({ loading: false });
     }
@@ -29,7 +32,9 @@ export const useBookStore = create((set, get) => ({
       return data || null;
     } catch (err) {
       console.error("Failed to fetch book:", err);
-      set({ error: err.response?.data?.message || "Failed to fetch book" });
+      const errorMsg = err.response?.data?.message || err.message || "Failed to fetch book";
+      set({ error: errorMsg });
+      throw err;
     } finally {
       set({ loading: false });
     }
@@ -37,27 +42,49 @@ export const useBookStore = create((set, get) => ({
 
   createBook: async (payload) => {
     const token = useAuthStore.getState().token;
-    if (!token) return;
+    if (!token) {
+      set({ error: "Authentication required" });
+      throw new Error("Authentication required");
+    }
 
     set({ loading: true, error: null });
     try {
       const formData = new FormData();
+      
+      // Append all fields to FormData
       Object.entries(payload).forEach(([key, value]) => {
-        if (value !== null) formData.append(key, value);
+        if (value !== null && value !== undefined && value !== "") {
+          formData.append(key, value);
+        }
       });
 
-      const data = await request("/api/books", "POST", formData, {
+      const response = await fetch(`${API_URL}/api/books`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
         },
+        body: formData,
       });
 
-      set((state) => ({ books: [...state.books, data] }));
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to create book");
+      }
+
+      const data = await response.json();
+      
+      // Add the new book to the state
+      set((state) => ({ 
+        books: [...state.books, data],
+        error: null 
+      }));
+      
       return data;
     } catch (err) {
       console.error("Failed to create book:", err);
-      set({ error: err.response?.data?.message || "Failed to create book" });
+      const errorMsg = err.message || "Failed to create book";
+      set({ error: errorMsg });
+      throw err;
     } finally {
       set({ loading: false });
     }
@@ -65,31 +92,54 @@ export const useBookStore = create((set, get) => ({
 
   updateBook: async (id, payload) => {
     const token = useAuthStore.getState().token;
-    if (!token) return;
+    if (!token) {
+      set({ error: "Authentication required" });
+      throw new Error("Authentication required");
+    }
 
     set({ loading: true, error: null });
     try {
       const formData = new FormData();
+      
+      // Append all fields to FormData
       Object.entries(payload).forEach(([key, value]) => {
-        if (value !== null) formData.append(key, value);
+        if (value !== null && value !== undefined && value !== "") {
+          // Only append cover_image if it's a File object
+          if (key === "cover_image" && !(value instanceof File)) {
+            return;
+          }
+          formData.append(key, value);
+        }
       });
 
-      const data = await request(`/api/books/${id}`, "POST", formData, {
+      const response = await fetch(`${API_URL}/api/books/${id}`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
           "X-HTTP-Method-Override": "PUT",
         },
+        body: formData,
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update book");
+      }
+
+      const data = await response.json();
+      
+      // Update the book in the state
       set((state) => ({
         books: state.books.map((b) => (b.id === id ? data : b)),
+        error: null
       }));
 
       return data;
     } catch (err) {
       console.error("Failed to update book:", err);
-      set({ error: err.response?.data?.message || "Failed to update book" });
+      const errorMsg = err.message || "Failed to update book";
+      set({ error: errorMsg });
+      throw err;
     } finally {
       set({ loading: false });
     }
@@ -97,32 +147,55 @@ export const useBookStore = create((set, get) => ({
 
   deleteBook: async (id) => {
     const token = useAuthStore.getState().token;
-    if (!token) return;
+    if (!token) {
+      set({ error: "Authentication required" });
+      throw new Error("Authentication required");
+    }
 
     set({ loading: true, error: null });
     try {
-      await request(`/api/books/${id}`, "DELETE", {}, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await fetch(`${API_URL}/api/books/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
 
-      set((state) => ({ books: state.books.filter((b) => b.id !== id) }));
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to delete book");
+      }
+
+      // Remove the book from the state
+      set((state) => ({ 
+        books: state.books.filter((b) => b.id !== id),
+        error: null
+      }));
+      
+      return true;
     } catch (err) {
       console.error("Failed to delete book:", err);
-      set({ error: err.response?.data?.message || "Failed to delete book" });
+      const errorMsg = err.message || "Failed to delete book";
+      set({ error: errorMsg });
+      throw err;
     } finally {
       set({ loading: false });
     }
   },
 
-  // ✅ FIXED fetchBooksByGenre
-fetchBooksByGenre: async (slug) => {
-  try {
-    const res = await fetch(`${API_URL}/api/books?genre=${slug}`);
-    if (!res.ok) throw new Error("Failed to fetch books");
-    return await res.json();
-  } catch (err) {
-    console.error(err);
-    throw err; // Let the component handle the error
-  }
-},
+  fetchBooksByGenre: async (slug) => {
+    set({ loading: true, error: null });
+    try {
+      const data = await request(`/api/books?genre=${slug}`, "GET");
+      return data || [];
+    } catch (err) {
+      console.error("Failed to fetch books by genre:", err);
+      const errorMsg = err.response?.data?.message || err.message || "Failed to fetch books";
+      set({ error: errorMsg });
+      throw err;
+    } finally {
+      set({ loading: false });
+    }
+  },
 }));
