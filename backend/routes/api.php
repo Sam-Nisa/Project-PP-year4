@@ -99,7 +99,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::middleware('auth:api')->group(function () {
     Route::get('/cart', [CartController::class, 'index']);
     Route::post('/cart/add', [CartController::class, 'addToCart']);
-    Route::put('/cart/item/{id}', [CartController::class, 'updateQuantity']);
+    Route::patch('/cart/item/{id}', [CartController::class, 'updateQuantity']);
     Route::delete('/cart/item/{id}', [CartController::class, 'removeItem']);
     Route::delete('/cart/clear', [CartController::class, 'clearCart']);
 });
