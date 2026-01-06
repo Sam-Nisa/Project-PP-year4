@@ -22,13 +22,16 @@ export default function GoogleSuccess() {
 
       try {
         // Use the dedicated Google login handler
-        await useAuthStore.getState().handleGoogleLogin(token);
+        const user = await useAuthStore.getState().handleGoogleLogin(token);
 
         // Small delay to ensure state propagates
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        new Promise((resolve) => setTimeout(resolve, 100));
 
+        console.log("Google login successful, user:", user);
         // Redirect to home after successful login
-        router.replace("/");
+        if (user.role === "admin") router.replace("/admin/dashboard");
+        else if (user.role === "author") router.replace("/author/dashboard");
+        else router.replace("/");
       } catch (error) {
         console.error("Google login failed:", error);
         router.replace("/login?error=google_auth_failed");

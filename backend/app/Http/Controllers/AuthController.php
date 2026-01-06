@@ -51,29 +51,41 @@ class AuthController extends Controller
     /**
      * Login user and return a JWT token.
      */
-    public function login(Request $request)
-    {
-        $credentials = $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|string',
-        ]);
+  public function login(Request $request)
+{
+    $credentials = $request->validate([
+        'email'    => 'required|email',
+        'password' => 'required|string',
+    ]);
 
-        $user = User::where('email', $credentials['email'])->first();
+    $user = User::where('email', $credentials['email'])->first();
 
-        if (!$user || !Hash::check($credentials['password'], $user->password_hash)) {
-            return response()->json(['success' => false, 'message' => 'Invalid credentials'], 401);
-        }
-
-        $token = JWTAuth::fromUser($user);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Login successful',
-            'user'    => $user,
-            'token'   => $token,
-        ]);
+    if (!$user || !Hash::check($credentials['password'], $user->password_hash)) {
+        return response()->json(['success' => false, 'message' => 'Invalid credentials'], 401);
     }
 
+    $token = JWTAuth::fromUser($user);  
+
+     $avatarUrl = $user->avatar
+        ? (filter_var($user->avatar, FILTER_VALIDATE_URL)
+            ? $user->avatar
+            : asset('storage/' . $user->avatar))
+        : null;
+
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Login successful',
+        'user'    => [ 'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'avatar' => $user->avatar,      // original value
+                'avatar_url' => $avatarUrl,     // full URL for frontend
+                'created_at' => $user->created_at,], // avatar_url is automatically included
+        'token'   => $token,
+    ]);
+}
     /**
      * Get the authenticated user's profile.
      */

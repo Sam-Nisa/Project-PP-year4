@@ -17,7 +17,8 @@ export const useBookStore = create((set, get) => ({
       return data;
     } catch (err) {
       console.error("Failed to fetch books:", err);
-      const errorMsg = err.response?.data?.message || err.message || "Failed to fetch books";
+      const errorMsg =
+        err.response?.data?.message || err.message || "Failed to fetch books";
       set({ error: errorMsg });
       throw err;
     } finally {
@@ -32,7 +33,8 @@ export const useBookStore = create((set, get) => ({
       return data || null;
     } catch (err) {
       console.error("Failed to fetch book:", err);
-      const errorMsg = err.response?.data?.message || err.message || "Failed to fetch book";
+      const errorMsg =
+        err.response?.data?.message || err.message || "Failed to fetch book";
       set({ error: errorMsg });
       throw err;
     } finally {
@@ -50,7 +52,7 @@ export const useBookStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const formData = new FormData();
-      
+
       // Append all fields to FormData
       Object.entries(payload).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== "") {
@@ -72,13 +74,13 @@ export const useBookStore = create((set, get) => ({
       }
 
       const data = await response.json();
-      
+
       // Add the new book to the state
-      set((state) => ({ 
+      set((state) => ({
         books: [...state.books, data],
-        error: null 
+        error: null,
       }));
-      
+
       return data;
     } catch (err) {
       console.error("Failed to create book:", err);
@@ -100,7 +102,7 @@ export const useBookStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const formData = new FormData();
-      
+
       // Append all fields to FormData
       Object.entries(payload).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== "") {
@@ -127,12 +129,17 @@ export const useBookStore = create((set, get) => ({
       }
 
       const data = await response.json();
-      
+      console.log("Update book response status:", data);
+
       // Update the book in the state
-      set((state) => ({
-        books: state.books.map((b) => (b.id === id ? data : b)),
-        error: null
-      }));
+      set((state) => {
+        console.log("Current books state:", state.books);
+
+        return {
+          books: state.books.map((b) => (b.id === id ? data : b)),
+          error: null,
+        };
+      });
 
       return data;
     } catch (err) {
@@ -168,11 +175,11 @@ export const useBookStore = create((set, get) => ({
       }
 
       // Remove the book from the state
-      set((state) => ({ 
+      set((state) => ({
         books: state.books.filter((b) => b.id !== id),
-        error: null
+        error: null,
       }));
-      
+
       return true;
     } catch (err) {
       console.error("Failed to delete book:", err);
@@ -191,7 +198,24 @@ export const useBookStore = create((set, get) => ({
       return data || [];
     } catch (err) {
       console.error("Failed to fetch books by genre:", err);
-      const errorMsg = err.response?.data?.message || err.message || "Failed to fetch books";
+      const errorMsg =
+        err.response?.data?.message || err.message || "Failed to fetch books";
+      set({ error: errorMsg });
+      throw err;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  fetchBooksByAuthor: async (authorId) => {
+    set({ loading: true, error: null });
+    try {
+      const data = await request(`/api/books?author_id=${authorId}`, "GET");
+      return data || [];
+    } catch (err) {
+      console.error("Failed to fetch books by author:", err);
+      const errorMsg =
+        err.response?.data?.message || err.message || "Failed to fetch books";
       set({ error: errorMsg });
       throw err;
     } finally {

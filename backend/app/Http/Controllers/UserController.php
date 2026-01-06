@@ -134,7 +134,7 @@ class UserController extends Controller
             'name'     => 'sometimes|string|max:255',
             'email'    => ['sometimes', 'email', Rule::unique('users')->ignore($user->id)],
             'password' => 'sometimes|string|min:6',
-            'avatar'   => 'sometimes', // accept file or URL
+            'avatar'   => 'sometimes', 
             'role'     => ['sometimes', Rule::in(['user', 'admin', 'author'])],
         ]);
     
@@ -172,8 +172,15 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'User updated successfully',
-            'data' => $user,
-            'avatar_url' => $avatarUrl // extra field for frontend
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'avatar' => $user->avatar,      // original value
+                'avatar_url' => $avatarUrl,     // full URL for frontend
+                'created_at' => $user->created_at,
+            ]
         ]);
     }
     

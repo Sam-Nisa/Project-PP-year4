@@ -11,11 +11,15 @@ export default function Home() {
       
       <Navbar />
       <HeroBanner />
-      <div>
-        <h2 className="text-2xl px-52 font-bold mb-4">New Arrival</h2>
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-16 xl:px-24 mt-10">
+        <h2 className="text-2xl font-bold ">Find Your Favourite books by Genres!</h2>
+      </section>
+        <GenresPage />
+      {/* New Arrival Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-16 xl:px-24 mt-10">
+        <h2 className="text-2xl font-bold mb-4">New Arrival</h2>
         <BooksPage />
-      </div>
-      <GenresPage />
+      </section>
       <Footer />
     </div>
   );

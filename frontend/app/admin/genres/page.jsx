@@ -1,15 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useGenreStore } from "../../store/useGenreStore";
-import { 
-  Pencil, 
-  Trash2, 
-  Plus, 
-  Check, 
-  X, 
-  Upload, 
+import {
+  Pencil,
+  Trash2,
+  Plus,
+  Check,
+  X,
+  Upload,
   Image as ImageIcon,
-  Loader2
+  Loader2,
 } from "lucide-react";
 
 export default function GenresPage() {
@@ -71,10 +71,14 @@ export default function GenresPage() {
 
       {/* Add New Genre Card */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
-        <h3 className="text-sm  uppercase tracking-wider text-gray-500 mb-4 font-bold">Add New Genre</h3>
+        <h3 className="text-sm  uppercase tracking-wider text-gray-500 mb-4 font-bold">
+          Add New Genre
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
           <div className="md:col-span-5">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Genre Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Genre Name
+            </label>
             <input
               type="text"
               placeholder="e.g. Rock, Jazz, Lo-Fi"
@@ -83,13 +87,17 @@ export default function GenresPage() {
               className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
             />
           </div>
-          
+
           <div className="md:col-span-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cover Image</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Cover Image
+            </label>
             <div className="flex items-center gap-3">
               <label className="cursor-pointer flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 px-4 py-2.5 rounded-lg border border-dashed border-gray-300 transition-all flex-1">
                 <Upload size={18} />
-                <span className="text-sm">{newImage ? "Change" : "Upload"}</span>
+                <span className="text-sm">
+                  {newImage ? "Change" : "Upload"}
+                </span>
                 <input
                   type="file"
                   accept="image/*"
@@ -104,7 +112,10 @@ export default function GenresPage() {
                     alt="Preview"
                     className="w-11 h-11 object-cover rounded-lg border shadow-sm"
                   />
-                  <button onClick={() => setNewImage(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-lg hover:bg-red-600 transition-colors">
+                  <button
+                    onClick={() => setNewImage(null)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-lg hover:bg-red-600 transition-colors"
+                  >
                     <X size={12} />
                   </button>
                 </div>
@@ -118,7 +129,11 @@ export default function GenresPage() {
               disabled={loading || !newGenre}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
-              {loading ? <Loader2 className="animate-spin" size={20} /> : <Plus size={20} />}
+              {loading ? (
+                <Loader2 className="animate-spin" size={20} />
+              ) : (
+                <Plus size={20} />
+              )}
               Add Genre
             </button>
           </div>
@@ -140,20 +155,29 @@ export default function GenresPage() {
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-600">
                 <th className="px-6 py-4 font-semibold text-sm">Image</th>
                 <th className="px-6 py-4 font-semibold text-sm">Name</th>
-                <th className="px-6 py-4 font-semibold text-sm text-right">Actions</th>
+                <th className="px-6 py-4 font-semibold text-sm">Slug</th>
+                <th className="px-6 py-4 font-semibold text-sm text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading && genres.length === 0 ? (
                 <tr>
-                  <td colSpan="3" className="px-6 py-10 text-center text-gray-400">
+                  <td
+                    colSpan="3"
+                    className="px-6 py-10 text-center text-gray-400"
+                  >
                     <Loader2 className="animate-spin mx-auto mb-2" size={32} />
                     Loading your library...
                   </td>
                 </tr>
               ) : (
                 genres.map((genre) => (
-                  <tr key={genre.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <tr
+                    key={genre.id}
+                    className="hover:bg-gray-50/50 transition-colors group"
+                  >
                     <td className="px-6 py-4">
                       {editingGenreId === genre.id ? (
                         <div className="flex items-center gap-2">
@@ -162,12 +186,18 @@ export default function GenresPage() {
                             <input
                               type="file"
                               className="hidden"
-                              onChange={(e) => setEditingImage(e.target.files[0])}
+                              onChange={(e) =>
+                                setEditingImage(e.target.files[0])
+                              }
                             />
                           </label>
                           {(editingImage || genre.image_url) && (
                             <img
-                              src={editingImage ? URL.createObjectURL(editingImage) : genre.image_url}
+                              src={
+                                editingImage
+                                  ? URL.createObjectURL(editingImage)
+                                  : genre.image_url
+                              }
                               className="w-12 h-12 rounded-lg object-cover shadow-sm border"
                               alt="Preview"
                             />
@@ -176,7 +206,11 @@ export default function GenresPage() {
                       ) : (
                         <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden border">
                           {genre.image_url ? (
-                            <img src={genre.image_url} alt={genre.name} className="w-full h-full object-cover" />
+                            <img
+                              src={genre.image_url}
+                              alt={genre.name}
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
                             <ImageIcon className="text-gray-400" size={20} />
                           )}
@@ -191,9 +225,12 @@ export default function GenresPage() {
                           className="border border-blue-400 rounded-md px-3 py-1.5 focus:outline-none ring-2 ring-blue-100 w-full max-w-[200px]"
                         />
                       ) : (
-                        <span className="font-medium text-gray-800 text-lg">{genre.name}</span>
+                        <span className="font-medium text-gray-800 text-lg">
+                          {genre.name}
+                        </span>
                       )}
                     </td>
+                    <td className="px-6 py-4 text-gray-500">{genre.slug}</td>
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-3">
                         {editingGenreId === genre.id ? (

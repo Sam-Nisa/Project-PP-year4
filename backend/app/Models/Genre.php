@@ -9,16 +9,37 @@ class Genre extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'parent_id', 'image']; // add 'image'
+    protected $fillable = [
+        'name',
+        'slug',
+        'parent_id',
+        'image',
+    ];
 
-    // Self-relation for subgenres
+    protected $casts = [
+        'parent_id' => 'integer',
+    ];
+
+    // Parent relationship
+    public function parent()
+    {
+        return $this->belongsTo(Genre::class, 'parent_id');
+    }
+
+    // Children/Subgenres relationship (both names for compatibility)
+    public function children()
+    {
+        return $this->hasMany(Genre::class, 'parent_id');
+    }
+
     public function subgenres()
     {
         return $this->hasMany(Genre::class, 'parent_id');
     }
 
-    public function parent()
+    // Books relationship (if you have a books table)
+    public function books()
     {
-        return $this->belongsTo(Genre::class, 'parent_id');
+        return $this->hasMany(\App\Models\Book::class);
     }
 }

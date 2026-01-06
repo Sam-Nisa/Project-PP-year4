@@ -10,12 +10,27 @@ use Illuminate\Support\Facades\Auth;
 class BookController extends Controller
 {
     // ✅ List all books (any user)
-    public function index()
-    {
-        $books = Book::with(['author', 'genre'])->get();
-        return response()->json($books);
+public function index()
+{
+    $query = Book::with(['author', 'genre']);
+    
+    // Filter by genre name instead of slug
+    if (request()->has('genre')) {
+        $query->whereHas('genre', function ($q) {
+            $q->where('slug', request('genre'));
+        });
     }
 
+    
+    // ✅ Filter by author_id
+    if (request()->filled('author_id')) {
+        $query->where('author_id', request('author_id'));
+    }
+
+    $books = $query->get();
+    
+    return response()->json($books);
+}
     // ✅ Show a single book (any user)
     public function show($id)
     {
@@ -94,14 +109,18 @@ class BookController extends Controller
         $data = $request->all();
 
         if ($request->hasFile('cover_image')) {
-            if ($book->cover_image && Storage::disk('public')->exists($book->cover_image)) {
+            if ($book->cover_image && Storage::disk(name: 'public')->exists($book->cover_image)) {
                 Storage::disk('public')->delete($book->cover_image);
             }
             $data['cover_image'] = $request->file('cover_image')->store('books', 'public');
         }
 
+        
         $book->update($data);
 
+          // Load relationships
+        $book->load(['genre', 'author']);
+        
         return response()->json($book);
     }
 

@@ -18,13 +18,14 @@ const slugify = (text) =>
     .replace(/[^\w\-]+/g, "")
     .replace(/\-\-+/g, "-");
 
-const SkeletonCircle = () => (
-  <div className="w-24 sm:w-28 aspect-square bg-gray-300 rounded-full animate-pulse mx-auto"></div>
+const SkeletonCard = () => (
+  <div className="w-full h-28 bg-gray-200 rounded-xl animate-pulse"></div>
 );
 
 export default function GenresList() {
   const { genres, fetchGenres, loading, error } = useGenreStore();
   const [startIndex, setStartIndex] = useState(0);
+
   const VISIBLE_COUNT = 6;
 
   useEffect(() => {
@@ -43,10 +44,10 @@ export default function GenresList() {
 
   if (loading) {
     return (
-      <section className="py-12">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <SkeletonCircle key={i} />
+      <section className="py-8">
+        <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} />
           ))}
         </div>
       </section>
@@ -65,48 +66,50 @@ export default function GenresList() {
   const visibleGenres = genres.slice(startIndex, startIndex + VISIBLE_COUNT);
 
   return (
-    <section className="py-12 bg-white relative">
-      <div className="max-w-7xl mx-auto px-4">
+    <section className="py-10 bg-white relative">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 md:px-12 lg:px-16 xl:px-24">
+        {/* Navigation Buttons */}
         {genres.length > VISIBLE_COUNT && (
-          <div className="absolute top-0 right-0 flex gap-2 mt-2 z-10 mr-8">
+          <div className="flex justify-end gap-2 mb-4">
             <button
               onClick={handlePrev}
               disabled={startIndex === 0}
-              className="bg-gray-200 p-2 rounded-full hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 disabled:opacity-30 transition"
             >
-              <FaChevronLeft />
+              <FaChevronLeft className="text-gray-500 text-sm" />
             </button>
             <button
               onClick={handleNext}
               disabled={startIndex + VISIBLE_COUNT >= genres.length}
-              className="bg-gray-200 p-2 rounded-full hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 disabled:opacity-30 transition"
             >
-              <FaChevronRight />
+              <FaChevronRight className="text-gray-500 text-sm" />
             </button>
           </div>
         )}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6">
+
+        {/* 6 Column Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {visibleGenres.map((genre) => {
             const imageUrl = genre.image
               ? `${API_URL}/storage/${genre.image}`
               : FALLBACK_IMAGE_URL;
-            const href = `/genres/${slugify(genre.name)}`;
 
             return (
               <Link
                 key={genre.id}
-                href={href}
-                className="flex flex-col items-center p-4 rounded-lg transition-all hover:scale-110 duration-300"
+                href={`/genres/${slugify(genre.name)}`}
+                className="group flex flex-col items-center justify-center bg-[#E9EFF6] rounded-xl p-4 hover:shadow hover:-translate-y-0.5 transition"
               >
-                <div className="relative w-24 h-24 sm:w-28 sm:h-28  overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
-                  <Image 
-                    src={imageUrl} 
-                    alt={genre.name} 
-                    fill 
-                    className="object-cover" 
+                <div className="relative w-10 h-8 mb-2">
+                  <Image
+                    src={imageUrl}
+                    alt={genre.name}
+                    fill
+                    className="object-contain"
                   />
                 </div>
-                <h3 className="mt-3 text-sm sm:text-base font-medium text-gray-700 text-center">
+                <h3 className="text-sm font-semibold text-gray-900 text-center line-clamp-1">
                   {genre.name}
                 </h3>
               </Link>

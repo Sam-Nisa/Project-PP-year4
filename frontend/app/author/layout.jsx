@@ -20,10 +20,16 @@ export default function AdminLayout({ children }) {
       <aside className="w-64 bg-gray-800 text-white flex flex-col">
         <div className="p-6 text-2xl font-bold">Admin Panel</div>
         <nav className="flex-1 px-4 space-y-2">
-          <Link href="/author/dashboard" className="block py-2 px-4 rounded hover:bg-gray-700">
+          <Link
+            href="/author/dashboard"
+            className="block py-2 px-4 rounded hover:bg-gray-700"
+          >
             Dashboard
           </Link>
-          <Link href="/author/books" className="block py-2 px-4 rounded hover:bg-gray-700">
+          <Link
+            href="/author/books"
+            className="block py-2 px-4 rounded hover:bg-gray-700"
+          >
             Books
           </Link>
         </nav>
@@ -49,7 +55,7 @@ export default function AdminLayout({ children }) {
               <span className="font-medium text-gray-700">{user.name}</span>
               <div className="w-10 h-10 relative rounded-full overflow-hidden">
                 <Image
-                  src={user.avatar || "/default-avatar.png"}
+                  src={user.avatar_url || "/default-avatar.png"}
                   alt="Admin Avatar"
                   fill
                   className="object-cover"

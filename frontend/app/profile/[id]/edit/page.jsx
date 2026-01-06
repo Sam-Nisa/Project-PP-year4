@@ -6,7 +6,7 @@ import { useAuthStore } from "../../../store/authStore";
 import ProfileEdit from "../../../component/ProfileEdit";
 
 export default function ProfilePage() {
-  const { user: authUser, token } = useAuthStore();
+  const { user: authUser, token, fetchProfile } = useAuthStore();
   const { fetchUserById, updateUser, error } = useUserStore();
 
   const [user, setUser] = useState(null);
@@ -34,18 +34,19 @@ export default function ProfilePage() {
   const handleSave = async (formData) => {
     if (!user) return;
     setSaving(true);
-  
+    console.log("Form Data to be saved:", formData);
     try {
-      const payload = new FormData();
-      payload.append("name", formData.name);
-      payload.append("email", formData.email);
-      if (formData.avatar instanceof File) payload.append("avatar", formData.avatar);
-  
-      const updated = await updateUser(user.id, payload);
+      const updated = await updateUser(user.id, formData);
+
+      console.log("Profile updated successfully:", updated);
       if (updated) {
-        updated.avatar = updated.avatar + "?t=" + new Date().getTime(); // refresh avatar
+        // updated.avatar = updated.avatar + "?t=" + new Date().getTime(); // refresh avatar
         setUser(updated);
         alert("Profile updated successfully!");
+      }
+
+      if (updated) {
+        await fetchProfile();
       }
     } catch (err) {
       console.error("Failed to update profile:", err);
@@ -53,12 +54,17 @@ export default function ProfilePage() {
       setSaving(false);
     }
   };
-  
-  
-  
+
   if (loading) return <p className="p-6">Loading profile...</p>;
   if (error) return <p className="p-6 text-red-500">{error}</p>;
   if (!user) return <p className="p-6 text-gray-500">Profile not found.</p>;
 
-  return <ProfileEdit user={user} onSave={handleSave} onCancel={() => {}} saving={saving} />;
+  return (
+    <ProfileEdit
+      user={user}
+      onSave={handleSave}
+      onCancel={() => {}}
+      saving={saving}
+    />
+  );
 }

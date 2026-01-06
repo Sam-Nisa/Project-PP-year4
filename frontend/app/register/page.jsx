@@ -134,30 +134,37 @@ const Register = () => {
                   required
                 />
                 <span
-                  onClick={() =>
-                    setShowConfirmPassword(!showConfirmPassword)
-                  }
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer"
                 >
                   {showConfirmPassword ? <EyeOff /> : <Eye />}
                 </span>
               </div>
 
-           <div className="flex justify-center space-x-4 mb-8">
+              <div className="flex justify-center space-x-4 mb-8">
                 <button
-                onClick={() => {
-                  window.location.href = "http://localhost:8000/auth/google/redirect";
-                }}
-                className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <img src="/login/google.png" alt="Google" className="w-9 h-9 mr-2" />
-                Login with Google
-              </button>
-              <button className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
-                <img src="/login/facebook.png" alt="GitHub" className="w-8 h-8 mr-2" />
-                login with facebook
-              </button>
-            </div>
+                  onClick={() => {
+                    window.location.href =
+                      "http://localhost:8000/auth/google/redirect";
+                  }}
+                  className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <img
+                    src="/login/google.png"
+                    alt="Google"
+                    className="w-9 h-9 mr-2"
+                  />
+                  Login with Google
+                </button>
+                <button className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
+                  <img
+                    src="/login/facebook.png"
+                    alt="GitHub"
+                    className="w-8 h-8 mr-2"
+                  />
+                  login with facebook
+                </button>
+              </div>
 
               {/* Submit Button */}
               <button

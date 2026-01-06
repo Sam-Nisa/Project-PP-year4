@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { request } from "../utils/request";
 import { useAuthStore } from "./authStore";
 
-
 export const useGenreStore = create((set, get) => ({
   genres: [],
   loading: false,
@@ -34,7 +33,9 @@ export const useGenreStore = create((set, get) => ({
       if (payload.parent_id) formData.append("parent_id", payload.parent_id);
       if (payload.image) formData.append("image", payload.image);
 
-      const data = await request("/api/genres", "POST", formData, {
+      console.log("Creating genre with payload:", payload);
+
+      const data = await request("/api/genres", "POST", payload, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -90,7 +91,12 @@ export const useGenreStore = create((set, get) => ({
 
     set({ loading: true, error: null });
     try {
-      await request(`/api/genres/${id}`, "DELETE", {}, { headers: { Authorization: `Bearer ${token}` } });
+      await request(
+        `/api/genres/${id}`,
+        "DELETE",
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       set((state) => ({ genres: state.genres.filter((g) => g.id !== id) }));
     } catch (err) {
       console.error("Failed to delete genre:", err);

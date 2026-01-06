@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { request } from "../utils/request";
 import { useAuthStore } from "./authStore";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export const useUserStore = create((set, get) => ({
   users: [],
   loading: false,
@@ -31,9 +32,7 @@ export const useUserStore = create((set, get) => ({
       console.error("Failed to fetch users:", err);
       set({
         error:
-          err?.response?.data?.error ||
-          err?.message ||
-          "Failed to fetch users",
+          err?.response?.data?.error || err?.message || "Failed to fetch users",
       });
       return [];
     } finally {
@@ -54,14 +53,19 @@ export const useUserStore = create((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const response = await request(`/api/users/${id}`, "GET", null, {}, token);
+      const response = await request(
+        `/api/users/${id}`,
+        "GET",
+        null,
+        {},
+        token
+      );
 
       return response?.data || null;
     } catch (err) {
       console.error("Failed to fetch user:", err);
       set({
-        error:
-          err?.response?.data?.error || "Failed to fetch user",
+        error: err?.response?.data?.error || "Failed to fetch user",
       });
       return null;
     } finally {
@@ -79,28 +83,44 @@ export const useUserStore = create((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const response = await request(
-        `/api/users/${id}`,
-        "PUT",
-        payload,
-        { "Content-Type": "application/json" },
-        token
-      );
+      const formData = new FormData();
 
-      const updatedUser = response?.data;
+      // Append all fields to FormData
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== "") {
+          // Only append cover_image if it's a File object
+          if (key === "cover_image" && !(value instanceof File)) {
+            return;
+          }
+          formData.append(key, value);
+        }
+      });
 
-      set((state) => ({
-        users: state.users.map((u) =>
-          u.id === id ? updatedUser : u
-        ),
-      }));
+      const response = await fetch(`${API_URL}/api/users/${id}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-HTTP-Method-Override": "PUT",
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      const updatedUser = data.user;
+
+      set((state) => {
+        console.log("state.users", state);
+        return {
+          users: state.users.map((u) => (u.id === id ? updatedUser : u)),
+        };
+      });
 
       return updatedUser;
     } catch (err) {
       console.error("Failed to update user:", err);
       set({
-        error:
-          err?.response?.data?.error || "Failed to update user",
+        error: err?.response?.data?.error || "Failed to update user",
       });
       return null;
     } finally {
@@ -108,40 +128,35 @@ export const useUserStore = create((set, get) => ({
     }
   },
 
-
-
   // inside useUserStore  "Update Role"
-changeUserRole: async (id, role) => {
-  if (!["user", "author"].includes(role)) return;
+  changeUserRole: async (id, role) => {
+    if (!["user", "author"].includes(role)) return;
 
-  const token = useAuthStore.getState().token;
-  if (!token) return;
+    const token = useAuthStore.getState().token;
+    if (!token) return;
 
-  set({ loading: true, error: null });
+    set({ loading: true, error: null });
 
-  try {
-    const response = await request(
-      `/api/users/${id}`,
-      "PUT",
-      { role },
-      { "Content-Type": "application/json" },
-      token
-    );
+    try {
+      const response = await request(
+        `/api/users/${id}`,
+        "PUT",
+        { role },
+        { "Content-Type": "application/json" },
+        token
+      );
 
-    const updatedUser = response.data;
+      const updatedUser = response.data;
 
-    set((state) => ({
-      users: state.users.map((u) =>
-        u.id === id ? updatedUser : u
-      ),
-    }));
-  } catch (err) {
-    set({ error: "Failed to change role" });
-  } finally {
-    set({ loading: false });
-  }
-},
-
+      set((state) => ({
+        users: state.users.map((u) => (u.id === id ? updatedUser : u)),
+      }));
+    } catch (err) {
+      set({ error: "Failed to change role" });
+    } finally {
+      set({ loading: false });
+    }
+  },
 
   // ========================
   // DELETE USER
@@ -163,8 +178,7 @@ changeUserRole: async (id, role) => {
     } catch (err) {
       console.error("Failed to delete user:", err);
       set({
-        error:
-          err?.response?.data?.error || "Failed to delete user",
+        error: err?.response?.data?.error || "Failed to delete user",
       });
       return false;
     } finally {
@@ -193,17 +207,14 @@ changeUserRole: async (id, role) => {
       const approvedUser = response?.data;
 
       set((state) => ({
-        users: state.users.map((u) =>
-          u.id === id ? approvedUser : u
-        ),
+        users: state.users.map((u) => (u.id === id ? approvedUser : u)),
       }));
 
       return approvedUser;
     } catch (err) {
       console.error("Failed to approve user:", err);
       set({
-        error:
-          err?.response?.data?.error || "Failed to approve user",
+        error: err?.response?.data?.error || "Failed to approve user",
       });
       return null;
     } finally {

@@ -4,57 +4,65 @@ import Image from 'next/image';
 
 const HeroBanner = () => {
   return (
-    <section className="relative bg-gradient-to-br from-blue-700 via-purple-800 to-pink-600 shadow-xl p-8 md:p-16 mb-12  overflow-hidden flex flex-col md:flex-row items-center justify-between text-white border border-transparent">
+    <section className="relative bg-gradient-to-br from-blue-700 via-purple-800 to-pink-600 shadow-xl mb-12 overflow-hidden border border-transparent">
       {/* Background Pattern */}
       <div
         className="absolute inset-0 opacity-10"
         style={{
-          backgroundImage: "url('/img_banner.png')", // Ensure this exists in public/images
+          backgroundImage: "url('/img_banner.png')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
       ></div>
 
-      {/* Content */}
-      <div className="relative px-16 z-10 md:w-1/2 mb-6 md:mb-0 text-center md:text-left animate-fade-in-up">
-        <h2 className="text-4xl pl-20 lg:text-4xl font-extrabold leading-tight tracking-tight mb-4 drop-shadow-lg">
-          Unlock New Worlds, <br /> One Page at a Time
-        </h2>
-        <p className="text-lg pl-20 lg:text-xl text-purple-100 mb-6 drop-shadow-md">
-          Discover a curated collection of bestsellers, hidden gems, and timeless classics.
-        </p>
-        {/* Fixed Link: no <a> tag inside */}
-        <Link
-          href="/browse"
-          className="inline-flex ml-20 items-center bg-pink-500 hover:bg-pink-600 text-white font-bold py-4 px-8 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out text-lg group"
-        >
-          Explore Our Collection
-          <svg
-            className="ml-3 h-6 w-6 transform group-hover:translate-x-2 transition-transform duration-300 ease-in-out"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M17 8l4 4m0 0l-4 4m4-4H3"
-            />
-          </svg>
-        </Link>
-      </div>
+      {/* Main Container */}
+      <div className="relative z-10 max-w-7xl mx-auto px-9 py-12 md:px-12 md:py-20 lg:py-24 flex flex-col md:flex-row items-center justify-between gap-10">
+        
+        {/* Content Side */}
+        <div className="w-full md:w-1/2 text-center md:text-left text-white flex flex-col px-7 items-center md:items-start animate-fade-in-up">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight tracking-tight mb-4 drop-shadow-lg">
+            Unlock New Worlds, <br className="hidden sm:block" /> One Page at a Time
+          </h2>
+          
+          <p className="text-base sm:text-lg lg:text-xl text-purple-100 mb-8 max-w-lg drop-shadow-md">
+            Discover a curated collection of bestsellers, hidden gems, and timeless classics.
+          </p>
 
-      {/* Image Illustration */}
-      <div className="relative z-10 lg:w-1/2 flex justify-center animate-fade-in-right">
-        <Image
-          src="/img_banner.png" // Make sure this image exists in public/images
-          alt="Stack of vibrant books"
-          width={450} // adjust size
-          height={350}
-          className="drop-shadow-2xl"
-          style={{ objectFit: 'contain' }} // modern Next.js uses style instead of objectFit prop
-        />
+          <Link
+            href="/browse"
+            className="inline-flex items-center bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-8 md:py-4 md:px-10 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out text-base md:text-lg group"
+          >
+            Explore Our Collection
+            <svg
+              className="ml-3 h-5 w-5 md:h-6 md:w-6 transform group-hover:translate-x-2 transition-transform duration-300 ease-in-out"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 8l4 4m0 0l-4 4m4-4H3"
+              />
+            </svg>
+          </Link>
+        </div>
+
+        {/* Image Side */}
+        <div className="w-full md:w-1/2 flex justify-center items-center animate-fade-in-right">
+          <div className="relative w-full max-w-[300px] sm:max-w-[400px] lg:max-w-[450px]">
+            <Image
+              src="/img_banner.png"
+              alt="Stack of vibrant books"
+              width={450}
+              height={350}
+              priority // High priority for hero image
+              className="drop-shadow-2xl w-full h-auto"
+              style={{ objectFit: 'contain' }}
+            />
+          </div>
+        </div>
       </div>
     </section>
   );

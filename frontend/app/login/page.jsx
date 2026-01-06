@@ -22,12 +22,14 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-  
+
     try {
       // login returns the user and token
       const data = await login(email, password);
       const loggedInUser = data.user; // get user directly from response
-  
+
+    
+
       // role-based redirect
       if (loggedInUser?.role === "admin") {
         router.push("/admin/dashboard");
@@ -36,17 +38,14 @@ export default function Login() {
       } else {
         router.push("/"); // normal user
       }
-  
     } catch (err) {
       setError(err?.message || storeError || "Login failed");
     }
   };
-  
-  
+
   return (
     <div className="min-h-screen bg-gray-100 flex justify-center items-center p-10">
       <div className="flex w-full max-w-6xl bg-white rounded-2xl shadow-lg overflow-hidden">
-
         {/* Left Section */}
         <div className="w-1/2 bg-gradient-to-br from-blue-600 to-pink-800 flex flex-col justify-start items-center p-10 text-white relative">
           <div className="absolute top-8 left-8 flex items-center space-x-2">
@@ -78,7 +77,9 @@ export default function Login() {
             </h1>
 
             {(error || storeError) && (
-              <p className="text-red-500 mb-4 text-center">{error || storeError}</p>
+              <p className="text-red-500 mb-4 text-center">
+                {error || storeError}
+              </p>
             )}
 
             <form onSubmit={handleSubmit}>
@@ -114,7 +115,11 @@ export default function Login() {
 
               <div className="flex items-center justify-between mb-8">
                 <label className="flex items-center text-gray-600">
-                  <input type="checkbox" className="form-checkbox text-yellow-600 mr-2 rounded" defaultChecked />
+                  <input
+                    type="checkbox"
+                    className="form-checkbox text-yellow-600 mr-2 rounded"
+                    defaultChecked
+                  />
                   Remember me
                 </label>
                 <button
@@ -127,26 +132,38 @@ export default function Login() {
               </div>
             </form>
 
-           <div className="flex justify-center space-x-4 mb-8">
+            <div className="flex justify-center space-x-4 mb-8">
               <button
                 onClick={() => {
-                  window.location.href = "http://localhost:8000/auth/google/redirect";
+                  window.location.href =
+                    "http://localhost:8000/auth/google/redirect";
                 }}
                 className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                <img src="/login/google.png" alt="Google" className="w-9 h-9 mr-2" />
+                <img
+                  src="/login/google.png"
+                  alt="Google"
+                  className="w-9 h-9 mr-2"
+                />
                 Login with Google
               </button>
 
               <button className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
-                <img src="/login/facebook.png" alt="GitHub" className="w-8 h-8 mr-2" />
+                <img
+                  src="/login/facebook.png"
+                  alt="GitHub"
+                  className="w-8 h-8 mr-2"
+                />
                 login with facebook
               </button>
             </div>
 
             <p className="text-center text-gray-600">
               No account yet?{" "}
-              <Link href="/register" className="text-blue-600 font-semibold hover:underline">
+              <Link
+                href="/register"
+                className="text-blue-600 font-semibold hover:underline"
+              >
                 SIGN UP
               </Link>
             </p>

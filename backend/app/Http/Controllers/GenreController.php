@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Genre;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+
 
 class GenreController extends Controller
 {
@@ -32,34 +35,60 @@ class GenreController extends Controller
 
     // ✅ Admin creates a genre
     public function store(Request $request)
-    {
-        $currentUser = JWTAuth::parseToken()->authenticate();
-        if ($currentUser->role !== 'admin') {
-            return response()->json(['error' => 'Unauthorized. Only admin can create genres.'], 403);
-        }
+{
+    $currentUser = JWTAuth::parseToken()->authenticate();
 
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'parent_id' => 'nullable|exists:genres,id',
-            'image' => 'nullable|image|max:2048'
-        ]);
-
-        $imagePath = null;
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('genres', 'public');
-        }
-
-        $genre = Genre::create([
-            'name' => $request->name,
-            'parent_id' => $request->parent_id,
-            'image' => $imagePath
-        ]);
-
+    if ($currentUser->role !== 'admin') {
         return response()->json([
-            'message' => 'Genre created successfully',
-            'genre' => $this->formatGenre($genre)
-        ]);
+            'error' => 'Unauthorized. Only admin can create genres.'
+        ], 403);
     }
+
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'parent_id' => 'nullable|exists:genres,id',
+        'image' => 'nullable|image|max:2048',
+    ]);
+
+    Log::info('Creating genre with data: ', $request->all());
+
+    /* =====================
+       Generate unique slug
+    ===================== */
+    $baseSlug = Str::slug($request->name);
+    $slug = $baseSlug;
+    $count = 1;
+
+    while (Genre::where('slug', $slug)->exists()) {
+       return response()->json(['error' => 'Genre slug already exists. Please choose a different name.'], 422);
+    }
+
+    /* =====================
+       Upload image
+    ===================== */
+    $imagePath = null;
+    if ($request->hasFile('image')) {
+        $imagePath = $request->file('image')->store('genres', 'public');
+    }
+
+    /* =====================
+       Create genre
+    ===================== */
+    $genre = Genre::create([
+        'name'      => $request->name,
+        'slug'      => $slug,
+        'parent_id' => $request->parent_id,
+        'image'     => $imagePath,
+    ]);
+
+    
+
+    return response()->json([
+        'message' => 'Genre created successfully',
+        'genre'   => $this->formatGenre($genre),
+    ], 201);
+}
+
 
     // ✅ Admin updates a genre
 public function update(Request $request, $id)
@@ -131,6 +160,7 @@ public function update(Request $request, $id)
             'id' => $genre->id,
             'name' => $genre->name,
             'parent_id' => $genre->parent_id,
+            'slug' => $genre->slug,
             'image' => $genre->image,
             'image_url' => $genre->image ? url("storage/{$genre->image}") : null,
             'created_at' => $genre->created_at,

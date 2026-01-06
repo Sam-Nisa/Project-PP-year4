@@ -11,7 +11,6 @@ export default function AdminNavbar() {
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-
   const handleLogout = async () => {
     await logout();
     router.push("/login");
@@ -43,7 +42,7 @@ export default function AdminNavbar() {
             onClick={() => setDropdownOpen(!dropdownOpen)}
           >
             <Image
-              src={user.avatar ? user.avatar : "/default-avatar.png"}
+              src={user.avatar_url ? user.avatar_url : "/default-avatar.png"}
               alt="Admin Avatar"
               fill
               className="object-cover"

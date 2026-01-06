@@ -10,17 +10,30 @@ class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
-        // Check if admin already exists
-        if (User::where('email', env('ADMIN_EMAIL', 'admin@gmail.com'))->exists()) {
-            return;
+        // ======================
+        // Create Admin
+        // ======================
+        if (!User::where('email', 'admin@gmail.com')->exists()) {
+            User::create([
+                'name' => 'Admin User',
+                'email' => 'admin@gmail.com',
+                'password_hash' => Hash::make('12345678'),
+                'role' => 'admin',
+                'avatar' => 'https://example.com/avatars/default.png',
+            ]);
         }
 
-        User::create([
-            'name' => env('ADMIN_NAME', 'Admin User'),
-            'email' => env('ADMIN_EMAIL', 'admin@gmail.com'),
-            'password_hash' => Hash::make(env('ADMIN_PASSWORD', '12345678')),
-            'role' => env('ADMIN_ROLE', 'admin'),
-            'avatar' => env('ADMIN_AVATAR', 'https://example.com/avatars/default.png'),
-        ]);
+        // ======================
+        // Create Author
+        // ======================
+        if (!User::where('email', 'author@gmail.com')->exists()) {
+            User::create([
+                'name' => 'Author User',
+                'email' => 'author@gmail.com',
+                'password_hash' => Hash::make('12345678'),
+                'role' => 'author',
+                'avatar' => 'https://example.com/avatars/default.png',
+            ]);
+        }
     }
 }

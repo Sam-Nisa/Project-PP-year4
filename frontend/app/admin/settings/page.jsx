@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { useAuthStore } from "../../store/authStore"; 
+import { useAuthStore } from "../../store/authStore";
 import { useUserStore } from "../../store/useUserStore";
 
 export default function AdminSettingsPage() {
@@ -28,9 +28,10 @@ export default function AdminSettingsPage() {
       setFormData({
         name: user.name || "",
         description: user.description || "",
+        avatar: user.avatar_url || "",
       });
       // Set initial preview from user object
-      setPreviewUrl(user.profile_photo_url || "");
+      setPreviewUrl(user.avatar_url || "");
     }
   }, [user]);
 
@@ -44,6 +45,7 @@ export default function AdminSettingsPage() {
     const file = e.target.files[0];
     if (file) {
       setSelectedFile(file);
+      setFormData((prev) => ({ ...prev, avatar: file }));
       // Create a local URL for the preview
       setPreviewUrl(URL.createObjectURL(file));
     }
@@ -63,20 +65,20 @@ export default function AdminSettingsPage() {
     try {
       /**
        * We use FormData because we are sending a file.
-       * Even if your backend uses PUT, some frameworks (like Laravel) 
+       * Even if your backend uses PUT, some frameworks (like Laravel)
        * require 'Method Spoofing' or POST for multipart data.
        */
       const data = new FormData();
       data.append("name", formData.name);
       data.append("description", formData.description);
-      
+
       if (selectedFile) {
         data.append("image", selectedFile);
       }
 
       // 1. Update the user via Store
       // Note: Make sure your useUserStore.updateUser supports FormData
-      const result = await updateUser(user.id, data);
+      const result = await updateUser(user.id, formData);
 
       if (result) {
         await fetchProfile();
@@ -98,7 +100,11 @@ export default function AdminSettingsPage() {
   }
 
   if (!user && !token) {
-    return <div className="p-10 text-center text-red-500">Access Denied. Please log in.</div>;
+    return (
+      <div className="p-10 text-center text-red-500">
+        Access Denied. Please log in.
+      </div>
+    );
   }
 
   return (
@@ -107,51 +113,63 @@ export default function AdminSettingsPage() {
         <h3 className="text-xl font-bold text-black mb-4 flex items-center">
           Admin Profile
         </h3>
-        
-        <form onSubmit={handleSave} className="p-6 shadow-lg bg-white rounded-lg">
+
+        <form
+          onSubmit={handleSave}
+          className="p-6 shadow-lg bg-white rounded-lg"
+        >
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            
             {/* Hidden File Input */}
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileChange} 
-              accept="image/*" 
-              className="hidden" 
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              className="hidden"
             />
 
             {/* Profile Image Section */}
             <div className="col-span-1 md:col-span-2 flex items-center gap-6 pb-6 border-b border-gray-100">
-              <div 
+              <div
                 onClick={triggerFileSelect}
                 className="relative rounded-full h-24 w-24 shrink-0 overflow-hidden shadow-lg border-2 border-white bg-gray-200 cursor-pointer group"
               >
                 <img
-                  src={previewUrl || `https://ui-avatars.com/api/?name=${user.name}&background=random`}
+                  src={
+                    previewUrl ||
+                    `https://ui-avatars.com/api/?name=${user.name}&background=random`
+                  }
                   alt="Admin"
                   className="h-full w-full object-cover transition duration-200 group-hover:opacity-75"
                 />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                   <span className="text-[10px] text-white font-bold">CHANGE</span>
+                <div className="absolute inset-0 flex items-center justify-center bg-white/30 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-[10px] text-black font-bold">
+                    CHANGE
+                  </span>
                 </div>
-              </div>  
-              
+              </div>
+
               <div>
-                <h4 className="text-lg font-semibold text-black">Admin Image</h4>
+                <h4 className="text-lg font-semibold text-black">
+                  Admin Image
+                </h4>
                 <p className="text-sm text-slate-400 mt-1">
                   Click the photo or "Change" to upload a new profile picture.
                 </p>
                 <div className="mt-2 flex gap-3">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={triggerFileSelect}
                     className="text-sm font-medium text-blue-500 hover:text-blue-600"
                   >
                     Change
                   </button>
-                  <button 
-                    type="button" 
-                    onClick={() => {setPreviewUrl(""); setSelectedFile(null);}}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewUrl("");
+                      setSelectedFile(null);
+                    }}
                     className="text-sm font-medium text-red-500 hover:text-red-400"
                   >
                     Remove
@@ -162,7 +180,9 @@ export default function AdminSettingsPage() {
 
             {/* User Name */}
             <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-500">User Name</label>
+              <label className="text-sm font-medium text-slate-500">
+                User Name
+              </label>
               <input
                 name="name"
                 value={formData.name}
@@ -176,7 +196,9 @@ export default function AdminSettingsPage() {
 
             {/* Email (Read Only) */}
             <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-500">Email (Read Only)</label>
+              <label className="text-sm font-medium text-slate-500">
+                Email (Read Only)
+              </label>
               <input
                 className="w-full bg-gray-200 cursor-not-allowed px-3 py-3 text-base text-gray-500 rounded-md shadow-sm outline-none"
                 type="email"
@@ -187,7 +209,9 @@ export default function AdminSettingsPage() {
 
             {/* Store Description */}
             <div className="space-y-1 md:col-span-2">
-              <label className="text-sm font-medium text-slate-500">Store Description</label>
+              <label className="text-sm font-medium text-slate-500">
+                Store Description
+              </label>
               <textarea
                 name="description"
                 value={formData.description}
@@ -200,7 +224,13 @@ export default function AdminSettingsPage() {
 
             {/* Status Messages */}
             {message.text && (
-              <div className={`col-span-2 p-3 rounded-md ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+              <div
+                className={`col-span-2 p-3 rounded-md ${
+                  message.type === "success"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
                 {message.text}
               </div>
             )}
@@ -215,7 +245,6 @@ export default function AdminSettingsPage() {
                 {isUpdating ? "Saving..." : "Save Changes"}
               </button>
             </div>
-
           </div>
         </form>
       </section>

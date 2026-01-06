@@ -16,9 +16,21 @@ export const useAuthStore = create((set, get) => ({
       const storedUser = sessionStorage.getItem("user");
 
       if (storedToken) {
+        let user = null;
+
+        // Safe JSON parsing
+        if (storedUser && storedUser !== "undefined" && storedUser !== "null") {
+          try {
+            user = JSON.parse(storedUser);
+          } catch (error) {
+            console.error("Failed to parse user data:", error);
+            sessionStorage.removeItem("user"); // Clean up invalid data
+          }
+        }
+
         set({
           token: storedToken,
-          user: storedUser ? JSON.parse(storedUser) : null,
+          user: user,
           isInitialized: true,
         });
 

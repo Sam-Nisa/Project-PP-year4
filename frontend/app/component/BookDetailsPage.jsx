@@ -8,6 +8,12 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   ShoppingCartIcon,
   HeartIcon as HeartOutlineIcon,
+  StarIcon,
+  ChevronRightIcon,
+  MinusIcon,
+  PlusIcon,
+  CheckIcon,
+  ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
 import { useBookStore } from "../store/useBookStore";
@@ -38,32 +44,22 @@ const TABS = {
 
 // ==================== UTILITY FUNCTIONS ====================
 const renderStars = (rating) => {
-  const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 !== 0;
-  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-
   return (
-    <>
-      {Array(fullStars)
-        .fill(0)
-        .map((_, i) => (
-          <span key={`full-${i}`} className="text-yellow-400">
-            ★
-          </span>
-        ))}
-      {hasHalfStar && (
-        <span key="half" className="text-yellow-400">
-          ★
-        </span>
-      )}
-      {Array(emptyStars)
-        .fill(0)
-        .map((_, i) => (
-          <span key={`empty-${i}`} className="text-gray-300">
-            ☆
-          </span>
-        ))}
-    </>
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <StarIcon
+          key={star}
+          className={`w-5 h-5 ${
+            star <= Math.floor(rating)
+              ? "text-yellow-400 fill-yellow-400"
+              : star === Math.ceil(rating) && rating % 1 !== 0
+              ? "text-yellow-400 fill-yellow-400"
+              : "text-gray-300"
+          }`}
+        />
+      ))}
+      <span className="ml-2 text-sm font-medium">{rating.toFixed(1)}</span>
+    </div>
   );
 };
 
@@ -84,39 +80,41 @@ const calculateDiscountedPrice = (price, discountValue, discountType) => {
 // ==================== SUB-COMPONENTS ====================
 const LoginPromptModal = ({ onClose }) => (
   <div
-    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300"
+    className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50 transition-all duration-300 animate-fadeIn"
     onClick={onClose}
   >
     <div
-      className="bg-white dark:bg-blue-800 rounded-xl p-6 shadow-2xl w-full max-w-sm m-4 transform transition-all duration-300"
+      className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 rounded-2xl p-8 shadow-2xl w-full max-w-md mx-4 transform transition-all duration-300 animate-scaleIn"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="text-center">
-        <HeartOutlineIcon className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-          Login Required
+        <div className="w-20 h-20 bg-gradient-to-r from-pink-100 to-red-100 dark:from-pink-900/30 dark:to-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+          <HeartOutlineIcon className="w-10 h-10 text-red-500" />
+        </div>
+        <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-3">
+          Welcome to BookHaven
         </h3>
-        <p className="text-sm text-gray-700 dark:text-gray-200 mb-6">
-          You need to be logged in to add items to your wishlist or cart.
+        <p className="text-gray-600 dark:text-gray-300 mb-8">
+          Sign in to save books to your wishlist, track orders, and get personalized recommendations.
         </p>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         <Link href="/login" onClick={onClose}>
-          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors">
-            Log In Now
+          <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3.5 rounded-xl transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0">
+            Sign In to Continue
           </button>
         </Link>
         <Link href="/register" onClick={onClose}>
-          <button className="w-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold py-2 rounded-lg transition-colors border border-transparent hover:border-blue-600">
-            Create Account
+          <button className="w-full bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 text-gray-800 dark:text-gray-200 font-semibold py-3.5 rounded-xl transition-all duration-300 hover:shadow-lg border border-gray-200 dark:border-gray-700 hover:border-blue-400">
+            Create New Account
           </button>
         </Link>
         <button
           onClick={onClose}
-          className="mt-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+          className="mt-4 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
         >
-          Maybe Later
+          Continue browsing as guest
         </button>
       </div>
     </div>
@@ -124,45 +122,83 @@ const LoginPromptModal = ({ onClose }) => (
 );
 
 const Breadcrumb = ({ genre, title }) => (
-  <div className="flex flex-wrap gap-2 mb-8 max-w-7xl mx-auto">
-    <Link href="/" className="text-lg text-black hover:text-blue-500">
+  <div className="flex flex-wrap items-center gap-2 mb-8 md:mb-12 max-w-7xl mx-auto px-4 sm:px-6">
+    <Link
+      href="/"
+      className="flex items-center gap-1 text-black  hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm sm:text-base"
+    >
+      <ArrowLeftIcon className="w-4 h-4" />
       Home
     </Link>
-    <span>/</span>
-    <span className="text-lg text-black hover:text-blue-500">{genre}</span>
-    <span>/</span>
-    <span className="text-lg font-medium">{title}</span>
+    <ChevronRightIcon className="w-4 h-4 text-black" />
+    <Link
+      href={`/genre/${genre.toLowerCase().replace(/\s+/g, "-")}`}
+      className="font-semibold text-gray-900 capitalize hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm sm:text-base"
+    >
+      {genre}
+    </Link>
+    <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+    <span className="font-semibold text-black truncate max-w-[200px] sm:max-w-xs text-sm sm:text-base">
+      {title}
+    </span>
   </div>
 );
 
 const BookImage = ({ image, title }) => (
-  <div className="flex justify-center px-4">
-    <div className="w-full max-w-md">
+  <div className="px-4 sm:px-6 lg:px-0">
+    <div className="relative group">
       <div
-        className="aspect-[3/4] w-full bg-center bg-cover rounded-lg shadow-2xl"
-        style={{ backgroundImage: `url('${image}')` }}
+        className="aspect-[3/4] w-full max-w-md mx-auto bg-center bg-cover rounded-2xl shadow-md transition-transform duration-500 "
+        style={{ 
+          backgroundImage: `url('${image}')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
         role="img"
         aria-label={title}
-      />
+      >
+        <div className="absolute  via-transparent to-transparent rounded-2xl" />
+      </div>
+      {image && (
+        <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow-lg">
+          New Release
+        </div>
+      )}
     </div>
   </div>
 );
 
 const BookHeader = ({ title, author, description, rating, reviews }) => (
-  <div>
-    <h2 className="font-serif text-4xl md:text-5xl font-bold">{title}</h2>
-    <p className="mt-2 text-lg text-gray-600">
-      by <span className="text-blue-500">{author}</span>
+  <div className="space-y-4">
+    <div>
+      <h2 className="font-serif text-3xl sm:text-2xl md:text-2xl font-bold text-black ">
+        {title}
+      </h2>
+      <p className="mt-3 text-lg text-gray-600 dark:text-gray-400">
+        by{" "}
+        <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors cursor-pointer">
+          {author}
+        </span>
+      </p>
+    </div>
+    <p className="font-serif text-gray-700  text-base sm:text-lg leading-relaxed line-clamp-3">
+      {description}
     </p>
-    <p className="font-serif text-lg py-4">{description}</p>
-    <div className="flex items-center gap-2 mt-4">
-      <div className="flex text-xl">{renderStars(rating)}</div>
-      <span className="text-sm text-gray-600">
-        ({rating} stars) - {reviews.toLocaleString()} reviews
-      </span>
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-4">
+      <div className="flex items-center gap-3">
+        {renderStars(rating)}
+      </div>
+      <div className="flex items-center gap-4 text-sm text-white">
+        <span className=" bg-red-500 px-3 py-1 rounded-full">
+          ⭐ {rating.toFixed(1)} stars
+        </span>
+        <span className="text-black">•</span>
+        <span className="text-black">{reviews.toLocaleString()} reviews</span>
+      </div>
     </div>
   </div>
 );
+
 
 const PriceSection = ({
   originalPrice,
@@ -171,46 +207,71 @@ const PriceSection = ({
   stock,
   hasDiscount,
 }) => (
-  <div>
-    <p className="text-xl font-semibold">Price per unit: ${finalPrice}</p>
-    <p className="text-3xl font-bold text-green-600">Total: ${totalPrice}</p>
+  <div className="space-y-3 p-4 rounded-md shadow-sm">
+    <div className="flex items-baseline gap-3">
+      <span className="text-gray-600 text-lg dark:text-gray-400">Price:</span>
+      <div className="flex items-baseline gap-2">
+        <span className="text-3xl md:text-2xl font-bold text-gray-900">
+          ${finalPrice}
+        </span>
+        {hasDiscount && (
+          <span className="text-lg text-gray-500 line-through">${originalPrice}</span>
+        )}
+      </div>
+    </div>
+    
     {hasDiscount && (
-      <p className="text-sm text-gray-500 line-through">
-        Original: ${originalPrice}
-      </p>
+      <div className="inline-block text-green-700 px-4 py-1.5 rounded-full text-sm font-semibold border border-green-700">
+        🎉 Save ${(parseFloat(originalPrice) - parseFloat(finalPrice)).toFixed(2)}
+      </div>
     )}
-    <p
-      className={`text-sm font-semibold mt-1 ${
-        stock > 0 ? "text-green-600" : "text-red-600"
-      }`}
-    >
-      {stock > 0 ? `✓ In Stock (${stock})` : "✗ Out of Stock"}
-    </p>
+    
+    <div className="flex items-center gap-3">
+      <div className={`flex items-center gap-2 ${stock > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+        <div className={`w-2 h-2 rounded-full ${stock > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
+        <span className="font-semibold">
+          {stock > 0 ? `In Stock (${stock} available)` : 'Out of Stock'}
+        </span>
+      </div>
+      {stock > 0 && stock < 10 && (
+        <span className="text-xs  dark:text-orange-300 px-2 py-1 rounded border border-orange-300 dark:border-orange-600">
+          Low stock
+        </span>
+      )}
+    </div>
+    
+    <div className="pt-4 border-t border-gray-300 dark:border-gray-700">
+      <div className="flex items-center justify-between">
+        <span className="text-gray-600 dark:text-gray-400">Total:</span>
+        <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+          ${totalPrice}
+        </span>
+      </div>
+    </div>
   </div>
 );
 
+
+
 const QuantitySelector = ({ quantity, onDecrease, onIncrease }) => (
-  <div className="flex items-center gap-3">
-    <span className="text-sm text-gray-600">Quantity:</span>
-    <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+  <div className="flex flex-col sm:flex-row sm:items-center  gap-4 p-4 rounded-xl">
+    <span className="text-sm font-medium text-gray-700">Quantity:</span>
+    <div className="flex items-center gap-4">
       <button
         onClick={onDecrease}
-        className="px-4 py-2 hover:bg-gray-100 text-lg font-bold"
+        className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-500 dark:to-gray-500 hover:from-gray-200 hover:to-gray-100 dark:hover:from-gray-500 dark:hover:to-gray-400 border border-gray-300 dark:border-gray-700 transition-all duration-300 active:scale-95 disabled:opacity-50"
         disabled={quantity <= 1}
       >
-        -
+        <MinusIcon className="w-5 h-5" />
       </button>
-      <input
-        type="text"
-        readOnly
-        value={quantity}
-        className="w-16 text-center py-2 border-x border-gray-300"
-      />
+      <div className="w-20 h-12 flex items-center justify-center bg-white border-2 border-blue-500 rounded-lg font-bold text-lg">
+        {quantity}
+      </div>
       <button
         onClick={onIncrease}
-        className="px-4 py-2 hover:bg-gray-100 text-lg font-bold"
+        className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-500/30 dark:to-blue-800/30 hover:from-blue-200 hover:to-blue-100 dark:hover:from-blue-800 dark:hover:to-blue-700 border border-blue-300 dark:border-blue-700 transition-all duration-300 active:scale-95"
       >
-        +
+        <PlusIcon className="w-5 h-5" />
       </button>
     </div>
   </div>
@@ -222,76 +283,109 @@ const ActionButtons = ({
   isWishlisted,
   isOutOfStock,
 }) => (
-  <div className="flex flex-col sm:flex-row gap-4">
+  <div className="grid grid-cols-3 gap-4">
     <button
       disabled={isOutOfStock}
       onClick={onAddToCart}
-      className={`w-full flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold transition-colors ${
+      className={`flex items-center justify-center gap-3 px-2 py-2 rounded-xl font-bold transition-all duration-300 ${
         isOutOfStock
           ? "bg-gray-400 text-gray-700 cursor-not-allowed"
-          : "bg-blue-500 text-white hover:bg-blue-600"
+          : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-xl hover:-translate-y-1"
       }`}
     >
-      <ShoppingCartIcon className="w-5 h-5" />
-      Add to Cart
+      <ShoppingCartIcon className="w-6 h-6" />
+      <span className="text-lg">Add to Cart</span>
     </button>
 
-    <button className="w-full flex-1 flex items-center justify-center px-6 py-3 rounded-lg bg-green-500 text-white font-bold hover:bg-green-600 transition-colors">
-      Order Now
+    <button className="flex items-center justify-center gap-2 px-2 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+      <CheckIcon className="w-5 h-5" />
+      <span className="text-lg">Buy Now</span>
     </button>
 
     <button
       onClick={onWishlistToggle}
-      className="p-3 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors"
+      className="flex items-center justify-center gap-2 px-2 py-2 rounded-xl bg-gray-200 border-2  text-black  hover:border-red-300 dark:hover:border-red-700 transition-all duration-300"
     >
       {isWishlisted ? (
-        <HeartSolidIcon className="w-6 h-6 text-red-500" />
+        <>
+          <HeartSolidIcon className="w-7 h-7 text-red-500 animate-pulse" />
+          <span className="ml-2 font-semibold text-black">
+            In Wishlist
+          </span>
+        </>
       ) : (
-        <HeartOutlineIcon className="w-6 h-6 text-red-500" />
+        <>
+          <HeartOutlineIcon className="w-7 h-7 text-red-500" />
+          <span className="ml-2 font-semibold text-gray-700">
+            Add to Wishlist
+          </span>
+        </>
       )}
     </button>
   </div>
 );
 
+
 const BookDetailsTable = ({ genre, publisher, publicationDate, pageCount }) => (
-  <div className="border-t border-gray-300 pt-6">
-    <h3 className="font-bold text-lg mb-4">Book Details</h3>
-    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-      <p className="text-gray-600">Genre:</p>
-      <p>{genre}</p>
-      <p className="text-gray-600">Publisher:</p>
-      <p>{publisher}</p>
-      <p className="text-gray-600">Publication Date:</p>
-      <p>{publicationDate}</p>
-      <p className="text-gray-600">Page Count:</p>
-      <p>{pageCount}</p>
+  <div className=" dark:to-gray-800/50 rounded-2xl p-6 border border-gray-200">
+    <h3 className="text-xl font-bold mb-6  text-black bg-clip-text ">
+      📚 Book Details
+    </h3>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Genre</p>
+          <p className="font-medium">{genre}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Publisher</p>
+          <p className="font-medium">{publisher}</p>
+        </div>
+      </div>
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Publication Date</p>
+          <p className="font-medium">{publicationDate}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Pages</p>
+          <p className="font-medium">{pageCount}</p>
+        </div>
+      </div>
     </div>
   </div>
 );
 
-const TabNavigation = ({ activeTab, onTabChange }) => (
-  <div className="border-b border-gray-300">
-    <nav className="-mb-px flex gap-6">
-      {Object.entries({
-        [TABS.DESCRIPTION]: "Description",
-        [TABS.REVIEWS]: "Reviews",
-        [TABS.AUTHOR]: "About the Author",
-      }).map(([key, label]) => (
-        <button
-          key={key}
-          onClick={() => onTabChange(key)}
-          className={`border-b-2 px-1 pb-4 transition-colors ${
-            activeTab === key
-              ? "border-blue-500 text-blue-500"
-              : "border-transparent text-gray-700 hover:text-blue-500"
-          }`}
-        >
-          {label}
-        </button>
-      ))}
-    </nav>
-  </div>
-);
+const TabNavigation = ({ activeTab, onTabChange }) => {
+  const tabs = [
+    { key: TABS.DESCRIPTION, label: "📖 Description" },
+    { key: TABS.REVIEWS, label: "⭐ Reviews & Ratings" },
+    { key: TABS.AUTHOR, label: "✍️ About Author" },
+  ];
+
+  return (
+    <div className="relative">
+      <div className="flex flex-wrap gap-2 md:gap-6 border-b border-gray-300 dark:border-gray-700 pb-2">
+        {tabs.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => onTabChange(key)}
+            className={`relative px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
+              activeTab === key
+                ? "text-blue-800 bg-blue-50 dark:bg-blue-900/30"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-black hover:bg-gray-100 dark:hover:bg-gray-200"
+            }`}
+          >
+            {label}
+            {activeTab === key && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transform -translate-y-2" />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const TabContent = ({
   activeTab,
@@ -300,33 +394,62 @@ const TabContent = ({
   aboutAuthor,
   title,
 }) => (
-  <div className="py-8 space-y-4">
+  <div className="py-8 animate-fadeIn">
     {activeTab === TABS.DESCRIPTION && (
-      <p className="whitespace-pre-wrap">{description}</p>
+      <div className="prose prose-lg dark:prose-invert max-w-none">
+        <p className="text-gray-700 leading-relaxed whitespace-pre-line shadow-lg py-14 px-5 rounded-lg">
+          {description}
+        </p>
+      </div>
     )}
 
     {activeTab === TABS.REVIEWS && (
-      <div className="space-y-2">
-        {reviewDistribution.map((r, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <span className="text-sm font-medium">{r.stars} ★</span>
-            <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
-              <div
-                className="rounded-full bg-blue-500 transition-all"
-                style={{ width: `${r.percent}%` }}
-              />
-            </div>
-            <span className="text-sm text-gray-600">{r.percent}%</span>
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            {reviewDistribution.map((r, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <div className="flex items-center gap-2 w-20">
+                  <span className="text-lg font-bold">{r.stars}</span>
+                  <StarIcon className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="h-3 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                    <div
+                      className="h-full bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full transition-all duration-1000"
+                      style={{ width: `${r.percent}%` }}
+                    />
+                  </div>
+                </div>
+                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 w-12">
+                  {r.percent}%
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-2xl">
+            <h4 className="font-bold text-lg mb-4">Review Summary</h4>
+            <p className="text-gray-700">
+              This book has received overwhelmingly positive reviews from readers,
+              with 90% of reviewers giving it 4 or 5 stars. Readers praise the
+              engaging storytelling and character development.
+            </p>
+          </div>
+        </div>
       </div>
     )}
 
     {activeTab === TABS.AUTHOR && (
-      <p className="whitespace-pre-wrap">
-        {aboutAuthor ||
-          `Author details for ${title} are currently unavailable.`}
-      </p>
+      <div className=" text-black rounded-2xl shadow-lg p-8">
+        <h4 className="text-xl font-bold mb-6">About the Author</h4>
+        <p className=" leading-relaxed">
+          {aboutAuthor ||
+            `The author of "${title}" is an accomplished writer with several
+            bestselling titles to their name. Known for their captivating
+            storytelling and rich character development, they have earned
+            critical acclaim and a dedicated readership worldwide.`}
+        </p>
+      </div>
     )}
   </div>
 );
@@ -364,8 +487,6 @@ const BookDetailPage = ({ bookId = 1 }) => {
 
     loadBook();
   }, [bookId, fetchBook, fetchGenres]);
-
-  console.log("Book Details Page - Book Data:", book);
 
   // Calculate genre name
   const genreName = useMemo(() => {
@@ -442,8 +563,23 @@ const BookDetailPage = ({ bookId = 1 }) => {
   const isLoading = bookLoading || genreLoading || !book;
   if (isLoading) {
     return (
-      <main className="container mx-auto py-12 text-center">
-        <div className="animate-pulse">Loading book details...</div>
+      <main className="min-h-screen  bg-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-8"></div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              <div className="bg-gray-200 dark:bg-gray-700 rounded-2xl aspect-[3/4]"></div>
+              <div className="space-y-6">
+                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                <div className="space-y-3">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
     );
   }
@@ -454,62 +590,64 @@ const BookDetailPage = ({ bookId = 1 }) => {
 
   return (
     <>
-      <main className="container mx-auto sm:px-6 lg:px-12 py-8 md:py-12 bg-white text-black">
-        <Breadcrumb genre={genreName} title={book.title} />
+      <main className="min-h-screen">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+          <Breadcrumb genre={genreName} title={book.title} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 max-w-7xl mx-auto">
-          <BookImage image={book.image} title={book.title} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 max-w-7xl mx-auto">
+            <BookImage image={book.image} title={book.title} />
 
-          <div className="flex flex-col gap-6">
-            <BookHeader
-              title={book.title}
-              author={book.author_name}
-              description={book.description}
-              rating={book.rating}
-              reviews={book.reviews}
-            />
-
-            <div className="flex items-center justify-between gap-4 p-4">
-              <PriceSection
-                originalPrice={prices.original}
-                finalPrice={prices.final}
-                totalPrice={prices.total}
-                stock={currentStock}
-                hasDiscount={hasDiscount}
+            <div className="flex flex-col gap-8 px-4 sm:px-6 lg:px-0">
+              <BookHeader
+                title={book.title}
+                author={book.author_name}
+                description={book.description}
+                rating={book.rating}
+                reviews={book.reviews}
               />
 
-              <QuantitySelector
-                quantity={quantity}
-                onDecrease={() => handleQuantityChange(-1)}
-                onIncrease={() => handleQuantityChange(1)}
+              <div className="space-y-6 bg-white  rounded-2xl p-6 shadow-lg border border-gray-300 ">
+                <PriceSection
+                  originalPrice={prices.original}
+                  finalPrice={prices.final}
+                  totalPrice={prices.total}
+                  stock={currentStock}
+                  hasDiscount={hasDiscount}
+                />
+
+                <QuantitySelector
+                  quantity={quantity}
+                  onDecrease={() => handleQuantityChange(-1)}
+                  onIncrease={() => handleQuantityChange(1)}
+                />
+
+                <ActionButtons
+                  onAddToCart={handleAddToCart}
+                  onWishlistToggle={handleWishlistToggle}
+                  isWishlisted={isWishlisted(book.id)}
+                  isOutOfStock={isOutOfStock}
+                />
+              </div>
+
+              <BookDetailsTable
+                genre={genreName}
+                publisher={book.publisher || "N/A"}
+                publicationDate={book.publication_date || "N/A"}
+                pageCount={book.page_count || "N/A"}
               />
             </div>
+          </div>
 
-            <ActionButtons
-              onAddToCart={handleAddToCart}
-              onWishlistToggle={handleWishlistToggle}
-              isWishlisted={isWishlisted(book.id)}
-              isOutOfStock={isOutOfStock}
-            />
-
-            <BookDetailsTable
-              genre={genreName}
-              publisher={book.publisher || "N/A"}
-              publicationDate={book.publication_date || "N/A"}
-              pageCount={book.page_count || "N/A"}
+          <div className="mt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-0">
+            <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+            <TabContent
+              activeTab={activeTab}
+              description={book.description}
+              reviewDistribution={book.reviewDistribution}
+              aboutAuthor={book.about_author}
+              title={book.title}
             />
           </div>
-        </div>
-
-        <div className="mt-16 max-w-7xl mx-auto">
-          <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-          <TabContent
-            activeTab={activeTab}
-            description={book.description}
-            reviewDistribution={book.reviewDistribution}
-            aboutAuthor={book.about_author}
-            title={book.title}
-          />
         </div>
       </main>
 
@@ -523,22 +661,30 @@ const BookDetailPage = ({ bookId = 1 }) => {
 // ==================== PAGE WRAPPER ====================
 export default function PageWrapper(props) {
   return (
-    <div>
+    <div className="relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute bg-" />
+      
       <BookDetailPage {...props} />
-      <div className="mt-12">
+      
+      <div className="mt-5 md:mt-3 relative z-1 max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-16 xl:px-24">
+        <p className="text-2xl font-bold mb-4">Find more books.</p>
         <BooksPage />
       </div>
+      
       <ToastContainer
         position="top-right"
-        autoClose={1000}
+        autoClose={3000}
         hideProgressBar={false}
-        newestOnTop={false}
+        newestOnTop
         closeOnClick
         rtl={false}
         pauseOnFocusLoss
         draggable
         pauseOnHover
-        theme="light"
+        theme="colored"
+        toastClassName="rounded-xl"
+        bodyClassName="font-sans"
       />
     </div>
   );

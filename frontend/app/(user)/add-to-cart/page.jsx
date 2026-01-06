@@ -135,22 +135,22 @@ export default function CartPage() {
 
                 <div className="flex-1">
                   <h2 className="text-lg font-semibold">{item.book.title}</h2>
-                  <div className="flex items-center gap-2">
-                    {item.book.discount_value > 0 ? (
-                      <>
-                        <p className="text-gray-600 line-through text-sm">
-                          ${parseFloat(item.book.price).toFixed(2)}
-                        </p>
-                        <p className="text-green-600 font-semibold">
-                          ${parseFloat(item.book.discounted_price).toFixed(2)}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-gray-600">
-                        ${parseFloat(item.book.price).toFixed(2)}
-                      </p>
-                    )}
-                  </div>
+                 <div className="flex items-center gap-2">
+                {item.book.discount_value > 0 ? (
+                  <>
+                    <p className="text-gray-600 line-through text-sm">
+                      ${parseFloat(item.book.price).toFixed(2)}
+                    </p>
+                    <p className="text-green-600 font-semibold">
+                      ${parseFloat(item.book.discounted_price).toFixed(2)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-gray-600">
+                    ${parseFloat(item.book.price).toFixed(2)}
+                  </p>
+                )}
+              </div>
 
                   {/* Quantity Controls */}
                   <div className="flex items-center gap-2 mt-2">
