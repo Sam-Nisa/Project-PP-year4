@@ -53,27 +53,22 @@ export const useBookStore = create((set, get) => ({
     try {
       const formData = new FormData();
 
-      // Append all fields to FormData
+      // Handle images separately
+      if (payload.images && Array.isArray(payload.images)) {
+        payload.images.forEach((image) => {
+          formData.append('images[]', image);
+        });
+        delete payload.images; // Remove from payload to avoid double processing
+      }
+
+      // Append all other fields to FormData
       Object.entries(payload).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== "") {
           formData.append(key, value);
         }
       });
 
-      const response = await fetch(`${API_URL}/api/books`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to create book");
-      }
-
-      const data = await response.json();
+      const data = await request("/api/books", "POST", formData, {}, token);
 
       // Add the new book to the state
       set((state) => ({
@@ -84,7 +79,7 @@ export const useBookStore = create((set, get) => ({
       return data;
     } catch (err) {
       console.error("Failed to create book:", err);
-      const errorMsg = err.message || "Failed to create book";
+      const errorMsg = err.response?.data?.message || err.message || "Failed to create book";
       set({ error: errorMsg });
       throw err;
     } finally {
@@ -103,7 +98,21 @@ export const useBookStore = create((set, get) => ({
     try {
       const formData = new FormData();
 
-      // Append all fields to FormData
+      // Handle images separately
+      if (payload.images && Array.isArray(payload.images) && payload.images.length > 0) {
+        // Only append if there are actual File objects
+        const hasFiles = payload.images.some(img => img instanceof File);
+        if (hasFiles) {
+          payload.images.forEach((image) => {
+            if (image instanceof File) {
+              formData.append('images[]', image);
+            }
+          });
+        }
+        delete payload.images; // Remove from payload to avoid double processing
+      }
+
+      // Append all other fields to FormData
       Object.entries(payload).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== "") {
           // Only append cover_image if it's a File object
@@ -114,37 +123,21 @@ export const useBookStore = create((set, get) => ({
         }
       });
 
-      const response = await fetch(`${API_URL}/api/books/${id}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "X-HTTP-Method-Override": "PUT",
-        },
-        body: formData,
-      });
+      // Add method override for Laravel
+      formData.append('_method', 'PUT');
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to update book");
-      }
-
-      const data = await response.json();
-      console.log("Update book response status:", data);
+      const data = await request(`/api/books/${id}`, "POST", formData, {}, token);
 
       // Update the book in the state
-      set((state) => {
-        console.log("Current books state:", state.books);
-
-        return {
-          books: state.books.map((b) => (b.id === id ? data : b)),
-          error: null,
-        };
-      });
+      set((state) => ({
+        books: state.books.map((b) => (b.id === id ? data : b)),
+        error: null,
+      }));
 
       return data;
     } catch (err) {
       console.error("Failed to update book:", err);
-      const errorMsg = err.message || "Failed to update book";
+      const errorMsg = err.response?.data?.message || err.message || "Failed to update book";
       set({ error: errorMsg });
       throw err;
     } finally {
@@ -161,18 +154,7 @@ export const useBookStore = create((set, get) => ({
 
     set({ loading: true, error: null });
     try {
-      const response = await fetch(`${API_URL}/api/books/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to delete book");
-      }
+      await request(`/api/books/${id}`, "DELETE", {}, {}, token);
 
       // Remove the book from the state
       set((state) => ({
@@ -183,7 +165,7 @@ export const useBookStore = create((set, get) => ({
       return true;
     } catch (err) {
       console.error("Failed to delete book:", err);
-      const errorMsg = err.message || "Failed to delete book";
+      const errorMsg = err.response?.data?.message || err.message || "Failed to delete book";
       set({ error: errorMsg });
       throw err;
     } finally {

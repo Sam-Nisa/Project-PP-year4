@@ -5,11 +5,13 @@ import { useEffect, useState } from "react";
 import { useBookStore } from "../../../store/useBookStore";
 import BookCard from "../../../component/BookCard";
 import { ArrowLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import LoadingSpinner from "../../../component/LoadingSpinner";
 
 /* =======================
    Breadcrumb Component
 ======================= */
 const Breadcrumb = ({ genre }) => (
+  
   <div className="flex flex-wrap items-center gap-2 mb-10 px-4">
     <Link
       href="/"
@@ -54,7 +56,7 @@ export default function GenrePage({ params }) {
     loadBooks();
   }, [slug]);
 
-  if (loading) return <p className="text-center py-12">Loading books...</p>;
+  if (loading) return <LoadingSpinner text="Loading books..." />;
 
   if (error) return <p className="text-center py-12 text-red-500">{error}</p>;
 

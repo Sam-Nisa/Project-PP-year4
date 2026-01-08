@@ -13,6 +13,8 @@ use App\Http\Controllers\CouponController;
 use App\Http\Controllers\OrderCouponController;
 use App\Http\Controllers\InventoryLogController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AuthorDashboardController;
 
 
 
@@ -36,6 +38,8 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('profile', [AuthController::class, 'profile']);
     Route::post('logout', [AuthController::class, 'logout']);
     Route::post('refresh', [AuthController::class, 'refresh']);
+    Route::get('dashboard-stats', [DashboardController::class, 'index']);
+    Route::get('author-dashboard-stats', [AuthorDashboardController::class, 'index']);
 
     // Users
     Route::get('users', [UserController::class, 'index']);

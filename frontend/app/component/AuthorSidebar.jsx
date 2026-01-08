@@ -1,22 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { FaTachometerAlt, FaUsers, FaBook, FaCogs, FaTags } from "react-icons/fa";
+import { FaTachometerAlt, FaBook, FaCogs } from "react-icons/fa";
 
-export default function AdminSidebar() {
+export default function AuthorSidebar() {
   const links = [
-    { name: "Dashboard", href: "/admin/dashboard", icon: <FaTachometerAlt color="#4E8D7C" /> },
-    { name: "Users", href: "/admin/users", icon: <FaUsers color="#F59E0B" /> },
-    { name: "Genres", href: "/admin/genres", icon: <FaTags color="#3B82F6" /> },
-    { name: "Books", href: "/admin/books", icon: <FaBook color="#EF4444" /> },
-    { name: "Settings", href: "/admin/settings", icon: <FaCogs color="#8B5CF6" /> },
+    { name: "Dashboard", href: "/author/dashboard", icon: <FaTachometerAlt color="#4E8D7C" /> },
+    { name: "Books", href: "/author/books", icon: <FaBook color="#EF4444" /> },
+    { name: "Settings", href: "/author/setting", icon: <FaCogs color="#8B5CF6" /> },
   ];
 
   return (
-    <aside className="w-72  text-black flex flex-col shadow-2xl  backdrop-blur-lg border-r border-blue-700/40">
+    <aside className="w-72 text-black flex flex-col shadow-2xl backdrop-blur-lg border-r border-blue-700/40">
       {/* Header */}
       <div className="p-6 text-3xl font-extrabold tracking-wide bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-        Admin Panel
+        Author Panel
       </div>
 
       {/* Navigation */}
@@ -37,7 +35,7 @@ export default function AdminSidebar() {
 
       {/* Footer */}
       <div className="p-4 text-xs text-gray-400 text-center border-t border-blue-700/30">
-        © 2026 Admin Dashboard
+        © 2026 Author Dashboard
       </div>
     </aside>
   );

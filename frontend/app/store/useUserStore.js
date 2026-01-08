@@ -9,6 +9,31 @@ export const useUserStore = create((set, get) => ({
   error: null,
 
   // ========================
+  // FETCH DASHBOARD STATS
+  // ========================
+   stats: null,
+   fetchDashboardData: async () => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+
+    set({ loading: true, error: null });
+
+    try {
+      // Note the URL matches what we added in api.php
+      const response = await request("/api/dashboard-stats", "GET", null, {}, token);
+
+      if (response && response.data) {
+        set({ stats: response.data });
+      }
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
+      set({ error: "Failed to load stats" });
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  // ========================
   // FETCH ALL USERS
   // ========================
   fetchUsers: async () => {
@@ -96,18 +121,7 @@ export const useUserStore = create((set, get) => ({
         }
       });
 
-      const response = await fetch(`${API_URL}/api/users/${id}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "X-HTTP-Method-Override": "PUT",
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      const updatedUser = data.user;
+      const updatedUser = await request(`/api/users/${id}`, "PUT", formData, {}, token);
 
       set((state) => {
         console.log("state.users", state);

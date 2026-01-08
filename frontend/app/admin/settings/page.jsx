@@ -108,7 +108,7 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl flex flex-col gap-8 p-6 rounded-lg my-16 bg-gray-100">
+    <div className="mx-auto max-w-6xl flex flex-col gap-8 p-6 rounded-lg ">
       <section>
         <h3 className="text-xl font-bold text-black mb-4 flex items-center">
           Admin Profile
@@ -151,7 +151,7 @@ export default function AdminSettingsPage() {
 
               <div>
                 <h4 className="text-lg font-semibold text-black">
-                  Admin Image
+                  Admin Profile Picture
                 </h4>
                 <p className="text-sm text-slate-400 mt-1">
                   Click the photo or "Change" to upload a new profile picture.

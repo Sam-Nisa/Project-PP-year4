@@ -16,21 +16,27 @@ class Book extends Model
         'genre_id',
         'price',
         'stock',
-        'cover_image',
+        'cover_image',       // optional main cover
+        'images',            // multiple images (JSON)
+        'pdf_file',          // PDF path
         'description',
         'status',
-        'discount_type',   // NEW
-        'discount_value',  // NEW
-        'publication_date', // NEW
-        'page_count',       // NEW
-        'about_author',     // NEW
-        'publisher',    // NEW
-        'author_name',    // NEW
-       
+        'discount_type',
+        'discount_value',
+        'publication_date',
+        'page_count',
+        'about_author',
+        'publisher',
+        'author_name',
     ];
 
-    // Combine all appended attributes in a single array
-    protected $appends = ['cover_image_url', 'discounted_price'];
+    // Append extra attributes
+    protected $appends = ['cover_image_url', 'images_url', 'pdf_file_url', 'discounted_price'];
+
+    // Cast JSON field to array
+    protected $casts = [
+        'images' => 'array',
+    ];
 
     public function author()
     {
@@ -45,10 +51,22 @@ class Book extends Model
     // Accessor for full cover image URL
     public function getCoverImageUrlAttribute()
     {
-        if ($this->cover_image) {
-            return asset('storage/' . $this->cover_image);
+        return $this->cover_image ? asset('storage/' . $this->cover_image) : null;
+    }
+
+    // Accessor for multiple images URLs
+    public function getImagesUrlAttribute()
+    {
+        if ($this->images && is_array($this->images)) {
+            return array_map(fn($img) => asset('storage/' . $img), $this->images);
         }
-        return null; 
+        return [];
+    }
+
+    // Accessor for PDF file URL
+    public function getPdfFileUrlAttribute()
+    {
+        return $this->pdf_file ? asset('storage/' . $this->pdf_file) : null;
     }
 
     // Accessor for discounted price
