@@ -48,13 +48,12 @@ const LoginPromptModal = ({ onClose }) => {
 export default function BookCard({ book }) {
   if (!book) return null;
 
+  console.log("book: ",book)
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   const title = book.title || "Untitled";
   const price = parseFloat(book.price || 0).toFixed(2);
-  const coverImageUrl = book.cover_image
-    ? `${API_URL}/storage/${book.cover_image}`
-    : "/no-image.png";
+  const coverImageUrl = book.images_url[0]
 
   const { addWishlist, removeWishlist, isWishlisted } = useWishlistStore();
   const { user } = useAuthStore();
@@ -79,7 +78,7 @@ export default function BookCard({ book }) {
 
   return (
     <>
-      <div className="relative bg-white border rounded-lg shadow-sm mb-6 hover:shadow-md transition overflow-hidden">
+      <div className="hover:scale-105 duration-400 transition relative bg-white border rounded-lg shadow-sm mb-6 hover:shadow-md overflow-hidden">
         
         {/* Wishlist */}
         <button
@@ -94,12 +93,12 @@ export default function BookCard({ book }) {
         </button>
 
         {/* Image */}
-        <div className="relative h-56 w-full bg-gray-100">
+        <div className="group relative h-56 w-full bg-transparent">
           <Image
             src={coverImageUrl}
             alt={title}
             fill
-            className="object-cover"
+            className="object-contain"
           />
         </div>
 

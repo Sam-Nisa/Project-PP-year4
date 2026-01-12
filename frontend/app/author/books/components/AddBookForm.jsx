@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Loader2, Upload, FileText, Image } from "lucide-react";
+import { Plus, Loader2, FileText, Image, X } from "lucide-react";
+import { useUploadStore } from "../../../store/upload";
 
 export default function AddBookForm({ 
   genres, 
@@ -9,6 +10,8 @@ export default function AddBookForm({
   loading, 
   error 
 }) {
+  const { uploadFile, uploadMultipleFiles, uploading, uploadProgress, error: uploadError, resetUpload } = useUploadStore();
+  
   const [newBook, setNewBook] = useState({
     title: "",
     genre_id: "",
@@ -27,6 +30,11 @@ export default function AddBookForm({
     author_name: "",
   });
 
+  const [imagePreviews, setImagePreviews] = useState([]);
+  const [pdfPreview, setPdfPreview] = useState(null);
+  const [uploadStep, setUploadStep] = useState(null); // Track upload progress
+
+
   const handleChangeNewBook = (e) => {
     const { name, value } = e.target;
     setNewBook((prev) => ({ ...prev, [name]: value }));
@@ -38,11 +46,54 @@ export default function AddBookForm({
       alert("You can only upload up to 5 images");
       return;
     }
+    
     setNewBook((prev) => ({ ...prev, images: files }));
+    
+    // Create preview URLs
+    const previews = files.map(file => ({
+      file,
+      url: URL.createObjectURL(file),
+      name: file.name
+    }));
+    setImagePreviews(previews);
   };
 
   const handlePdfChangeNewBook = (e) => {
-    setNewBook((prev) => ({ ...prev, pdf_file: e.target.files[0] }));
+    const file = e.target.files[0];
+    setNewBook((prev) => ({ ...prev, pdf_file: file }));
+    
+    // Create PDF preview info
+    if (file) {
+      setPdfPreview({
+        name: file.name,
+        size: (file.size / 1024 / 1024).toFixed(2) // Size in MB
+      });
+    } else {
+      setPdfPreview(null);
+    }
+  };
+
+  const removeImagePreview = (index) => {
+    const newImages = newBook.images.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    
+    setNewBook((prev) => ({ ...prev, images: newImages }));
+    setImagePreviews(newPreviews);
+    
+    // Update file input
+    const imageInput = document.querySelector('input[type="file"][multiple]');
+    if (imageInput && newImages.length === 0) {
+      imageInput.value = '';
+    }
+  };
+
+  const removePdfPreview = () => {
+    setNewBook((prev) => ({ ...prev, pdf_file: null }));
+    setPdfPreview(null);
+    
+    // Clear file input
+    const pdfInput = document.querySelector('input[type="file"][accept=".pdf"]');
+    if (pdfInput) pdfInput.value = '';
   };
 
   const handleSubmit = async () => {
@@ -52,7 +103,37 @@ export default function AddBookForm({
     }
 
     try {
-      await onAddBook(newBook);
+      resetUpload();
+      let imageUrls = [];
+      let pdfUrl = null;
+
+      // Step 1: Upload images if any
+      if (newBook.images && newBook.images.length > 0) {
+        setUploadStep("Uploading images...");
+        const imageResults = await uploadMultipleFiles(newBook.images, '/books/images');
+        imageUrls = imageResults.map(result => result.url);
+      }
+
+      // Step 2: Upload PDF if any
+      if (newBook.pdf_file) {
+        setUploadStep("Uploading PDF...");
+        const pdfResult = await uploadFile(newBook.pdf_file, '/books/pdfs');
+        pdfUrl = pdfResult.url;
+      }
+
+      // Step 3: Create book with uploaded URLs
+      setUploadStep("Creating book...");
+      const bookData = {
+        ...newBook,
+        images_url: imageUrls,
+        pdf_file_url: pdfUrl,
+      };
+
+      // Remove file objects from bookData since we now have URLs
+      delete bookData.images;
+      delete bookData.pdf_file;
+
+      await onAddBook(bookData);
       
       // Reset form fields
       setNewBook({
@@ -73,6 +154,11 @@ export default function AddBookForm({
         author_name: "",
       });
 
+      // Clear previews
+      setImagePreviews([]);
+      setPdfPreview(null);
+      setUploadStep(null);
+
       // Reset file inputs
       const imageInput = document.querySelector('input[type="file"][multiple]');
       const pdfInput = document.querySelector('input[type="file"][accept=".pdf"]');
@@ -80,6 +166,7 @@ export default function AddBookForm({
       if (pdfInput) pdfInput.value = '';
     } catch (error) {
       console.error("Error adding book:", error);
+      setUploadStep(null);
     }
   };
 
@@ -230,6 +317,35 @@ export default function AddBookForm({
             <p className="text-xs text-gray-500 mt-1">
               Select up to 5 images for your book
             </p>
+            
+            {/* Image Previews */}
+            {imagePreviews.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm text-gray-600 mb-2">Preview ({imagePreviews.length} image{imagePreviews.length > 1 ? 's' : ''}):</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={preview.url}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-20 object-cover rounded border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImagePreview(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove image"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b truncate">
+                        {preview.name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -246,6 +362,34 @@ export default function AddBookForm({
             <p className="text-xs text-gray-500 mt-1">
               Upload the book PDF file
             </p>
+            
+            {/* PDF Preview */}
+            {pdfPreview && (
+              <div className="mt-3">
+                <p className="text-sm text-gray-600 mb-2">PDF Selected:</p>
+                <div className="flex items-center justify-between p-3 bg-gray-50 border rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-red-500" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {pdfPreview.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {pdfPreview.size} MB
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removePdfPreview}
+                    className="text-red-500 hover:text-red-700 transition-colors"
+                    title="Remove PDF"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -314,10 +458,43 @@ export default function AddBookForm({
           </div>
         </div>
 
-        {/* Error message */}
+        {/* Error messages */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
             {error}
+          </div>
+        )}
+
+        {uploadError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            Upload Error: {uploadError}
+          </div>
+        )}
+
+        {/* Upload Progress */}
+        {(uploading || uploadStep) && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">
+                  {uploadStep || "Uploading files..."}
+                </p>
+                {uploading && (
+                  <div className="mt-2">
+                    <div className="bg-blue-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      {Math.round(uploadProgress)}% complete
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -325,15 +502,15 @@ export default function AddBookForm({
         <div className="flex justify-end">
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || uploading}
             className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold shadow-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
           >
-            {loading ? (
+            {(loading || uploading) ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
               <Plus className="w-4 h-4 mr-2" />
             )}
-            Add New Book
+            {uploading ? "Uploading..." : loading ? "Creating..." : "Add New Book"}
           </button>
         </div>
       </div>

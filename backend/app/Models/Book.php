@@ -16,9 +16,12 @@ class Book extends Model
         'genre_id',
         'price',
         'stock',
-        'cover_image',       // optional main cover
-        'images',            // multiple images (JSON)
-        'pdf_file',          // PDF path
+        'cover_image',       // optional main cover (legacy)
+        'cover_image_url',   // direct URL for cover image
+        'images',            // multiple images (JSON) (legacy)
+        'images_url',        // multiple image URLs (JSON)
+        'pdf_file',          // PDF path (legacy)
+        'pdf_file_url',      // direct URL for PDF
         'description',
         'status',
         'discount_type',
@@ -30,12 +33,13 @@ class Book extends Model
         'author_name',
     ];
 
-    // Append extra attributes
-    protected $appends = ['cover_image_url', 'images_url', 'pdf_file_url', 'discounted_price'];
+    // Append extra attributes (remove images_url since it's a direct column now)
+    protected $appends = ['cover_image_url', 'pdf_file_url', 'discounted_price'];
 
-    // Cast JSON field to array
+    // Cast JSON fields to array
     protected $casts = [
         'images' => 'array',
+        'images_url' => 'array',
     ];
 
     public function author()
@@ -51,21 +55,24 @@ class Book extends Model
     // Accessor for full cover image URL
     public function getCoverImageUrlAttribute()
     {
-        return $this->cover_image ? asset('storage/' . $this->cover_image) : null;
-    }
-
-    // Accessor for multiple images URLs
-    public function getImagesUrlAttribute()
-    {
-        if ($this->images && is_array($this->images)) {
-            return array_map(fn($img) => asset('storage/' . $img), $this->images);
+        // If we have a direct URL, use it
+        if (!empty($this->attributes['cover_image_url'])) {
+            return $this->attributes['cover_image_url'];
         }
-        return [];
+        
+        // Fallback to legacy storage path
+        return $this->cover_image ? asset('storage/' . $this->cover_image) : null;
     }
 
     // Accessor for PDF file URL
     public function getPdfFileUrlAttribute()
     {
+        // If we have a direct URL, use it
+        if (!empty($this->attributes['pdf_file_url'])) {
+            return $this->attributes['pdf_file_url'];
+        }
+        
+        // Fallback to legacy storage path
         return $this->pdf_file ? asset('storage/' . $this->pdf_file) : null;
     }
 

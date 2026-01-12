@@ -41,6 +41,8 @@ export const useBookStore = create((set, get) => ({
       set({ loading: false });
     }
   },
+  
+
 
   createBook: async (payload) => {
     const token = useAuthStore.getState().token;
@@ -51,6 +53,22 @@ export const useBookStore = create((set, get) => ({
 
     set({ loading: true, error: null });
     try {
+      // If payload contains uploaded URLs, send as JSON
+      if (payload.images_url || payload.pdf_file_url) {
+        const data = await request("/api/books", "POST", payload, {
+          'Content-Type': 'application/json'
+        }, token);
+        
+        // Add the new book to the state
+        set((state) => ({
+          books: [...state.books, data],
+          error: null,
+        }));
+
+        return data;
+      }
+
+      // Fallback to FormData for direct file uploads (legacy support)
       const formData = new FormData();
 
       // Handle images separately
@@ -69,6 +87,7 @@ export const useBookStore = create((set, get) => ({
       });
 
       const data = await request("/api/books", "POST", formData, {}, token);
+      
 
       // Add the new book to the state
       set((state) => ({
@@ -96,6 +115,23 @@ export const useBookStore = create((set, get) => ({
 
     set({ loading: true, error: null });
     try {
+      // If payload contains uploaded URLs, send as JSON
+      if (payload.images_url || payload.pdf_file_url || payload.cover_image_url) {
+        // Send as JSON when we have URLs
+        const data = await request(`/api/books/${id}`, "PUT", payload, {
+          'Content-Type': 'application/json'
+        }, token);
+
+        // Update the book in the state
+        set((state) => ({
+          books: state.books.map((b) => (b.id === id ? data : b)),
+          error: null,
+        }));
+
+        return data;
+      }
+
+      // Fallback to FormData for direct file uploads (legacy support)
       const formData = new FormData();
 
       // Handle images separately

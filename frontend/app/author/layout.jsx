@@ -3,6 +3,7 @@
 import AuthorNavbar from "../component/AuthorNavbar";
 import AuthorSidebar from "../component/AuthorSidebar";
 
+
 export default function AuthorLayout({ children }) {
   return (
     <div className="flex h-screen bg-gray-50">

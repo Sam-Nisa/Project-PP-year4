@@ -1,6 +1,7 @@
 "use client";
 
-import { Image, FileText } from "lucide-react";
+import { Image, FileText, X } from "lucide-react";
+import { useUploadStore } from "../../../store/upload";
 
 export default function EditBookModal({ 
   isOpen, 
@@ -10,6 +11,19 @@ export default function EditBookModal({
   genres, 
   setBookData 
 }) {
+  const { uploadFile, uploadMultipleFiles, uploading, uploadProgress, error: uploadError, resetUpload } = useUploadStore();
+  
+  // Debug: Log the book data when modal opens
+  if (isOpen && book) {
+    console.log('EditBookModal opened with book:', {
+      id: book.id,
+      title: book.title,
+      images_url: book.images_url,
+      images_url_type: typeof book.images_url,
+      cover_image_url: book.cover_image_url
+    });
+  }
+  
   if (!isOpen) return null;
 
   const handleChange = (e) => {
@@ -30,17 +44,97 @@ export default function EditBookModal({
     setBookData((prev) => ({ ...prev, pdf_file: e.target.files[0] }));
   };
 
+  const removeExistingImage = (indexToRemove) => {
+    let currentImages = book.images_url || [];
+    
+    // Handle string JSON data
+    if (typeof currentImages === 'string') {
+      try {
+        currentImages = JSON.parse(currentImages);
+      } catch (e) {
+        console.error('Failed to parse images_url for removal:', currentImages);
+        return;
+      }
+    }
+    
+    // Ensure it's an array
+    if (!Array.isArray(currentImages)) {
+      currentImages = [];
+    }
+    
+    const updatedImages = currentImages.filter((_, index) => index !== indexToRemove);
+    setBookData((prev) => ({ ...prev, images_url: updatedImages }));
+  };
+
+  const handleSave = async () => {
+    try {
+      resetUpload();
+      let updatedBookData = { ...book };
+
+      console.log('EditModal - Saving book with data:', {
+        hasNewImages: !!(book.images && book.images.length > 0),
+        hasNewPdf: !!book.pdf_file,
+        existingImagesUrl: book.images_url,
+        bookData: updatedBookData
+      });
+
+      // Only upload and update images if new images were selected
+      if (book.images && book.images.length > 0) {
+        console.log('EditModal - Uploading new images');
+        const imageResults = await uploadMultipleFiles(book.images, '/books/images');
+        const newImageUrls = imageResults.map(result => result.url);
+        
+        // Combine existing images with new ones
+        const existingImages = book.images_url || [];
+        updatedBookData.images_url = [...existingImages, ...newImageUrls];
+        delete updatedBookData.images; // Remove file objects
+      }
+      // If no new images, preserve existing images_url as is
+      // (don't delete or modify images_url)
+
+      // Only upload and update PDF if new PDF was selected
+      if (book.pdf_file) {
+        console.log('EditModal - Uploading new PDF');
+        const pdfResult = await uploadFile(book.pdf_file, '/books/pdfs');
+        updatedBookData.pdf_file_url = pdfResult.url;
+        delete updatedBookData.pdf_file; // Remove file object
+      }
+      // If no new PDF, preserve existing pdf_file_url as is
+
+      console.log('EditModal - Final data to save:', updatedBookData);
+      await onSave(book.id, updatedBookData);
+    } catch (error) {
+      console.error("Error updating book:", error);
+    }
+  };
+
   const getImagePreviews = () => {
-    // Check for new files first
+    // Check for new files first (when user selects new images)
     if (book.images && Array.isArray(book.images) && book.images.length > 0) {
       if (book.images[0] instanceof File) {
         return book.images.map(file => URL.createObjectURL(file));
       }
     }
     
-    // Return existing images from server
-    if (book.images_url && Array.isArray(book.images_url) && book.images_url.length > 0) {
-      return book.images_url;
+    // Return existing images from server (images_url is the primary source)
+    if (book.images_url) {
+      let imageUrls = book.images_url;
+      
+      // If it's a string, try to parse it as JSON
+      if (typeof imageUrls === 'string') {
+        try {
+          imageUrls = JSON.parse(imageUrls);
+        } catch (e) {
+          console.error('EditModal - Failed to parse images_url:', imageUrls);
+          return [];
+        }
+      }
+      
+      if (Array.isArray(imageUrls) && imageUrls.length > 0) {
+        // Filter out any invalid URLs
+        const validUrls = imageUrls.filter(url => url && typeof url === 'string' && url.length > 0);
+        return validUrls;
+      }
     }
     
     // Fallback to cover_image_url if available
@@ -67,6 +161,36 @@ export default function EditBookModal({
 
         {/* Modal Body (Form) */}
         <div className="p-6">
+          {/* Upload Progress */}
+          {uploading && (
+            <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Uploading files...</p>
+                  <div className="mt-2">
+                    <div className="bg-blue-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      {Math.round(uploadProgress)}% complete
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Upload Error */}
+          {uploadError && (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              Upload Error: {uploadError}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Basic Information */}
             <div className="lg:col-span-2 space-y-4">
@@ -282,15 +406,34 @@ export default function EditBookModal({
                 {/* Image Previews */}
                 {getImagePreviews().length > 0 && (
                   <div className="mt-3">
-                    <p className="text-sm text-gray-600 mb-2">Preview:</p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Current Images ({getImagePreviews().length}):
+                    </p>
                     <div className="grid grid-cols-2 gap-2">
                       {getImagePreviews().slice(0, 4).map((url, index) => (
-                        <img
-                          key={index}
-                          src={url}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-20 object-cover rounded border"
-                        />
+                        <div key={index} className="relative group">
+                          <img
+                            src={url}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-20 object-cover rounded border"
+                            onError={(e) => {
+                              console.error('EditModal - Image failed to load:', url);
+                              e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMiA5VjEzTTEyIDE3SDE2TTE2IDlIMTJNMTIgOUw4IDEzTDEyIDE3IiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=';
+                              e.target.className = "w-full h-20 object-cover rounded border bg-gray-200";
+                            }}
+                          />
+                          {/* Remove button for existing images */}
+                          {book.images_url && book.images_url.includes(url) && (
+                            <button
+                              type="button"
+                              onClick={() => removeExistingImage(index)}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Remove image"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                       ))}
                       {getImagePreviews().length > 4 && (
                         <div className="w-full h-20 bg-gray-100 rounded border flex items-center justify-center text-sm text-gray-600">
@@ -339,10 +482,11 @@ export default function EditBookModal({
             Cancel
           </button>
           <button
-            onClick={() => onSave(book.id)}
-            className="w-full sm:w-auto bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors"
+            onClick={handleSave}
+            disabled={uploading}
+            className="w-full sm:w-auto bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors"
           >
-            Save Changes
+            {uploading ? "Uploading..." : "Save Changes"}
           </button>
         </div>
       </div>

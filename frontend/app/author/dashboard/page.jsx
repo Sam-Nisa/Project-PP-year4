@@ -82,7 +82,7 @@ export default function AuthorDashboardPage() {
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 bg-background-dark text-black">
+    <div className="flex-1  p-6 bg-background-dark text-black">
       <div className="mx-auto max-w-7xl flex flex-col gap-6">
         
         {/* Header */}

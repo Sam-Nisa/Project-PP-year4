@@ -15,8 +15,10 @@ use App\Http\Controllers\InventoryLogController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthorDashboardController;
+use App\Http\Controllers\UploadController;
 
-
+// Upload file and image
+Route::post('/upload', [UploadController::class, 'upload']);
 
 // Public API routes
 Route::post('/login', [AuthController::class, 'login']);
@@ -36,6 +38,8 @@ Route::middleware(['jwt.auth'])->group(function () {
 
     // Auth
     Route::get('profile', [AuthController::class, 'profile']);
+    Route::post('profile', [AuthController::class, 'updateProfile']);
+    Route::delete('profile/avatar', [AuthController::class, 'deleteAvatar']);
     Route::post('logout', [AuthController::class, 'logout']);
     Route::post('refresh', [AuthController::class, 'refresh']);
     Route::get('dashboard-stats', [DashboardController::class, 'index']);

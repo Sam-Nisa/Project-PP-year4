@@ -4,11 +4,18 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Book;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use App\Services\ImageKitService;
 
 class BookController extends Controller
 {
+    protected $imageKit;
+
+public function __construct(ImageKitService $imageKit)
+{
+    $this->imageKit = $imageKit;
+}
     // ✅ List all books (any user)
     public function index()
     {
@@ -59,7 +66,10 @@ class BookController extends Controller
             'stock' => 'required|integer',
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // multiple images
+            'images_url' => 'nullable|array', // Pre-uploaded image URLs
+            'images_url.*' => 'nullable|url',
             'pdf_file' => 'nullable|mimes:pdf|max:10000', // PDF max 10MB
+            'pdf_file_url' => 'nullable|url', // Pre-uploaded PDF URL
             'description' => 'nullable|string',
             'status' => 'nullable|in:pending,approved,rejected',
             'discount_type' => 'nullable|in:percentage,fixed',
@@ -75,23 +85,51 @@ class BookController extends Controller
         $data['author_id'] = $user->id;
         $data['status'] = $data['status'] ?? 'pending';
 
-        // Handle cover image
+        // Handle cover image (file upload)
         if ($request->hasFile('cover_image')) {
-            $data['cover_image'] = $request->file('cover_image')->store('books', 'public');
+            $file = $request->file('cover_image');
+            $upload = $this->imageKit->upload(
+                $file->getPathname(),
+                time().'_'.$file->getClientOriginalName(),
+                '/books/cover'
+            );
+            $data['cover_image_url'] = $upload->result->url;
+            unset($data['cover_image']);
         }
 
-        // Handle multiple images (1–5)
+        // Handle multiple images
         if ($request->hasFile('images')) {
-            $images = [];
+            // Direct file uploads
+            $imageUrls = [];
             foreach ($request->file('images') as $image) {
-                $images[] = $image->store('books/images', 'public');
+                $upload = $this->imageKit->upload(
+                    $image->getPathname(),
+                    time().'_'.$image->getClientOriginalName(),
+                    '/books/images'
+                );
+                $imageUrls[] = $upload->result->url;
             }
-            $data['images'] = $images;
+            $data['images_url'] = $imageUrls;
+            unset($data['images']);
+        } elseif ($request->has('images_url') && is_array($request->images_url)) {
+            // Pre-uploaded URLs
+            $data['images_url'] = $request->images_url;
         }
 
         // Handle PDF
         if ($request->hasFile('pdf_file')) {
-            $data['pdf_file'] = $request->file('pdf_file')->store('books/pdfs', 'public');
+            // Direct file upload
+            $pdf = $request->file('pdf_file');
+            $upload = $this->imageKit->upload(
+                $pdf->getPathname(),
+                time().'_'.$pdf->getClientOriginalName(),
+                '/books/pdfs'
+            );
+            $data['pdf_file_url'] = $upload->result->url;
+            unset($data['pdf_file']);
+        } elseif ($request->has('pdf_file_url')) {
+            // Pre-uploaded URL
+            $data['pdf_file_url'] = $request->pdf_file_url;
         }
 
         $book = Book::create($data);
@@ -119,8 +157,12 @@ class BookController extends Controller
             'price' => 'required|numeric',
             'stock' => 'required|integer',
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'cover_image_url' => 'nullable|url',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // multiple images
+            'images_url' => 'nullable|array', // Pre-uploaded image URLs
+            'images_url.*' => 'nullable|url',
             'pdf_file' => 'nullable|mimes:pdf|max:10000', // PDF max 10MB
+            'pdf_file_url' => 'nullable|url', // Pre-uploaded PDF URL
             'description' => 'nullable|string',
             'status' => 'nullable|in:pending,approved,rejected',
             'discount_type' => 'nullable|in:percentage,fixed',
@@ -134,38 +176,54 @@ class BookController extends Controller
 
         $data = $request->all();
 
-        // Handle cover image
+        // Handle cover image (file upload)
         if ($request->hasFile('cover_image')) {
-            if ($book->cover_image && Storage::disk('public')->exists($book->cover_image)) {
-                Storage::disk('public')->delete($book->cover_image);
-            }
-            $data['cover_image'] = $request->file('cover_image')->store('books', 'public');
+            $file = $request->file('cover_image');
+            $upload = $this->imageKit->upload(
+                $file->getPathname(),
+                time().'_'.$file->getClientOriginalName(),
+                '/books/cover'
+            );
+            $data['cover_image_url'] = $upload->result->url;
+            unset($data['cover_image']);
+        } elseif ($request->has('cover_image_url')) {
+            // Pre-uploaded URL
+            $data['cover_image_url'] = $request->cover_image_url;
         }
 
         // Handle multiple images
         if ($request->hasFile('images')) {
-            // Delete old images
-            if ($book->images) {
-                foreach ($book->images as $img) {
-                    if (Storage::disk('public')->exists($img)) {
-                        Storage::disk('public')->delete($img);
-                    }
-                }
-            }
-
-            $images = [];
+            // Direct file uploads
+            $imageUrls = [];
             foreach ($request->file('images') as $image) {
-                $images[] = $image->store('books/images', 'public');
+                $upload = $this->imageKit->upload(
+                    $image->getPathname(),
+                    time().'_'.$image->getClientOriginalName(),
+                    '/books/images'
+                );
+                $imageUrls[] = $upload->result->url;
             }
-            $data['images'] = $images;
+            $data['images_url'] = $imageUrls;
+            unset($data['images']);
+        } elseif ($request->has('images_url') && is_array($request->images_url)) {
+            // Pre-uploaded URLs
+            $data['images_url'] = $request->images_url;
         }
 
         // Handle PDF
         if ($request->hasFile('pdf_file')) {
-            if ($book->pdf_file && Storage::disk('public')->exists($book->pdf_file)) {
-                Storage::disk('public')->delete($book->pdf_file);
-            }
-            $data['pdf_file'] = $request->file('pdf_file')->store('books/pdfs', 'public');
+            // Direct file upload
+            $pdf = $request->file('pdf_file');
+            $upload = $this->imageKit->upload(
+                $pdf->getPathname(),
+                time().'_'.$pdf->getClientOriginalName(),
+                '/books/pdfs'
+            );
+            $data['pdf_file_url'] = $upload->result->url;
+            unset($data['pdf_file']);
+        } elseif ($request->has('pdf_file_url')) {
+            // Pre-uploaded URL
+            $data['pdf_file_url'] = $request->pdf_file_url;
         }
 
         $book->update($data);
@@ -187,25 +245,9 @@ class BookController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Delete cover image
-        if ($book->cover_image && Storage::disk('public')->exists($book->cover_image)) {
-            Storage::disk('public')->delete($book->cover_image);
-        }
-
-        // Delete multiple images
-        if ($book->images) {
-            foreach ($book->images as $img) {
-                if (Storage::disk('public')->exists($img)) {
-                    Storage::disk('public')->delete($img);
-                }
-            }
-        }
-
-        // Delete PDF
-        if ($book->pdf_file && Storage::disk('public')->exists($book->pdf_file)) {
-            Storage::disk('public')->delete($book->pdf_file);
-        }
-
+        // Note: ImageKit files are managed externally, so we don't need to delete them here
+        // In a production environment, you might want to implement ImageKit file deletion
+        
         $book->delete();
 
         return response()->json(['message' => 'Book deleted successfully']);

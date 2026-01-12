@@ -168,6 +168,76 @@ export const useAuthStore = create((set, get) => ({
       set({ loading: false });
     }
   },
+
+  // Update user profile
+  updateProfile: async (profileData) => {
+    const token = get().token;
+    if (!token) {
+      throw new Error("Authentication required");
+    }
+
+    set({ loading: true, error: null });
+
+    try {
+      const formData = new FormData();
+      
+      // Append all fields to FormData
+      Object.entries(profileData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== "") {
+          formData.append(key, value);
+        }
+      });
+
+      const response = await request("/api/profile", "POST", formData, {}, token);
+
+      // Update user in state
+      set({ user: response.data || response });
+
+      // Update sessionStorage
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("user", JSON.stringify(response.data || response));
+      }
+
+      return response.data || response;
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || "Failed to update profile";
+      set({ error: errorMsg });
+      throw new Error(errorMsg);
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  // Delete avatar
+  deleteAvatar: async () => {
+    const token = get().token;
+    if (!token) {
+      throw new Error("Authentication required");
+    }
+
+    set({ loading: true, error: null });
+
+    try {
+      const response = await request("/api/profile/avatar", "DELETE", {}, {}, token);
+
+      // Update user in state (remove avatar)
+      const updatedUser = { ...get().user, avatar_url: null };
+      set({ user: updatedUser });
+
+      // Update sessionStorage
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("user", JSON.stringify(updatedUser));
+      }
+
+      return response;
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || "Failed to delete avatar";
+      set({ error: errorMsg });
+      throw new Error(errorMsg);
+    } finally {
+      set({ loading: false });
+    }
+  },
 }));
 
 // Auto-initialize when the module loads (client-side only)

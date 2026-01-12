@@ -4,7 +4,7 @@ import Link from "next/link";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   ShoppingCartIcon,
   HeartIcon as HeartOutlineIcon,
@@ -14,6 +14,7 @@ import {
   PlusIcon,
   CheckIcon,
   ArrowLeftIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
 import { useBookStore } from "../store/useBookStore";
@@ -22,6 +23,8 @@ import { useWishlistStore } from "../store/useWishlistStore";
 import { useAuthStore } from "../store/authStore";
 import { useAddToCartStore } from "../store/useAddToCardStore";
 import BooksPage from "./BooksPage";
+import ImageGallery from "./ImageGallery";
+import PDFViewer from "./PDFViewer";
 
 // ==================== CONSTANTS ====================
 const MOCK_PLACEHOLDERS = {
@@ -144,29 +147,6 @@ const Breadcrumb = ({ genre, title }) => (
   </div>
 );
 
-const BookImage = ({ image, title }) => (
-  <div className="px-4 sm:px-6 lg:px-0">
-    <div className="relative group">
-      <div
-        className="aspect-[3/4] w-full max-w-md mx-auto bg-center bg-cover rounded-2xl shadow-md transition-transform duration-500 "
-        style={{ 
-          backgroundImage: `url('${image}')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }}
-        role="img"
-        aria-label={title}
-      >
-        <div className="absolute  via-transparent to-transparent rounded-2xl" />
-      </div>
-      {image && (
-        <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow-lg">
-          New Release
-        </div>
-      )}
-    </div>
-  </div>
-);
 
 const BookHeader = ({ title, author, description, rating, reviews }) => (
   <div className="space-y-4">
@@ -280,10 +260,13 @@ const QuantitySelector = ({ quantity, onDecrease, onIncrease }) => (
 const ActionButtons = ({
   onAddToCart,
   onWishlistToggle,
+  onReadSample,
   isWishlisted,
   isOutOfStock,
+  hasPDF,
 }) => (
-  <div className="grid grid-cols-3 gap-4">
+  <div className="grid grid-cols-2 gap-4">
+    {/* First row - Add to Cart and Buy Now */}
     <button
       disabled={isOutOfStock}
       onClick={onAddToCart}
@@ -301,6 +284,25 @@ const ActionButtons = ({
       <CheckIcon className="w-5 h-5" />
       <span className="text-lg">Buy Now</span>
     </button>
+
+    {/* Second row - Read Sample and Wishlist */}
+    {hasPDF ? (
+      <button
+        onClick={onReadSample}
+        className="flex items-center justify-center gap-2 px-2 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+      >
+        <DocumentTextIcon className="w-6 h-6" />
+        <span className="text-lg">Read Sample</span>
+      </button>
+    ) : (
+      <button
+        disabled
+        className="flex items-center justify-center gap-2 px-2 py-2 rounded-xl bg-gray-300 text-gray-500 cursor-not-allowed"
+      >
+        <DocumentTextIcon className="w-6 h-6" />
+        <span className="text-lg">No Sample</span>
+      </button>
+    )}
 
     <button
       onClick={onWishlistToggle}
@@ -326,7 +328,7 @@ const ActionButtons = ({
 );
 
 
-const BookDetailsTable = ({ genre, publisher, publicationDate, pageCount }) => (
+const BookDetailsTable = ({ genre, publisher, publicationDate, pageCount, hasPDF }) => (
   <div className=" dark:to-gray-800/50 rounded-2xl p-6 border border-gray-200">
     <h3 className="text-xl font-bold mb-6  text-black bg-clip-text ">
       📚 Book Details
@@ -351,6 +353,17 @@ const BookDetailsTable = ({ genre, publisher, publicationDate, pageCount }) => (
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Pages</p>
           <p className="font-medium">{pageCount}</p>
         </div>
+      </div>
+    </div>
+    
+    {/* PDF Availability */}
+    <div className="mt-4 pt-4 border-t border-gray-200">
+      <div className="flex items-center gap-2">
+        <DocumentTextIcon className="w-5 h-5 text-gray-500" />
+        <span className="text-sm text-gray-500">Sample Preview:</span>
+        <span className={`text-sm font-medium ${hasPDF ? 'text-green-600' : 'text-gray-400'}`}>
+          {hasPDF ? '✓ Available' : '✗ Not Available'}
+        </span>
       </div>
     </div>
   </div>
@@ -455,7 +468,7 @@ const TabContent = ({
 );
 
 // ==================== MAIN COMPONENT ====================
-const BookDetailPage = ({ bookId = 1 }) => {
+const BookDetailsPage = ({ bookId = 1 }) => {
   const { fetchBook, loading: bookLoading } = useBookStore();
   const { genres = [], fetchGenres, loading: genreLoading } = useGenreStore();
   const { addWishlist, removeWishlist, isWishlisted } = useWishlistStore();
@@ -466,6 +479,7 @@ const BookDetailPage = ({ bookId = 1 }) => {
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState(TABS.DESCRIPTION);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showPDFViewer, setShowPDFViewer] = useState(false);
 
   // Fetch data on mount
   useEffect(() => {
@@ -474,10 +488,26 @@ const BookDetailPage = ({ bookId = 1 }) => {
 
     const loadBook = async () => {
       const fetched = await fetchBook(bookId);
+      console.log("fetch",fetched)
       if (fetched) {
+        // Process images_url to ensure it's an array
+        let processedImages = fetched.images_url;
+        if (typeof processedImages === 'string') {
+          try {
+            processedImages = JSON.parse(processedImages);
+          } catch (e) {
+            console.error('Failed to parse images_url:', processedImages);
+            processedImages = [];
+          }
+        }
+        if (!Array.isArray(processedImages)) {
+          processedImages = [];
+        }
+
         setBook({
           ...fetched,
-          image: fetched.cover_image_url,
+          images_url: processedImages,
+          image: processedImages, // Keep for backward compatibility
           rating: MOCK_PLACEHOLDERS.rating,
           reviews: MOCK_PLACEHOLDERS.reviews,
           reviewDistribution: MOCK_PLACEHOLDERS.reviewDistribution,
@@ -487,6 +517,8 @@ const BookDetailPage = ({ bookId = 1 }) => {
 
     loadBook();
   }, [bookId, fetchBook, fetchGenres]);
+
+  console.log(book)
 
   // Calculate genre name
   const genreName = useMemo(() => {
@@ -559,6 +591,12 @@ const BookDetailPage = ({ bookId = 1 }) => {
     }
   };
 
+  const handleReadSample = () => {
+    if (book?.pdf_file_url) {
+      setShowPDFViewer(true);
+    }
+  };
+
   // Loading state
   const isLoading = bookLoading || genreLoading || !book;
   if (isLoading) {
@@ -595,7 +633,7 @@ const BookDetailPage = ({ bookId = 1 }) => {
           <Breadcrumb genre={genreName} title={book.title} />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 max-w-7xl mx-auto">
-            <BookImage image={book.image} title={book.title} />
+            <ImageGallery images={book.images_url} title={book.title} hasPDF={!!(book.pdf_file_url)} />
 
             <div className="flex flex-col gap-8 px-4 sm:px-6 lg:px-0">
               <BookHeader
@@ -624,8 +662,10 @@ const BookDetailPage = ({ bookId = 1 }) => {
                 <ActionButtons
                   onAddToCart={handleAddToCart}
                   onWishlistToggle={handleWishlistToggle}
+                  onReadSample={handleReadSample}
                   isWishlisted={isWishlisted(book.id)}
                   isOutOfStock={isOutOfStock}
+                  hasPDF={!!(book.pdf_file_url)}
                 />
               </div>
 
@@ -634,6 +674,7 @@ const BookDetailPage = ({ bookId = 1 }) => {
                 publisher={book.publisher || "N/A"}
                 publicationDate={book.publication_date || "N/A"}
                 pageCount={book.page_count || "N/A"}
+                hasPDF={!!(book.pdf_file_url)}
               />
             </div>
           </div>
@@ -654,18 +695,27 @@ const BookDetailPage = ({ bookId = 1 }) => {
       {showLoginPrompt && (
         <LoginPromptModal onClose={() => setShowLoginPrompt(false)} />
       )}
+
+      {showPDFViewer && (
+        <PDFViewer
+          pdfUrl={book?.pdf_file_url}
+          title={book?.title}
+          isOpen={showPDFViewer}
+          onClose={() => setShowPDFViewer(false)}
+        />
+      )}
     </>
   );
 };
 
 // ==================== PAGE WRAPPER ====================
-export default function PageWrapper(props) {
+export default function BookDetailsPageWrapper(props) {
   return (
     <div className="relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute bg-" />
       
-      <BookDetailPage {...props} />
+      <BookDetailsPage {...props} />
       
       <div className="mt-5 md:mt-3 relative z-1 max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-16 xl:px-24">
         <p className="text-2xl font-bold mb-4">Find more books.</p>

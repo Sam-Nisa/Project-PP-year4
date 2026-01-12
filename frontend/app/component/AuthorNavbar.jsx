@@ -30,7 +30,7 @@ export default function AuthorNavbar() {
   }, []);
 
   return (
-    <header className="h-16 bg-white shadow-md flex items-center justify-between px-6 border-b border-gray-200">
+    <header className="h-16 w-full bg-white shadow-md flex items-center justify-between px-6 border-b border-gray-200">
       <h1 className="text-2xl font-bold text-gray-800"></h1>
 
       {user && (

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Illuminate\Support\Facades\Auth;
@@ -146,6 +147,93 @@ class AuthController extends Controller
             ]);
         } catch (JWTException $e) {
             return response()->json(['success' => false, 'message' => 'Failed to logout'], 500);
+        }
+    }
+
+    /**
+     * Update user profile.
+     */
+    public function updateProfile(Request $request)
+    {
+        try {
+            $user = Auth::user();
+
+            $validated = $request->validate([
+                'name' => 'sometimes|required|string|max:255',
+                'email' => 'sometimes|required|email|unique:users,email,' . $user->id,
+                'bio' => 'nullable|string|max:1000',
+                'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            ]);
+
+            // Handle avatar upload
+            if ($request->hasFile('avatar')) {
+                // Delete old avatar if exists
+                if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                    Storage::disk('public')->delete($user->avatar);
+                }
+
+                // Store new avatar
+                $avatarPath = $request->file('avatar')->store('avatars', 'public');
+                $validated['avatar'] = $avatarPath;
+            }
+
+            // Update user
+            $user->update($validated);
+
+            // Prepare response with avatar URL
+            $avatarUrl = $user->avatar
+                ? (filter_var($user->avatar, FILTER_VALIDATE_URL)
+                    ? $user->avatar
+                    : asset('storage/' . $user->avatar))
+                : null;
+
+            $user->avatar_url = $avatarUrl;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile updated successfully',
+                'data' => $user,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update profile',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete user avatar.
+     */
+    public function deleteAvatar()
+    {
+        try {
+            $user = Auth::user();
+
+            if ($user->avatar) {
+                // Delete avatar file
+                if (Storage::disk('public')->exists($user->avatar)) {
+                    Storage::disk('public')->delete($user->avatar);
+                }
+
+                // Update user record
+                $user->update(['avatar' => null]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Avatar deleted successfully',
+                'data' => $user,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete avatar',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }
