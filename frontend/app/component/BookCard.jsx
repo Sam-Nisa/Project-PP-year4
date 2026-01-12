@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 
 import { useWishlistStore } from "../store/useWishlistStore";
 import { useAuthStore } from "../store/authStore";
+import StarRating from "./StarRating";
 
 const LoginPromptModal = ({ onClose }) => {
   return (
@@ -105,6 +106,17 @@ export default function BookCard({ book }) {
         {/* Content */}
         <div className="p-3 flex flex-col gap-1">
           <h3 className="text-sm font-semibold line-clamp-2">{title}</h3>
+          
+          {/* Rating */}
+          {book.average_rating > 0 && (
+            <div className="flex items-center gap-2">
+              <StarRating rating={book.average_rating} readonly size="sm" />
+              <span className="text-xs text-gray-500">
+                ({book.total_reviews})
+              </span>
+            </div>
+          )}
+          
           <p className="text-blue-600 font-bold text-sm">${price}</p>
 
           <Link

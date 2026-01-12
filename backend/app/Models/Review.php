@@ -13,18 +13,51 @@ class Review extends Model
         'user_id',
         'book_id',
         'rating',
-        'comment'
+        'comment',
+        'is_verified_purchase',
+        'status',
     ];
 
-    // Relationship to User
+    protected $casts = [
+        'is_verified_purchase' => 'boolean',
+        'rating' => 'integer',
+    ];
+
+    // Relationships
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    // Relationship to Book
     public function book()
     {
         return $this->belongsTo(Book::class);
+    }
+
+    // Scopes
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 'approved');
+    }
+
+    public function scopeByRating($query, $rating)
+    {
+        return $query->where('rating', $rating);
+    }
+
+    public function scopeVerifiedPurchases($query)
+    {
+        return $query->where('is_verified_purchase', true);
+    }
+
+    // Helper methods
+    public function isOwner($userId)
+    {
+        return $this->user_id == $userId;
+    }
+
+    public function canBeEditedBy($userId)
+    {
+        return $this->isOwner($userId) && $this->created_at->diffInHours(now()) <= 24;
     }
 }

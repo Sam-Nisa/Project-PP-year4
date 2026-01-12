@@ -8,7 +8,6 @@ import { useState, useEffect, useMemo } from "react";
 import {
   ShoppingCartIcon,
   HeartIcon as HeartOutlineIcon,
-  StarIcon,
   ChevronRightIcon,
   MinusIcon,
   PlusIcon,
@@ -22,22 +21,15 @@ import { useGenreStore } from "../store/useGenreStore";
 import { useWishlistStore } from "../store/useWishlistStore";
 import { useAuthStore } from "../store/authStore";
 import { useAddToCartStore } from "../store/useAddToCardStore";
+import { useReviewStore } from "../store/useReviewStore";
 import BooksPage from "./BooksPage";
 import ImageGallery from "./ImageGallery";
 import PDFViewer from "./PDFViewer";
+import ReviewsSection from "./ReviewsSection";
+import QuickRating from "./QuickRating";
+import RatingSummary from "./RatingSummary";
 
 // ==================== CONSTANTS ====================
-const MOCK_PLACEHOLDERS = {
-  rating: 4.5,
-  reviews: 1245,
-  reviewDistribution: [
-    { stars: 5, percent: 75 },
-    { stars: 4, percent: 15 },
-    { stars: 3, percent: 5 },
-    { stars: 2, percent: 3 },
-    { stars: 1, percent: 2 },
-  ],
-};
 
 const TABS = {
   DESCRIPTION: "description",
@@ -46,25 +38,6 @@ const TABS = {
 };
 
 // ==================== UTILITY FUNCTIONS ====================
-const renderStars = (rating) => {
-  return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <StarIcon
-          key={star}
-          className={`w-5 h-5 ${
-            star <= Math.floor(rating)
-              ? "text-yellow-400 fill-yellow-400"
-              : star === Math.ceil(rating) && rating % 1 !== 0
-              ? "text-yellow-400 fill-yellow-400"
-              : "text-gray-300"
-          }`}
-        />
-      ))}
-      <span className="ml-2 text-sm font-medium">{rating.toFixed(1)}</span>
-    </div>
-  );
-};
 
 const calculateDiscountedPrice = (price, discountValue, discountType) => {
   if (!discountType || discountValue <= 0) return price;
@@ -148,7 +121,7 @@ const Breadcrumb = ({ genre, title }) => (
 );
 
 
-const BookHeader = ({ title, author, description, rating, reviews }) => (
+const BookHeader = ({ title, author, description }) => (
   <div className="space-y-4">
     <div>
       <h2 className="font-serif text-3xl sm:text-2xl md:text-2xl font-bold text-black ">
@@ -164,18 +137,6 @@ const BookHeader = ({ title, author, description, rating, reviews }) => (
     <p className="font-serif text-gray-700  text-base sm:text-lg leading-relaxed line-clamp-3">
       {description}
     </p>
-    <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-4">
-      <div className="flex items-center gap-3">
-        {renderStars(rating)}
-      </div>
-      <div className="flex items-center gap-4 text-sm text-white">
-        <span className=" bg-red-500 px-3 py-1 rounded-full">
-          ⭐ {rating.toFixed(1)} stars
-        </span>
-        <span className="text-black">•</span>
-        <span className="text-black">{reviews.toLocaleString()} reviews</span>
-      </div>
-    </div>
   </div>
 );
 
@@ -403,9 +364,9 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
 const TabContent = ({
   activeTab,
   description,
-  reviewDistribution,
   aboutAuthor,
   title,
+  bookId,
 }) => (
   <div className="py-8 animate-fadeIn">
     {activeTab === TABS.DESCRIPTION && (
@@ -417,39 +378,7 @@ const TabContent = ({
     )}
 
     {activeTab === TABS.REVIEWS && (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-4">
-            {reviewDistribution.map((r, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <div className="flex items-center gap-2 w-20">
-                  <span className="text-lg font-bold">{r.stars}</span>
-                  <StarIcon className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                </div>
-                <div className="flex-1">
-                  <div className="h-3 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                    <div
-                      className="h-full bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full transition-all duration-1000"
-                      style={{ width: `${r.percent}%` }}
-                    />
-                  </div>
-                </div>
-                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 w-12">
-                  {r.percent}%
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-2xl">
-            <h4 className="font-bold text-lg mb-4">Review Summary</h4>
-            <p className="text-gray-700">
-              This book has received overwhelmingly positive reviews from readers,
-              with 90% of reviewers giving it 4 or 5 stars. Readers praise the
-              engaging storytelling and character development.
-            </p>
-          </div>
-        </div>
-      </div>
+      <ReviewsSection bookId={bookId} />
     )}
 
     {activeTab === TABS.AUTHOR && (
@@ -474,6 +403,7 @@ const BookDetailsPage = ({ bookId = 1 }) => {
   const { addWishlist, removeWishlist, isWishlisted } = useWishlistStore();
   const { user } = useAuthStore();
   const { addToCart } = useAddToCartStore();
+  const { fetchUserReview } = useReviewStore();
 
   const [book, setBook] = useState(null);
   const [quantity, setQuantity] = useState(1);
@@ -508,15 +438,17 @@ const BookDetailsPage = ({ bookId = 1 }) => {
           ...fetched,
           images_url: processedImages,
           image: processedImages, // Keep for backward compatibility
-          rating: MOCK_PLACEHOLDERS.rating,
-          reviews: MOCK_PLACEHOLDERS.reviews,
-          reviewDistribution: MOCK_PLACEHOLDERS.reviewDistribution,
         });
+
+        // Fetch user's review if logged in
+        if (user) {
+          fetchUserReview(bookId);
+        }
       }
     };
 
     loadBook();
-  }, [bookId, fetchBook, fetchGenres]);
+  }, [bookId, fetchBook, fetchGenres, user, fetchUserReview]);
 
   console.log(book)
 
@@ -640,9 +572,12 @@ const BookDetailsPage = ({ bookId = 1 }) => {
                 title={book.title}
                 author={book.author_name}
                 description={book.description}
-                rating={book.rating}
-                reviews={book.reviews}
               />
+              {/* ⭐ Rating summary under description */}
+            <RatingSummary
+              rating={book.average_rating || 0}
+              totalReviews={book.total_reviews || 0}
+            />
 
               <div className="space-y-6 bg-white  rounded-2xl p-6 shadow-lg border border-gray-300 ">
                 <PriceSection
@@ -651,6 +586,26 @@ const BookDetailsPage = ({ bookId = 1 }) => {
                   totalPrice={prices.total}
                   stock={currentStock}
                   hasDiscount={hasDiscount}
+                />
+
+                {/* Quick Rating Section */}
+                <QuickRating 
+                  bookId={book.id}
+                  currentRating={book.average_rating || 0}
+                  totalReviews={book.total_reviews || 0}
+                  onRatingUpdate={() => {
+                    // Refresh book data when rating is updated
+                    fetchBook(bookId).then(updatedBook => {
+                      if (updatedBook) {
+                        setBook(prev => ({
+                          ...prev,
+                          average_rating: updatedBook.average_rating,
+                          total_reviews: updatedBook.total_reviews,
+                          rating_distribution: updatedBook.rating_distribution
+                        }));
+                      }
+                    });
+                  }}
                 />
 
                 <QuantitySelector
@@ -684,11 +639,12 @@ const BookDetailsPage = ({ bookId = 1 }) => {
             <TabContent
               activeTab={activeTab}
               description={book.description}
-              reviewDistribution={book.reviewDistribution}
               aboutAuthor={book.about_author}
               title={book.title}
+              bookId={book.id}
             />
           </div>
+
         </div>
       </main>
 

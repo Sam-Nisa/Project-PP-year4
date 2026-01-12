@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 
 class Book extends Model
 {
@@ -31,6 +31,9 @@ class Book extends Model
         'about_author',
         'publisher',
         'author_name',
+        'average_rating',
+        'total_reviews',
+        'rating_distribution',
     ];
 
     // Append extra attributes (remove images_url since it's a direct column now)
@@ -40,6 +43,8 @@ class Book extends Model
     protected $casts = [
         'images' => 'array',
         'images_url' => 'array',
+        'rating_distribution' => 'array',
+        'average_rating' => 'decimal:2',
     ];
 
     public function author()
@@ -50,6 +55,16 @@ class Book extends Model
     public function genre()
     {
         return $this->belongsTo(Genre::class, 'genre_id');
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    public function approvedReviews()
+    {
+        return $this->hasMany(Review::class)->where('status', 'approved');
     }
 
     // Accessor for full cover image URL
@@ -87,5 +102,64 @@ class Book extends Model
             }
         }
         return $this->price;
+    }
+
+    // Rating calculation methods
+    public function calculateRatingStats()
+    {
+        // Build query with proper column checks
+        $query = $this->reviews();
+        
+        // Check if status column exists before filtering
+        if (Schema::hasColumn('reviews', 'status')) {
+            $query->where('status', 'approved');
+        }
+        
+        $reviews = $query->get();
+        $totalReviews = $reviews->count();
+        
+        if ($totalReviews === 0) {
+            return [
+                'average_rating' => (float) 0,
+                'total_reviews' => (int) 0,
+                'rating_distribution' => [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0]
+            ];
+        }
+
+        $averageRating = $reviews->avg('rating');
+        $distribution = [];
+        
+        for ($i = 1; $i <= 5; $i++) {
+            $distribution[$i] = $reviews->where('rating', $i)->count();
+        }
+
+        return [
+            'average_rating' => (float) round($averageRating, 2),
+            'total_reviews' => (int) $totalReviews,
+            'rating_distribution' => $distribution
+        ];
+    }
+
+    public function updateRatingStats()
+    {
+        $stats = $this->calculateRatingStats();
+        
+        $this->update([
+            'average_rating' => $stats['average_rating'],
+            'total_reviews' => $stats['total_reviews'],
+            'rating_distribution' => $stats['rating_distribution']
+        ]);
+
+        return $stats;
+    }
+
+    public function getUserReview($userId)
+    {
+        return $this->reviews()->where('user_id', $userId)->first();
+    }
+
+    public function hasUserReviewed($userId)
+    {
+        return $this->reviews()->where('user_id', $userId)->exists();
     }
 }

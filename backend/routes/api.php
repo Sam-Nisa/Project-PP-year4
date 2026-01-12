@@ -33,6 +33,20 @@ Route::get('books/{id}', [BookController::class, 'show']);   // All logged-in us
 Route::get('genres', [GenreController::class, 'index']);       // All logged-in users
 Route::get('genres/{id}', [GenreController::class, 'show']);   // All logged-in users
 
+// Public review routes
+Route::get('books/{bookId}/reviews', [ReviewController::class, 'getBookReviews']); // Public - Get reviews for a book
+
+// Debug route (remove in production)
+Route::get('debug/user/{id}', function($id) {
+    $user = App\Models\User::find($id);
+    return response()->json([
+        'user' => $user,
+        'avatar' => $user->avatar ?? 'null',
+        'avatar_url_column' => $user->getAttributes()['avatar_url'] ?? 'null',
+        'avatar_url_accessor' => $user->avatar_url ?? 'null',
+    ]);
+});
+
 // Protected routes (JWT)
 Route::middleware(['jwt.auth'])->group(function () {
 
@@ -64,10 +78,18 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::put('books/{id}', [BookController::class, 'update']); // Admin or book author
     Route::delete('books/{id}', [BookController::class, 'destroy']); // Admin or book author
 
-    // Reviews
+    // Reviews (legacy - keep for backward compatibility)
     Route::get('reviews', [ReviewController::class, 'index']);
     Route::post('reviews', [ReviewController::class, 'store']);
     Route::delete('reviews/{id}', [ReviewController::class, 'destroy']); // Owner/Admin
+
+    // Book-specific review routes (protected)
+    Route::prefix('books/{bookId}/reviews')->group(function () {
+        Route::post('/', [ReviewController::class, 'createReview']); // Create review for a book
+        Route::get('/user', [ReviewController::class, 'getUserReview']); // Get current user's review
+        Route::put('/{reviewId}', [ReviewController::class, 'updateReview']); // Update review
+        Route::delete('/{reviewId}', [ReviewController::class, 'deleteReview']); // Delete review
+    });
 
     // Wishlist
     Route::get('wishlists', [WishlistController::class, 'index']);
