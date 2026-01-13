@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Loader2, FileText, Image, X, User } from "lucide-react";
+import { Plus, Loader2, FileText, Image, X, Shield } from "lucide-react";
 import { useUploadStore } from "../../../store/upload";
 
-export default function AddBookForm({ 
+export default function AdminAddBookForm({ 
   genres, 
   onAddBook, 
   loading, 
-  error 
+  error
 }) {
   const { uploadFile, uploadMultipleFiles, uploading, uploadProgress, error: uploadError, resetUpload } = useUploadStore();
   
@@ -20,7 +20,7 @@ export default function AddBookForm({
     images: [],
     pdf_file: null,
     description: "",
-    status: "approved",
+    status: "approved", // Admin can directly approve
     discount_type: "",
     discount_value: "",
     publication_date: "",
@@ -32,8 +32,7 @@ export default function AddBookForm({
 
   const [imagePreviews, setImagePreviews] = useState([]);
   const [pdfPreview, setPdfPreview] = useState(null);
-  const [uploadStep, setUploadStep] = useState(null); // Track upload progress
-
+  const [uploadStep, setUploadStep] = useState(null);
 
   const handleChangeNewBook = (e) => {
     const { name, value } = e.target;
@@ -144,7 +143,7 @@ export default function AddBookForm({
         images: [],
         pdf_file: null,
         description: "",
-        status: "approved", 
+        status: "approved",
         discount_type: "",
         discount_value: "",
         publication_date: "",
@@ -174,16 +173,16 @@ export default function AddBookForm({
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
       <h3 className="text-lg lg:text-xl font-semibold mb-6 text-gray-700 flex items-center">
         <Plus className="w-5 h-5 mr-2" />
-        Add New Book (Author)
+        Add New Book (Admin)
       </h3>
 
       <div className="space-y-6">
-        {/* Author Notice */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        {/* Admin Notice */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center gap-2">
-            <User className="w-5 h-5 text-green-600" />
-            <p className="text-sm text-green-800 font-medium">
-              Author Mode: Creating books for your author account. Books will be pending approval.
+            <Shield className="w-5 h-5 text-blue-600" />
+            <p className="text-sm text-blue-800 font-medium">
+              Admin Mode: Creating books for admin account. Authors manage their books separately.
             </p>
           </div>
         </div>
@@ -253,7 +252,8 @@ export default function AddBookForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Author & Publisher Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Author Name
@@ -282,7 +282,7 @@ export default function AddBookForm({
             />
           </div>
 
-           <div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Status
             </label>
@@ -296,7 +296,9 @@ export default function AddBookForm({
               <option value="pending">Pending</option>
             </select>
           </div>
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Publication Date
@@ -340,7 +342,7 @@ export default function AddBookForm({
               className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Select up to 5 images for your book
+              Select up to 5 images for the book
             </p>
             
             {/* Image Previews */}

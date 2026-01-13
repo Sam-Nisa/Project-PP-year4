@@ -1,17 +1,16 @@
 "use client";
 
-import { Pencil, Trash2, Loader2, Image, FileText } from "lucide-react";
+import { Pencil, Trash2, Loader2, Image, FileText, CheckCircle, Clock } from "lucide-react";
 
-export default function BooksTable({ 
+export default function AdminBooksTable({ 
   books, 
   loading, 
   onEdit, 
   onDelete,
-  onViewDetails,
   genres = []
 }) {
   // Debug log to see what books data we're getting
-  console.log('BooksTable received books:', books);
+  console.log('AdminBooksTable received books:', books);
 
   if (loading) {
     return (
@@ -24,27 +23,36 @@ export default function BooksTable({
     );
   }
 
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'approved':
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
+      default:
+        return <Clock className="w-4 h-4 text-yellow-600" />;
+    }
+  };
+
   const getGenreName = (genreId) => {
     const genre = genres.find(g => g.id === genreId);
     return genre ? genre.name : 'N/A';
   };
 
   return (
-    <div className="bg-white  w-[78rem] h-[100vh] rounded-xl shadow-sm border border-gray-200 ">
+    <div className="bg-white w-[78rem] h-[100vh] rounded-xl shadow-sm border border-gray-200">
       <div className="p-4 lg:p-6 border-b border-gray-200">
         <h3 className="text-lg lg:text-xl font-semibold text-gray-800">
-          Author Books
+          Admin Books
         </h3>
         <p className="text-sm text-gray-600 mt-1">
-          Books created by you
+          Books created by admin users only
         </p>
       </div>
 
-      {/* Table container with horizontal scroll only */}
+      {/* Table container with scroll */}
       <div className="overflow-scroll h-[100vh]" style={{scrollbarWidth: 'thin'}}>
         <div className="pb-2">
-          <table className="w-full divide-y divide-gray-200" >
-            <thead className="bg-gray-100">
+          <table className="w-full divide-y divide-gray-200">
+            <thead className="bg-gray-100 sticky top-0">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   ID
@@ -58,7 +66,7 @@ export default function BooksTable({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   Genre
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   Cover
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
@@ -77,13 +85,13 @@ export default function BooksTable({
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  PDF
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   Rating
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   Reviews
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  PDF
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   Created
@@ -105,15 +113,14 @@ export default function BooksTable({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    {book.author_name || "-"}
+                    {book.author_name || book.author?.name || `User ID: ${book.author_id}` || "-"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       {getGenreName(book.genre_id)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {/* Show first image from images_url array as cover, fallback to cover_image_url */}
+                   <td className="px-6 py-4 whitespace-nowrap">
                     {(() => {
                       let imageUrls = book.images_url;
                       
@@ -180,8 +187,8 @@ export default function BooksTable({
                       }
                     })()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    ${parseFloat(book.price).toFixed(2)}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">
+                    ${parseFloat(book.price || 0).toFixed(2)}
                   </td>
                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                     {book.discount_value ? (
@@ -205,15 +212,27 @@ export default function BooksTable({
                     {book.publisher || "-"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        book.status === "approved"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {book.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(book.status)}
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          book.status === "approved"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {book.status}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                    <div className="flex items-center gap-1">
+                      <span className="text-yellow-400">★</span>
+                      <span>{Number(book.average_rating || 0).toFixed(1)}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                    {book.total_reviews || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     {book.pdf_file_url ? (
@@ -225,21 +244,13 @@ export default function BooksTable({
                       <span className="text-gray-400 text-xs">No PDF</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    <div className="flex items-center gap-1">
-                      <span className="text-yellow-400">★</span>
-                      <span>{Number(book.average_rating || 0).toFixed(1)}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    {book.total_reviews || 0}
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {book.created_at ? new Date(book.created_at).toLocaleDateString() : "-"}
                   </td>
                   {/* Actions */}
                   <td className="px-6 py-4 whitespace-nowrap text-right">
                     <div className="flex justify-end gap-2">
+
                       {/* Edit Icon */}
                       <button
                         onClick={() => onEdit(book)}
@@ -272,7 +283,7 @@ export default function BooksTable({
             </div>
             <p className="text-gray-500 mb-2">No books found</p>
             <p className="text-sm text-gray-400">
-              Start by adding your first book above
+              Books will appear here once authors start publishing
             </p>
           </div>
         )}

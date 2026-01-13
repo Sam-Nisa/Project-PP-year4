@@ -2,8 +2,6 @@ import { create } from "zustand";
 import { request } from "../utils/request";
 import { useAuthStore } from "./authStore";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
 export const useBookStore = create((set, get) => ({
   books: [],
   loading: false,
@@ -226,12 +224,52 @@ export const useBookStore = create((set, get) => ({
   },
 
   fetchBooksByAuthor: async (authorId) => {
+    const token = useAuthStore.getState().token;
+    const user = useAuthStore.getState().user;
+    
     set({ loading: true, error: null });
     try {
-      const data = await request(`/api/books?author_id=${authorId}`, "GET");
+      let data;
+      
+      // If the current user is fetching their own books and they're an author,
+      // use the author endpoint to get all their books (including pending)
+      if (user && user.role === 'author' && user.id === parseInt(authorId)) {
+        console.log('Using author endpoint for own books:', { userId: user.id, authorId });
+        data = await request("/api/author/books", "GET", {}, {}, token);
+      } else {
+        // For other cases (public view, admin view), use the regular endpoint
+        console.log('Using public endpoint for author books:', { userId: user?.id, authorId });
+        data = await request(`/api/books?author_id=${authorId}`, "GET");
+      }
+      
+      console.log('Fetched books for author:', { authorId, count: data?.length, books: data });
       return data || [];
     } catch (err) {
       console.error("Failed to fetch books by author:", err);
+      const errorMsg =
+        err.response?.data?.message || err.message || "Failed to fetch books";
+      set({ error: errorMsg });
+      throw err;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  // Admin method to fetch all books regardless of author
+  fetchAllBooks: async () => {
+    const token = useAuthStore.getState().token;
+    if (!token) {
+      set({ error: "Authentication required" });
+      throw new Error("Authentication required");
+    }
+
+    set({ loading: true, error: null });
+    try {
+      // Admin endpoint to get all books
+      const data = await request("/api/admin/books", "GET", {}, {}, token);
+      return data || [];
+    } catch (err) {
+      console.error("Failed to fetch all books:", err);
       const errorMsg =
         err.response?.data?.message || err.message || "Failed to fetch books";
       set({ error: errorMsg });

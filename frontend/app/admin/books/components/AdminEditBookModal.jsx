@@ -1,28 +1,17 @@
 "use client";
 
-import { Image, FileText, X, User } from "lucide-react";
+import { Image, FileText, X, UserCheck, Shield } from "lucide-react";
 import { useUploadStore } from "../../../store/upload";
 
-export default function EditBookModal({ 
+export default function AdminEditBookModal({ 
   isOpen, 
   onClose, 
   book, 
   onSave, 
   genres, 
-  setBookData 
+  setBookData
 }) {
   const { uploadFile, uploadMultipleFiles, uploading, uploadProgress, error: uploadError, resetUpload } = useUploadStore();
-  
-  // Debug: Log the book data when modal opens
-  if (isOpen && book) {
-    console.log('EditBookModal opened with book:', {
-      id: book.id,
-      title: book.title,
-      images_url: book.images_url,
-      images_url_type: typeof book.images_url,
-      cover_image_url: book.cover_image_url
-    });
-  }
   
   if (!isOpen) return null;
 
@@ -71,16 +60,8 @@ export default function EditBookModal({
       resetUpload();
       let updatedBookData = { ...book };
 
-      console.log('EditModal - Saving book with data:', {
-        hasNewImages: !!(book.images && book.images.length > 0),
-        hasNewPdf: !!book.pdf_file,
-        existingImagesUrl: book.images_url,
-        bookData: updatedBookData
-      });
-
       // Only upload and update images if new images were selected
       if (book.images && book.images.length > 0) {
-        console.log('EditModal - Uploading new images');
         const imageResults = await uploadMultipleFiles(book.images, '/books/images');
         const newImageUrls = imageResults.map(result => result.url);
         
@@ -89,24 +70,21 @@ export default function EditBookModal({
         updatedBookData.images_url = [...existingImages, ...newImageUrls];
         delete updatedBookData.images; // Remove file objects
       }
-      // If no new images, preserve existing images_url as is
-      // (don't delete or modify images_url)
 
       // Only upload and update PDF if new PDF was selected
       if (book.pdf_file) {
-        console.log('EditModal - Uploading new PDF');
         const pdfResult = await uploadFile(book.pdf_file, '/books/pdfs');
         updatedBookData.pdf_file_url = pdfResult.url;
         delete updatedBookData.pdf_file; // Remove file object
       }
-      // If no new PDF, preserve existing pdf_file_url as is
 
-      console.log('EditModal - Final data to save:', updatedBookData);
       await onSave(book.id, updatedBookData);
     } catch (error) {
       console.error("Error updating book:", error);
     }
   };
+
+
 
   const getImagePreviews = () => {
     // Check for new files first (when user selects new images)
@@ -125,7 +103,7 @@ export default function EditBookModal({
         try {
           imageUrls = JSON.parse(imageUrls);
         } catch (e) {
-          console.error('EditModal - Failed to parse images_url:', imageUrls);
+          console.error('AdminEditModal - Failed to parse images_url:', imageUrls);
           return [];
         }
       }
@@ -141,9 +119,12 @@ export default function EditBookModal({
     if (book.cover_image_url) {
       return [book.cover_image_url];
     }
-    
+ 
     return [];
   };
+
+  const avgRating =Number(book.average_rating);
+ 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -151,10 +132,10 @@ export default function EditBookModal({
         {/* Modal Header */}
         <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
           <div className="flex items-center gap-3">
-            <User className="w-6 h-6 text-green-600" />
+            <Shield className="w-6 h-6 text-blue-600" />
             <div>
-              <h3 className="text-xl font-semibold">Author Edit: {book.title}</h3>
-              <p className="text-sm text-gray-600">Edit your book details</p>
+              <h3 className="text-xl font-semibold">Admin Edit: {book.title}</h3>
+              <p className="text-sm text-gray-600">Full administrative control</p>
             </div>
           </div>
           <button
@@ -200,6 +181,30 @@ export default function EditBookModal({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Basic Information */}
             <div className="lg:col-span-2 space-y-4">
+              {/* Admin Info Section */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Admin Book Management
+                </h4>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      name="status"
+                      value={book.status || "pending"}
+                      onChange={handleChange}
+                      className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -261,17 +266,15 @@ export default function EditBookModal({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
+                    Page Count
                   </label>
-                  <select
-                    name="status"
-                    value={book.status || "pending"}
+                  <input
+                    name="page_count"
+                    type="number"
+                    value={book.page_count || ""}
                     onChange={handleChange}
                     className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                  </select>
+                  />
                 </div>
               </div>
 
@@ -315,48 +318,35 @@ export default function EditBookModal({
                     className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Page Count
-                  </label>
-                  <input
-                    name="page_count"
-                    type="number"
-                    value={book.page_count || ""}
-                    onChange={handleChange}
-                    className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Discount Value
-                  </label>
-                  <input
-                    name="discount_value"
-                    type="number"
-                    step="0.01"
-                    value={book.discount_value || ""}
-                    onChange={handleChange}
-                    className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Discount Type
-                  </label>
-                  <select
-                    name="discount_type"
-                    value={book.discount_type || ""}
-                    onChange={handleChange}
-                    className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Select Type</option>
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="fixed">Fixed ($)</option>
-                  </select>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Discount Value
+                    </label>
+                    <input
+                      name="discount_value"
+                      type="number"
+                      step="0.01"
+                      value={book.discount_value || ""}
+                      onChange={handleChange}
+                      className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Type
+                    </label>
+                    <select
+                      name="discount_type"
+                      value={book.discount_type || ""}
+                      onChange={handleChange}
+                      className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">None</option>
+                      <option value="percentage">%</option>
+                      <option value="fixed">$</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -397,9 +387,11 @@ export default function EditBookModal({
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Average Rating:</span>
+
                     <span className="font-medium">
-                      {Number(book.average_rating || 0).toFixed(1)} ⭐
-                    </span>
+                  {(isNaN(avgRating) ? 0 : avgRating).toFixed(1)} ⭐
+                    </span> 
+
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total Reviews:</span>
@@ -428,7 +420,7 @@ export default function EditBookModal({
                   className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Select up to 5 images for your book
+                  Select up to 5 images for the book
                 </p>
                 
                 {/* Image Previews */}
@@ -445,7 +437,7 @@ export default function EditBookModal({
                             alt={`Preview ${index + 1}`}
                             className="w-full h-20 object-cover rounded border"
                             onError={(e) => {
-                              console.error('EditModal - Image failed to load:', url);
+                              console.error('AdminEditModal - Image failed to load:', url);
                               e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMiA5VjEzTTEyIDE3SDE2TTE2IDlIMTJNMTIgOUw4IDEzTDEyIDE3IiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=';
                               e.target.className = "w-full h-20 object-cover rounded border bg-gray-200";
                             }}
@@ -491,8 +483,9 @@ export default function EditBookModal({
                 
                 {(book.pdf_file || book.pdf_file_url) && (
                   <div className="mt-2 p-2 bg-gray-50 rounded border">
-                    <p className="text-sm text-gray-600">
-                      📄 {book.pdf_file?.name || "Current PDF file"}
+                    <p className="text-sm text-gray-600 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-red-500" />
+                      {book.pdf_file?.name || "Current PDF file"}
                     </p>
                   </div>
                 )}
@@ -512,9 +505,19 @@ export default function EditBookModal({
           <button
             onClick={handleSave}
             disabled={uploading}
-            className="w-full sm:w-auto bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors"
+            className="w-full sm:w-auto bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
           >
-            {uploading ? "Uploading..." : "Save Changes"}
+            {uploading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Uploading...
+              </>
+            ) : (
+              <>
+                <UserCheck className="w-4 h-4" />
+                Save Changes
+              </>
+            )}
           </button>
         </div>
       </div>

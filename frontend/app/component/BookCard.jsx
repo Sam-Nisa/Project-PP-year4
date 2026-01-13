@@ -54,7 +54,11 @@ export default function BookCard({ book }) {
 
   const title = book.title || "Untitled";
   const price = parseFloat(book.price || 0).toFixed(2);
-  const coverImageUrl = book.images_url[0]
+ const coverImageUrl =
+  book.images_url?.length > 0
+    ? book.images_url[0]
+    : "/images/book-placeholder.png";
+
 
   const { addWishlist, removeWishlist, isWishlisted } = useWishlistStore();
   const { user } = useAuthStore();
