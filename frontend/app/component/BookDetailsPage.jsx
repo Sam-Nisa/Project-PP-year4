@@ -311,7 +311,7 @@ const BookDetailsTable = ({ genre, publisher, publicationDate, pageCount, hasPDF
           <p className="font-medium">{publicationDate}</p>
         </div>
         <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Pages</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Pages Count</p>
           <p className="font-medium">{pageCount}</p>
         </div>
       </div>
@@ -627,7 +627,7 @@ const BookDetailsPage = ({ bookId = 1 }) => {
               <BookDetailsTable
                 genre={genreName}
                 publisher={book.publisher || "N/A"}
-                publicationDate={book.publication_date || "N/A"}
+                publicationDate={book.created_at ? book.created_at.split("T")[0] : "N/A"}
                 pageCount={book.page_count || "N/A"}
                 hasPDF={!!(book.pdf_file_url)}
               />

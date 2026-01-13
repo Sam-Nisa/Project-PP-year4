@@ -13,6 +13,7 @@ use App\Http\Controllers\CouponController;
 use App\Http\Controllers\OrderCouponController;
 use App\Http\Controllers\InventoryLogController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\DiscountCodeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthorDashboardController;
 use App\Http\Controllers\UploadController;
@@ -131,13 +132,28 @@ Route::middleware(['jwt.auth'])->group(function () {
 
 
  
-    // Cart and cartItem 
-    Route::middleware('auth:api')->group(function () {
-    Route::get('/cart', [CartController::class, 'index']);
-    Route::post('/cart/add', [CartController::class, 'addToCart']);
-    Route::patch('/cart/item/{id}', [CartController::class, 'updateQuantity']);
-    Route::delete('/cart/item/{id}', [CartController::class, 'removeItem']);
-    Route::delete('/cart/clear', [CartController::class, 'clearCart']);
-});
+    // Cart routes
+    Route::prefix('cart')->group(function () {
+        Route::get('/', [CartController::class, 'index']);                    // Get cart items
+        Route::get('/count', [CartController::class, 'getCartCount']);        // Get cart count
+        Route::post('/add', [CartController::class, 'addToCart']);            // Add item to cart
+        Route::patch('/item/{bookId}', [CartController::class, 'updateQuantity']); // Update quantity by book ID
+        Route::delete('/item/{itemId}', [CartController::class, 'removeItem']); // Remove item by item ID
+        Route::delete('/clear', [CartController::class, 'clearCart']);        // Clear entire cart
+    });
+
+    // Discount code routes
+    Route::prefix('discount-codes')->group(function () {
+        // Admin routes
+        Route::get('/', [DiscountCodeController::class, 'index']);           // Get all discount codes (Admin)
+        Route::post('/', [DiscountCodeController::class, 'store']);          // Create discount code (Admin)
+        Route::get('/generate-code', [DiscountCodeController::class, 'generateCode']); // Generate random code (Admin)
+        Route::get('/{id}', [DiscountCodeController::class, 'show']);        // Get specific discount code (Admin)
+        Route::put('/{id}', [DiscountCodeController::class, 'update']);      // Update discount code (Admin)
+        Route::delete('/{id}', [DiscountCodeController::class, 'destroy']);  // Delete discount code (Admin)
+        
+        // User routes
+        Route::post('/validate', [DiscountCodeController::class, 'validateCode']); // Validate discount code (User)
+    });
 
 });

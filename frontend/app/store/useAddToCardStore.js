@@ -6,6 +6,8 @@ export const useAddToCartStore = create((set, get) => ({
   cartItems: [],
   loading: false,
   error: null,
+  cartCount: 0,
+  subtotal: 0,
 
   // ---------------------- FETCH CART ----------------------
   fetchCart: async () => {
@@ -24,12 +26,37 @@ export const useAddToCartStore = create((set, get) => ({
         }
       );
 
-      set({ cartItems: data.items || [] });
+      set({ 
+        cartItems: data.items || [],
+        cartCount: data.total_items || 0,
+        subtotal: data.subtotal || 0
+      });
     } catch (err) {
-      console.error(err);
+      console.error("Failed to fetch cart:", err);
       set({ error: err.response?.data?.error || "Failed to fetch cart" });
     } finally {
       set({ loading: false });
+    }
+  },
+
+  // ---------------------- GET CART COUNT ----------------------
+  fetchCartCount: async () => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+
+    try {
+      const data = await request(
+        "/api/cart/count",
+        "GET",
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      set({ cartCount: data.count || 0 });
+    } catch (err) {
+      console.error("Failed to fetch cart count:", err);
     }
   },
 
@@ -50,33 +77,21 @@ export const useAddToCartStore = create((set, get) => ({
         }
       );
 
-      set((state) => {
-        const existing = state.cartItems.find((i) => i.book_id === bookId);
-
-        if (existing) {
-          return {
-            cartItems: state.cartItems.map((item) =>
-              item.book_id === bookId
-                ? { ...item, quantity: item.quantity + quantity }
-                : item
-            ),
-          };
-        }
-
-        return { cartItems: [...state.cartItems, data.item] };
-      });
+      // Refresh cart data after adding
+      await get().fetchCart();
 
       return data.item;
     } catch (err) {
       console.error("Failed to add to cart:", err);
-      set({ error: err.response?.data?.error || "Failed to add to cart" });
-      throw err;
+      const errorMessage = err.response?.data?.error || "Failed to add to cart";
+      set({ error: errorMessage });
+      throw new Error(errorMessage);
     } finally {
       set({ loading: false });
     }
   },
 
-  // ---------------------- UPDATE CART ----------------------
+  // ---------------------- UPDATE CART ITEM ----------------------
   updateCartItem: async (bookId, quantity) => {
     const token = useAuthStore.getState().token;
     if (!token) return;
@@ -93,16 +108,22 @@ export const useAddToCartStore = create((set, get) => ({
         }
       );
 
+      // Update the specific item in the state
       set((state) => ({
         cartItems: state.cartItems.map((item) =>
           item.book_id === bookId ? data.item : item
         ),
       }));
 
+      // Refresh cart totals
+      await get().fetchCart();
+
       return data.item;
     } catch (err) {
       console.error("Failed to update cart:", err);
-      set({ error: err.response?.data?.error || "Failed to update cart item" });
+      const errorMessage = err.response?.data?.error || "Failed to update cart item";
+      set({ error: errorMessage });
+      throw new Error(errorMessage);
     } finally {
       set({ loading: false });
     }
@@ -116,7 +137,6 @@ export const useAddToCartStore = create((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // FIX 1: Use the cartItemId in the URL parameter
       await request(
         `/api/cart/item/${cartItemId}`,
         "DELETE",
@@ -126,16 +146,18 @@ export const useAddToCartStore = create((set, get) => ({
         }
       );
 
-      // FIX 2: Remove item from UI instantly using cartItemId
+      // Remove item from state immediately
       set((state) => ({
         cartItems: state.cartItems.filter((item) => item.id !== cartItemId),
       }));
+
+      // Refresh cart totals
+      await get().fetchCart();
     } catch (err) {
       console.error("Failed to remove item:", err);
-      // NOTE: We now log the error clearly for the user via the `error` state.
-      set({ error: err.response?.data?.error || "Failed to remove item" });
-      // Throwing the error here is optional but good for components that need to react.
-      throw err;
+      const errorMessage = err.response?.data?.error || "Failed to remove item";
+      set({ error: errorMessage });
+      throw new Error(errorMessage);
     } finally {
       set({ loading: false });
     }
@@ -158,12 +180,23 @@ export const useAddToCartStore = create((set, get) => ({
         }
       );
 
-      set({ cartItems: [] });
+      set({ 
+        cartItems: [],
+        cartCount: 0,
+        subtotal: 0
+      });
     } catch (err) {
       console.error("Failed to clear cart:", err);
-      set({ error: err.response?.data?.error || "Failed to clear cart" });
+      const errorMessage = err.response?.data?.error || "Failed to clear cart";
+      set({ error: errorMessage });
+      throw new Error(errorMessage);
     } finally {
       set({ loading: false });
     }
+  },
+
+  // ---------------------- CLEAR ERROR ----------------------
+  clearError: () => {
+    set({ error: null });
   },
 }));

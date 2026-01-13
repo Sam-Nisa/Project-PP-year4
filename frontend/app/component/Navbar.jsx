@@ -31,17 +31,20 @@ export default function Header() {
     loading: genresLoading,
     error: genresError,
   } = useGenreStore();
-  const { cartItems } = useAddToCartStore();
+  const { cartItems, cartCount, fetchCartCount } = useAddToCartStore();
   const { wishlists } = useWishlistStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isGenresDropdownOpen, setIsGenresDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Fetch genres once on mount
+  // Fetch genres and cart count once on mount
   useEffect(() => {
     fetchGenres();
-  }, []);
+    if (isInitialized && user) {
+      fetchCartCount();
+    }
+  }, [isInitialized, user]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -169,7 +172,7 @@ export default function Header() {
             <IconWithBadge
               href="/add-to-cart"
               Icon={ShoppingCart}
-              count={isInitialized && user ? cartItems.length : 0}
+              count={isInitialized && user ? cartCount : 0}
               label="Cart"
             />
 
@@ -214,7 +217,7 @@ export default function Header() {
         user={user}
         isInitialized={isInitialized}
         loading={loading}
-        cartCount={cartItems.length}
+        cartCount={cartCount}
         wishlistCount={wishlists.length}
         onLogout={handleLogout}
       />
