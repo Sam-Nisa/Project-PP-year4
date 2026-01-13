@@ -78,6 +78,12 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::put('books/{id}', [BookController::class, 'update']); // Admin or book author
     Route::delete('books/{id}', [BookController::class, 'destroy']); // Admin or book author
 
+    // Admin-specific routes
+    Route::get('admin/books', [BookController::class, 'adminIndex']); // Admin: Get all books
+
+    // Author-specific routes
+    Route::get('author/books', [BookController::class, 'authorIndex']); // Author: Get own books
+
     // Reviews (legacy - keep for backward compatibility)
     Route::get('reviews', [ReviewController::class, 'index']);
     Route::post('reviews', [ReviewController::class, 'store']);

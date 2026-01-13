@@ -16,10 +16,11 @@ public function __construct(ImageKitService $imageKit)
 {
     $this->imageKit = $imageKit;
 }
-    // ✅ List all books (any user)
+    // ✅ List all books (any user) - Only show approved books
     public function index()
     {
-        $query = Book::with(['author', 'genre']);
+        $query = Book::with(['author', 'genre'])
+            ->where('status', 'approved'); // Only show approved books on public interface
 
         // Filter by genre name instead of slug
         if (request()->has('genre')) {
@@ -38,13 +39,53 @@ public function __construct(ImageKitService $imageKit)
         return response()->json($books);
     }
 
-    // ✅ Show a single book (any user)
+    // ✅ Admin: List only admin-created books
+    public function adminIndex()
+    {
+        $user = Auth::user();
+        
+        if ($user->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        // Only show books created by admin users (role = 'admin')
+        $books = Book::with(['author', 'genre'])
+            ->whereHas('author', function ($query) {
+                $query->where('role', 'admin');
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($books);
+    }
+
+    // ✅ Author: List only author's own books (all statuses)
+    public function authorIndex()
+    {
+        $user = Auth::user();
+        
+        if ($user->role !== 'author') {
+            return response()->json(['message' => 'Unauthorized. Author access required.'], 403);
+        }
+
+        // Show all books created by this author (including pending)
+        $books = Book::with(['author', 'genre'])
+            ->where('author_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($books);
+    }
+
+    // ✅ Show a single book (any user) - Only show if approved
     public function show($id)
     {
-        $book = Book::with(['author', 'genre'])->find($id);
+        $book = Book::with(['author', 'genre'])
+            ->where('status', 'approved') // Only show approved books on public interface
+            ->find($id);
 
         if (!$book) {
-            return response()->json(['message' => 'Book not found'], 404);
+            return response()->json(['message' => 'Book not found or not approved'], 404);
         }
 
         return response()->json($book);
@@ -71,7 +112,7 @@ public function __construct(ImageKitService $imageKit)
             'pdf_file' => 'nullable|mimes:pdf|max:10000', // PDF max 10MB
             'pdf_file_url' => 'nullable|url', // Pre-uploaded PDF URL
             'description' => 'nullable|string',
-            'status' => 'nullable|in:pending,approved,rejected',
+            'status' => 'nullable|in:pending,approved',
             'discount_type' => 'nullable|in:percentage,fixed',
             'discount_value' => 'nullable|numeric|min:0',
             'publication_date' => 'nullable|date',
@@ -82,7 +123,13 @@ public function __construct(ImageKitService $imageKit)
         ]);
 
         $data = $request->all();
+        
+        // Each user creates books for themselves only
         $data['author_id'] = $user->id;
+        
+        // Remove user_id from data as it's not needed
+        unset($data['user_id']);
+        
         $data['status'] = $data['status'] ?? 'pending';
 
         // Handle cover image (file upload)
@@ -140,15 +187,17 @@ public function __construct(ImageKitService $imageKit)
         return response()->json($book, 201);
     }
 
-    // ✅ Update a book (only admin or author)
+    // ✅ Update a book (only own books)
     public function update(Request $request, $id)
     {
         $book = Book::find($id);
         if (!$book) return response()->json(['message' => 'Book not found'], 404);
 
         $user = Auth::user();
-        if ($user->role !== 'admin' && $book->author_id !== $user->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        
+        // Users can only edit their own books (no cross-role editing)
+        if ($book->author_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized. You can only edit your own books.'], 403);
         }
 
         $request->validate([
@@ -164,7 +213,7 @@ public function __construct(ImageKitService $imageKit)
             'pdf_file' => 'nullable|mimes:pdf|max:10000', // PDF max 10MB
             'pdf_file_url' => 'nullable|url', // Pre-uploaded PDF URL
             'description' => 'nullable|string',
-            'status' => 'nullable|in:pending,approved,rejected',
+            'status' => 'nullable|in:pending,approved',
             'discount_type' => 'nullable|in:percentage,fixed',
             'discount_value' => 'nullable|numeric|min:0',
             'publication_date' => 'nullable|date',
@@ -175,6 +224,9 @@ public function __construct(ImageKitService $imageKit)
         ]);
 
         $data = $request->all();
+
+        // Remove user_id from data as it's not needed (users can only edit their own books)
+        unset($data['user_id']);
 
         // Handle cover image (file upload)
         if ($request->hasFile('cover_image')) {
@@ -234,15 +286,17 @@ public function __construct(ImageKitService $imageKit)
         return response()->json($book);
     }
 
-    // ✅ Delete a book (only admin or author)
+    // ✅ Delete a book (only own books)
     public function destroy($id)
     {
         $book = Book::find($id);
         if (!$book) return response()->json(['message' => 'Book not found'], 404);
 
         $user = Auth::user();
-        if ($user->role !== 'admin' && $book->author_id !== $user->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        
+        // Users can only delete their own books (no cross-role deletion)
+        if ($book->author_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized. You can only delete your own books.'], 403);
         }
 
         // Note: ImageKit files are managed externally, so we don't need to delete them here
