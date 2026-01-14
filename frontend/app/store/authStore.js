@@ -181,24 +181,28 @@ export const useAuthStore = create((set, get) => ({
     try {
       const formData = new FormData();
       
-      // Append all fields to FormData
+      // Append all fields to FormData, but skip empty strings and null values
       Object.entries(profileData).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== "") {
-          formData.append(key, value);
+          // Only append files or non-empty strings
+          if (value instanceof File || (typeof value === 'string' && value.trim() !== '')) {
+            formData.append(key, value);
+          }
         }
       });
 
       const response = await request("/api/profile", "POST", formData, {}, token);
 
       // Update user in state
-      set({ user: response.data || response });
+      const updatedUser = response.data || response;
+      set({ user: updatedUser });
 
       // Update sessionStorage
       if (typeof window !== "undefined") {
-        sessionStorage.setItem("user", JSON.stringify(response.data || response));
+        sessionStorage.setItem("user", JSON.stringify(updatedUser));
       }
 
-      return response.data || response;
+      return updatedUser;
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || "Failed to update profile";
       set({ error: errorMsg });

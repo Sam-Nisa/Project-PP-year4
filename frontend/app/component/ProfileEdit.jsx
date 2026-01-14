@@ -47,7 +47,14 @@ export default function ProfileEdit({ user, onCancel, onSave, saving }) {
     };
   }, [avatarPreview]);
 
-  const handleSubmit = () => onSave(formData);
+  const handleSubmit = () => {
+    // Don't send email if it hasn't changed or is readonly
+    const dataToSave = { ...formData };
+    if (dataToSave.email === user?.email) {
+      delete dataToSave.email;
+    }
+    onSave(dataToSave);
+  };
 
   return (
     <div className="max-w-lg mx-auto mt-8 p-6 bg-white rounded-2xl shadow-lg border border-gray-200">

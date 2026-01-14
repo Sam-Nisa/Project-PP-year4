@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useUserStore } from "../../../store/useUserStore";
 import { useAuthStore } from "../../../store/authStore";
 import ProfileEdit from "../../../component/ProfileEdit";
 
 export default function ProfilePage() {
-  const { user: authUser, token, fetchProfile } = useAuthStore();
-  const { fetchUserById, updateUser, error } = useUserStore();
+  const { user: authUser, token, fetchProfile, updateProfile, loading: authLoading, error } = useAuthStore();
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,8 +17,8 @@ export default function ProfilePage() {
     const getProfile = async () => {
       setLoading(true);
       try {
-        const data = await fetchUserById(authUser.id);
-        if (data) setUser(data);
+        await fetchProfile();
+        setUser(authUser);
       } catch (err) {
         console.error("Failed to fetch profile:", err);
       } finally {
@@ -29,27 +27,35 @@ export default function ProfilePage() {
     };
 
     getProfile();
-  }, [authUser, token, fetchUserById]);
+  }, [token]);
+
+  // Update local user state when authUser changes
+  useEffect(() => {
+    if (authUser) {
+      setUser(authUser);
+    }
+  }, [authUser]);
 
   const handleSave = async (formData) => {
     if (!user) return;
     setSaving(true);
     console.log("Form Data to be saved:", formData);
     try {
-      const updated = await updateUser(user.id, formData);
+      const updated = await updateProfile(formData);
 
       console.log("Profile updated successfully:", updated);
+      
+      // Update local state with new data
       if (updated) {
-        // updated.avatar = updated.avatar + "?t=" + new Date().getTime(); // refresh avatar
         setUser(updated);
-        alert("Profile updated successfully!");
       }
-
-      if (updated) {
-        await fetchProfile();
-      }
+      
+      // Always show success alert if no error was thrown
+      alert("Profile updated successfully!");
+      
     } catch (err) {
       console.error("Failed to update profile:", err);
+      alert(err.message || "Failed to update profile");
     } finally {
       setSaving(false);
     }

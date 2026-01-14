@@ -159,16 +159,16 @@ class AuthController extends Controller
             $user = Auth::user();
 
             $validated = $request->validate([
-                'name' => 'sometimes|required|string|max:255',
-                'email' => 'sometimes|required|email|unique:users,email,' . $user->id,
+                'name' => 'sometimes|string|max:255',
+                'email' => 'sometimes|email|unique:users,email,' . $user->id,
                 'bio' => 'nullable|string|max:1000',
                 'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
 
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
-                // Delete old avatar if exists
-                if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                // Delete old avatar if exists and it's not a URL
+                if ($user->avatar && !filter_var($user->avatar, FILTER_VALIDATE_URL) && Storage::disk('public')->exists($user->avatar)) {
                     Storage::disk('public')->delete($user->avatar);
                 }
 
@@ -177,8 +177,11 @@ class AuthController extends Controller
                 $validated['avatar'] = $avatarPath;
             }
 
-            // Update user
+            // Update user with validated data
             $user->update($validated);
+
+            // Refresh user from database to get updated values
+            $user->refresh();
 
             // Prepare response with avatar URL
             $avatarUrl = $user->avatar
@@ -195,6 +198,12 @@ class AuthController extends Controller
                 'data' => $user,
             ]);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
