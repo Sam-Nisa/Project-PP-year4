@@ -38,7 +38,7 @@ export default function AdminBooksTable({
   };
 
   return (
-    <div className="bg-white w-[78rem] h-[100vh] rounded-xl shadow-sm border border-gray-200">
+    <div className="bg-white  h-[100vh] rounded-xl shadow-sm border border-gray-200">
       <div className="p-4 lg:p-6 border-b border-gray-200">
         <h3 className="text-lg lg:text-xl font-semibold text-gray-800">
           Admin Books
@@ -49,7 +49,7 @@ export default function AdminBooksTable({
       </div>
 
       {/* Table container with scroll */}
-      <div className="overflow-scroll h-[100vh]" style={{scrollbarWidth: 'thin'}}>
+      <div className=" h-[100vh] overflow-y-auto" style={{scrollbarWidth: 'thin'}}>
         <div className="pb-2">
           <table className="w-full divide-y divide-gray-200">
             <thead className="bg-gray-100 sticky top-0">

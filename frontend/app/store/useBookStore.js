@@ -223,7 +223,7 @@ export const useBookStore = create((set, get) => ({
     }
   },
 
-  fetchBooksByAuthor: async (authorId) => {
+  fetchBooksByAuthor: async (authorId, queryParams = '') => {
     const token = useAuthStore.getState().token;
     const user = useAuthStore.getState().user;
     
@@ -235,7 +235,8 @@ export const useBookStore = create((set, get) => ({
       // use the author endpoint to get all their books (including pending)
       if (user && user.role === 'author' && user.id === parseInt(authorId)) {
         console.log('Using author endpoint for own books:', { userId: user.id, authorId });
-        data = await request("/api/author/books", "GET", {}, {}, token);
+        const url = queryParams ? `/api/author/books?${queryParams}` : "/api/author/books";
+        data = await request(url, "GET", {}, {}, token);
       } else {
         // For other cases (public view, admin view), use the regular endpoint
         console.log('Using public endpoint for author books:', { userId: user?.id, authorId });
@@ -256,7 +257,7 @@ export const useBookStore = create((set, get) => ({
   },
 
   // Admin method to fetch all books regardless of author
-  fetchAllBooks: async () => {
+  fetchAllBooks: async (queryParams = '') => {
     const token = useAuthStore.getState().token;
     if (!token) {
       set({ error: "Authentication required" });
@@ -266,7 +267,8 @@ export const useBookStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       // Admin endpoint to get all books
-      const data = await request("/api/admin/books", "GET", {}, {}, token);
+      const url = queryParams ? `/api/admin/books?${queryParams}` : "/api/admin/books";
+      const data = await request(url, "GET", {}, {}, token);
       return data || [];
     } catch (err) {
       console.error("Failed to fetch all books:", err);

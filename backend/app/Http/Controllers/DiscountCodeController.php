@@ -7,6 +7,7 @@ use App\Models\DiscountCodeUsage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class DiscountCodeController extends Controller
 {
@@ -25,13 +26,28 @@ class DiscountCodeController extends Controller
 
             $query = DiscountCode::with('creator:id,name');
 
-            // Filter by status
+            // Filter by status (active, inactive, expired)
             if ($request->has('status')) {
+                $now = Carbon::now();
+                
                 if ($request->status === 'active') {
-                    $query->active();
-                } elseif ($request->status === 'inactive') {
-                    $query->where('is_active', false);
+                    // Active: is_active = true AND (not expired OR no expiry date)
+                    $query->where('is_active', true)
+                        ->where(function($q) use ($now) {
+                            $q->whereNull('expires_at')
+                              ->orWhere('expires_at', '>=', $now);
+                        });
+                } 
+                elseif ($request->status === 'expired') {
+                    // Expired: has expiry date AND expiry date is in the past
+                    $query->whereNotNull('expires_at')
+                        ->where('expires_at', '<', $now);
                 }
+            }
+
+            // Filter by type
+            if ($request->filled('type')) {
+                $query->where('type', $request->type);
             }
 
             // Search by code or name
@@ -43,7 +59,10 @@ class DiscountCodeController extends Controller
                 });
             }
 
-            $discountCodes = $query->orderBy('created_at', 'desc')->paginate(15);
+            // Default sort by created_at desc
+            $query->orderBy('created_at', 'desc');
+
+            $discountCodes = $query->paginate(15);
 
             return response()->json([
                 'message' => 'Discount codes retrieved successfully',

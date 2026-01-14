@@ -16,7 +16,7 @@ export default function AuthorSidebar() {
   const isActive = (href) => pathname === href;
 
   return (
-    <aside className="w-72 h-screen text-black flex flex-col shadow-2xl backdrop-blur-lg border-r border-blue-700/40 sticky">
+    <aside className="min-w-72 h-screen text-black flex flex-col shadow-2xl backdrop-blur-lg border-r border-blue-700/40 sticky">
       {/* Header */}
       <div className="p-6 text-3xl font-extrabold tracking-wide bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
         Author Panel

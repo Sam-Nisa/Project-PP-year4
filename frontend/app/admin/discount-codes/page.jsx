@@ -6,8 +6,6 @@ import {
   PlusIcon,
   PencilIcon,
   TrashIcon,
-  EyeIcon,
-  MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import { useAuthStore } from "../../store/authStore";
 import { request } from "../../utils/request";
@@ -16,22 +14,30 @@ const DiscountCodesPage = () => {
   const { user, token } = useAuthStore();
   const [discountCodes, setDiscountCodes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [filters, setFilters] = useState({
+    search: '',
+    status: 'all',
+    type: 'all',
+  });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedCode, setSelectedCode] = useState(null);
 
   useEffect(() => {
     fetchDiscountCodes();
-  }, [statusFilter]);
+  }, []);
 
-  const fetchDiscountCodes = async () => {
+  const fetchDiscountCodes = async (applyFilters = false) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (statusFilter !== "all") params.append("status", statusFilter);
-      if (searchTerm) params.append("search", searchTerm);
+      
+      // Only apply filters if explicitly requested
+      if (applyFilters) {
+        if (filters.status !== "all") params.append("status", filters.status);
+        if (filters.search) params.append("search", filters.search);
+        if (filters.type !== "all") params.append("type", filters.type);
+      }
 
       const data = await request(
         `/api/discount-codes?${params.toString()}`,
@@ -49,9 +55,27 @@ const DiscountCodesPage = () => {
     }
   };
 
-  const handleSearch = () => {
-    fetchDiscountCodes();
+  const handleApplyFilters = () => {
+    fetchDiscountCodes(true);
   };
+
+  const handleClearFilters = () => {
+    setFilters({
+      search: '',
+      status: 'all',
+      type: 'all',
+    });
+    fetchDiscountCodes(false); // Reload without filters
+  };
+
+  // Auto-filter when any filter changes
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchDiscountCodes(true);
+    }, 500); // 500ms delay for debouncing
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [filters.search, filters.status, filters.type]);
 
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this discount code?")) return;
@@ -76,11 +100,7 @@ const DiscountCodesPage = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const getStatusBadge = (code) => {
-    if (!code.is_active) {
-      return <span className="px-2 py-1 text-xs bg-gray-200 text-gray-800 rounded-full">Inactive</span>;
-    }
-    
+  const getStatusBadge = (code) => {   
     const now = new Date();
     const expiresAt = code.expires_at ? new Date(code.expires_at) : null;
     const startsAt = code.starts_at ? new Date(code.starts_at) : null;
@@ -115,45 +135,72 @@ const DiscountCodesPage = () => {
         <p className="text-gray-600">Manage discount codes and promotional offers</p>
       </div>
 
-      {/* Filters and Search */}
+      {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="flex flex-col md:flex-row gap-4 flex-1">
-            <div className="flex-1 max-w-md">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search by code or name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              </div>
-            </div>
-            
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Search by Code or Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Search by Code or Name
+            </label>
+            <input
+              type="text"
+              placeholder="Search by code or name..."
+              value={filters.search}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="expired">Expired</option>
+            
             </select>
-
-            <button
-              onClick={handleSearch}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Search
-            </button>
           </div>
 
+          {/* Type Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Type
+            </label>
+            <select
+              value={filters.type}
+              onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">All Types</option>
+              <option value="percentage">Percentage</option>
+              <option value="fixed">Fixed Amount</option>
+            </select>
+          </div>
+
+          {/* Clear Button */}
+          <div className="flex items-end">
+            <button
+              onClick={handleClearFilters}
+              className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+
+        {/* Create Button Row */}
+        <div className="mt-4 flex justify-end">
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <PlusIcon className="w-5 h-5" />
             <span>Create Discount Code</span>
@@ -182,7 +229,7 @@ const DiscountCodesPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Usage
                 </th>
-                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Per User
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -199,7 +246,7 @@ const DiscountCodesPage = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {discountCodes.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="9" className="px-6 py-12 text-center text-gray-500">
                     No discount codes found
                   </td>
                 </tr>
@@ -228,10 +275,10 @@ const DiscountCodesPage = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className="text-sm text-gray-900">
-                      {code.usage_limit_per_user || "∞"}
-                    </span>
-                  </td>
+                      <span className="text-sm text-gray-900">
+                        {code.usage_limit_per_user || "∞"}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-gray-900">{formatDate(code.expires_at)}</span>
                     </td>

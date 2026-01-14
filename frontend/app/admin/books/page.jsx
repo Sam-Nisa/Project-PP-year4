@@ -38,15 +38,61 @@ export default function AdminBooksPage() {
     approved: 0,
     pending: 0,
   });
+  
+  // Filter states
+  const [filters, setFilters] = useState({
+    search: '',
+    genre_id: '',
+    status: '',
+    min_price: '',
+    max_price: '',
+  });
 
   const reloadBooks = () => {
     setRefreshTrigger((prev) => prev + 1);
   };
 
+  const handleApplyFilters = async () => {
+    try {
+      // Build query params from filters
+      const params = new URLSearchParams();
+      if (filters.search) params.append('search', filters.search);
+      if (filters.genre_id) params.append('genre_id', filters.genre_id);
+      if (filters.status) params.append('status', filters.status);
+      if (filters.min_price) params.append('min_price', filters.min_price);
+      if (filters.max_price) params.append('max_price', filters.max_price);
+
+      // Admin fetches only admin-created books using the admin endpoint
+      const data = await fetchAllBooks(params.toString());
+      console.log('Admin fetched books with filters:', data);
+      setBooks(data);
+      
+      // Calculate stats
+      const newStats = {
+        total: data.length,
+        approved: data.filter(book => book.status === 'approved').length,
+        pending: data.filter(book => book.status === 'pending').length,
+      };
+      setStats(newStats);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Auto-filter when any filter changes
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      handleApplyFilters();
+    }, 500); // 500ms delay for debouncing
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [filters.search, filters.genre_id, filters.status, filters.min_price, filters.max_price]);
+
   useEffect(() => {
     const loadData = async () => {
       try {
         // Admin fetches only admin-created books using the admin endpoint
+        // Load without filters on initial load and after CRUD operations
         const data = await fetchAllBooks();
         console.log('Admin fetched books:', data); // Debug log
         setBooks(data);
@@ -151,7 +197,7 @@ export default function AdminBooksPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className=" flex flex-col max-w-6xl mx-auto">
       {/* Fixed Header */}
       <div className="flex-shrink-0 p-4 lg:p-6 bg-white border-b border-gray-200">
         <div className="flex items-center justify-between">
@@ -208,6 +254,111 @@ export default function AdminBooksPage() {
                 <p className="text-sm text-yellow-600 font-medium">Pending</p>
                 <p className="text-2xl font-bold text-yellow-900">{stats.pending}</p>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter Section */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Search by Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Search by Name
+              </label>
+              <input
+                type="text"
+                placeholder="Search by book title..."
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Genre Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Genre
+              </label>
+              <select
+                value={filters.genre_id}
+                onChange={(e) => setFilters({ ...filters, genre_id: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Genres</option>
+                {genres.map((genre) => (
+                  <option key={genre.id} value={genre.id}>
+                    {genre.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                value={filters.status}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Status</option>
+                <option value="approved">Approved</option>
+                <option value="pending">Pending</option>
+              </select>
+            </div>
+
+            {/* Min Price */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Min Price ($)
+              </label>
+              <input
+                type="number"
+                placeholder="0"
+                min="0"
+                step="0.01"
+                value={filters.min_price}
+                onChange={(e) => setFilters({ ...filters, min_price: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Max Price */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Max Price ($)
+              </label>
+              <input
+                type="number"
+                placeholder="999"
+                min="0"
+                step="0.01"
+                value={filters.max_price}
+                onChange={(e) => setFilters({ ...filters, max_price: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Clear Button */}
+            <div className="lg:col-span-3 flex items-end">
+              <button
+                onClick={() => {
+                  setFilters({
+                    search: '',
+                    genre_id: '',
+                    status: '',
+                    min_price: '',
+                    max_price: '',
+                  });
+                  reloadBooks(); // Reload without filters
+                }}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Clear Filters
+              </button>
             </div>
           </div>
         </div>

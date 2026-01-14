@@ -39,8 +39,8 @@ public function __construct(ImageKitService $imageKit)
         return response()->json($books);
     }
 
-    // ✅ Admin: List only admin-created books
-    public function adminIndex()
+    // ✅ Admin: List only admin-created books with filters
+    public function adminIndex(Request $request)
     {
         $user = Auth::user();
         
@@ -49,18 +49,45 @@ public function __construct(ImageKitService $imageKit)
         }
 
         // Only show books created by admin users (role = 'admin')
-        $books = Book::with(['author', 'genre'])
-            ->whereHas('author', function ($query) {
-                $query->where('role', 'admin');
-            })
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $query = Book::with(['author', 'genre'])
+            ->whereHas('author', function ($q) {
+                $q->where('role', 'admin');
+            });
+
+        // Filter by search term (book title only)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('title', 'like', "%{$search}%");
+        }
+
+        // Filter by genre
+        if ($request->filled('genre_id')) {
+            $query->where('genre_id', $request->genre_id);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by price range
+        if ($request->filled('min_price')) {
+            $query->where('price', '>=', $request->min_price);
+        }
+        if ($request->filled('max_price')) {
+            $query->where('price', '<=', $request->max_price);
+        }
+
+        // Default sort by created_at desc
+        $query->orderBy('created_at', 'desc');
+
+        $books = $query->get();
 
         return response()->json($books);
     }
 
-    // ✅ Author: List only author's own books (all statuses)
-    public function authorIndex()
+    // ✅ Author: List only author's own books (all statuses) with filters
+    public function authorIndex(Request $request)
     {
         $user = Auth::user();
         
@@ -69,10 +96,37 @@ public function __construct(ImageKitService $imageKit)
         }
 
         // Show all books created by this author (including pending)
-        $books = Book::with(['author', 'genre'])
-            ->where('author_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $query = Book::with(['author', 'genre'])
+            ->where('author_id', $user->id);
+
+        // Filter by search term (book title only)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('title', 'like', "%{$search}%");
+        }
+
+        // Filter by genre
+        if ($request->filled('genre_id')) {
+            $query->where('genre_id', $request->genre_id);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by price range
+        if ($request->filled('min_price')) {
+            $query->where('price', '>=', $request->min_price);
+        }
+        if ($request->filled('max_price')) {
+            $query->where('price', '<=', $request->max_price);
+        }
+
+        // Default sort by created_at desc
+        $query->orderBy('created_at', 'desc');
+
+        $books = $query->get();
 
         return response()->json($books);
     }

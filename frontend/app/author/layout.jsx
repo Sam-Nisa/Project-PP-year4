@@ -8,7 +8,7 @@ export default function AuthorLayout({ children }) {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <AuthorSidebar />
+      <  AuthorSidebar />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col">
