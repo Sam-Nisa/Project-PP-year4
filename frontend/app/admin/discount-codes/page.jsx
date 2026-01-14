@@ -507,37 +507,6 @@ const DiscountCodeModal = ({ isOpen, onClose, discountCode, onSuccess }) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Minimum Amount ($)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.minimum_amount}
-                onChange={(e) => setFormData({ ...formData, minimum_amount: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Maximum Discount ($)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.maximum_discount}
-                onChange={(e) => setFormData({ ...formData, maximum_discount: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={formData.type === "fixed"}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Usage Limit
               </label>
               <input
