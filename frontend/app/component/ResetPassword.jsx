@@ -1,34 +1,91 @@
 "use client";
 
 import { useState } from "react";
-import { Lock, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { Lock, AlertCircle, CheckCircle, Loader2, Eye, EyeOff, Shield } from "lucide-react";
+import { useAuthStore } from "../store/authStore";
+import { request } from "../utils/request";
+
+// Move PasswordInput outside to prevent re-creation on every render
+const PasswordInput = ({ label, name, value, error, showPassword, toggleShow, onChange, disabled }) => (
+  <div className="mb-5">
+    <label htmlFor={name} className="block text-sm font-semibold text-gray-700 mb-2">
+      {label}
+    </label>
+    <div className="relative">
+      <input
+        id={name}
+        type={showPassword ? "text" : "password"}
+        name={name}
+        value={value}
+        onChange={onChange}
+        autoComplete="off"
+        disabled={disabled}
+        placeholder={`Enter ${label.toLowerCase()}`}
+        className={`w-full px-4 py-3 pr-12 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 ${
+          error 
+            ? "border-red-400 bg-red-50 focus:ring-red-500 focus:border-red-500" 
+            : "border-gray-300 bg-white hover:border-gray-400"
+        } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+      />
+      <button
+        type="button"
+        onClick={toggleShow}
+        disabled={disabled}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none disabled:opacity-50"
+        tabIndex={-1}
+      >
+        {showPassword ? (
+          <EyeOff className="w-5 h-5" />
+        ) : (
+          <Eye className="w-5 h-5" />
+        )}
+      </button>
+    </div>
+    {error && (
+      <p className="mt-2 text-sm text-red-600 flex items-center">
+        <AlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+        {error}
+      </p>
+    )}
+  </div>
+);
 
 export default function ResetPassword() {
+  const { token } = useAuthStore();
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState(null); // Success or generic error message
+  const [message, setMessage] = useState(null);
 
-  // Simple client-side validation
+  // Client-side validation
   const validateForm = () => {
     const newErrors = {};
     const { currentPassword, newPassword, confirmPassword } = formData;
 
     if (!currentPassword) {
-      newErrors.currentPassword = "Current password is required.";
+      newErrors.currentPassword = "Current password is required";
     }
-    if (newPassword.length < 8) {
-      newErrors.newPassword = "New password must be at least 8 characters.";
+    if (!newPassword) {
+      newErrors.newPassword = "New password is required";
+    } else if (newPassword.length < 6) {
+      newErrors.newPassword = "New password must be at least 6 characters";
     }
-    if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match.";
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your new password";
+    } else if (newPassword !== confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
     }
     if (currentPassword && newPassword && currentPassword === newPassword) {
-        newErrors.newPassword = "New password must be different from the current one.";
+      newErrors.newPassword = "New password must be different from current password";
     }
 
     setErrors(newErrors);
@@ -38,154 +95,217 @@ export default function ResetPassword() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear validation error when user starts typing
+    
+    // Clear error for this field
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
-    // Clear any success/error messages
-    setMessage(null);
+    // Clear message
+    if (message) {
+      setMessage(null);
+    }
+  };
+
+  const togglePasswordVisibility = (field) => {
+    setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     if (!validateForm()) {
       return;
     }
 
-    // --- START: Mock API Interaction (NO actual fetch) ---
+    if (!token) {
+      setMessage({ 
+        type: "error", 
+        text: "You must be logged in to change your password" 
+      });
+      return;
+    }
+
     setSaving(true);
     setErrors({});
     setMessage(null);
 
-    // Simulate an API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const response = await request(
+        "/api/change-password",
+        "POST",
+        {
+          current_password: formData.currentPassword,
+          new_password: formData.newPassword,
+          confirm_password: formData.confirmPassword,
+        },
+        {},
+        token
+      );
 
-    // Simulate success or failure response
-    const success = Math.random() > 0.3; // 70% chance of success
-
-    if (success) {
-      setMessage({ type: "success", text: "Password successfully updated! You can now use your new password." });
-      // Optionally reset form data after success
-      setFormData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
+      if (response.success) {
+        setMessage({
+          type: "success",
+          text: response.message || "Password successfully updated!",
+        });
+        
+        // Reset form
+        setFormData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+        
+        // Reset password visibility
+        setShowPasswords({
+          current: false,
+          new: false,
+          confirm: false,
+        });
+      }
+    } catch (error) {
+      console.error("Error changing password:", error);
+      
+      // Handle validation errors from backend
+      if (error.response?.data?.errors) {
+        const backendErrors = {};
+        const errorData = error.response.data.errors;
+        
+        if (errorData.current_password) {
+          backendErrors.currentPassword = errorData.current_password[0];
+        }
+        if (errorData.new_password) {
+          backendErrors.newPassword = errorData.new_password[0];
+        }
+        if (errorData.confirm_password) {
+          backendErrors.confirmPassword = errorData.confirm_password[0];
+        }
+        
+        setErrors(backendErrors);
+      }
+      
+      // Set error message
+      const errorMessage = error.response?.data?.message || 
+                          "Failed to update password. Please try again.";
+      setMessage({
+        type: "error",
+        text: errorMessage,
       });
-    } else {
-      setMessage({ type: "error", text: "Failed to update password. Please check your current password and try again." });
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
-    // --- END: Mock API Interaction ---
   };
 
-  const InputField = ({ label, name, value, error }) => (
-    <div className="mb-6">
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">
-        {label}
-      </label>
-      <input
-        id={name}
-        type="password"
-        name={name}
-        value={value}
-        onChange={handleChange}
-        autoComplete={name === 'currentPassword' ? 'current-password' : 'new-password'}
-        disabled={saving}
-        className={`w-full px-4 py-2 border rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 outline-none transition duration-150 ${
-          error ? "border-red-500 focus:ring-red-500" : "border-gray-300"
-        }`}
-      />
-      {error && (
-        <p className="mt-1 text-sm text-red-600 flex items-center">
-          <AlertCircle className="w-4 h-4 mr-1" />
-          {error}
-        </p>
-      )}
-    </div>
-  );
-
   return (
-    <div className="p-4 sm:p-8 max-w-lg mx-auto bg-gray-50 min-h-screen">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-xl shadow-2xl border border-gray-100"
-      >
-        <div className="flex items-center mb-6">
-          <Lock className="w-8 h-8 text-indigo-600 mr-3" />
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            Reset Password
-          </h2>
+    <div className="w-full max-w-2xl mx-auto p-6">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-6">
+          <div className="flex items-center">
+            <div className="bg-white/20 p-3 rounded-lg mr-4">
+              <Shield className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">Change Password</h2>
+              <p className="text-purple-100 text-sm mt-1">
+                Keep your account secure with a strong password
+              </p>
+            </div>
+          </div>
         </div>
-        <p className="text-gray-500 mb-8 border-b pb-4">
-          Change your password to keep your account secure.
-        </p>
 
-        {/* Status Message */}
-        {message && (
-          <div
-            className={`p-4 mb-6 rounded-lg flex items-start ${
-              message.type === "success"
-                ? "bg-green-100 text-green-700 border border-green-300"
-                : "bg-red-100 text-red-700 border border-red-300"
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="px-8 py-6">
+          {/* Status Message */}
+          {message && (
+            <div
+              className={`p-4 mb-6 rounded-lg flex items-start animate-in fade-in duration-300 ${
+                message.type === "success"
+                  ? "bg-green-50 text-green-800 border border-green-200"
+                  : "bg-red-50 text-red-800 border border-red-200"
+              }`}
+            >
+              {message.type === "success" ? (
+                <CheckCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-green-600" />
+              ) : (
+                <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-red-600" />
+              )}
+              <p className="text-sm font-medium">{message.text}</p>
+            </div>
+          )}
+
+          {/* Password Fields */}
+          <PasswordInput
+            label="Current Password"
+            name="currentPassword"
+            value={formData.currentPassword}
+            error={errors.currentPassword}
+            showPassword={showPasswords.current}
+            toggleShow={() => togglePasswordVisibility("current")}
+            onChange={handleChange}
+            disabled={saving}
+          />
+
+          <PasswordInput
+            label="New Password"
+            name="newPassword"
+            value={formData.newPassword}
+            error={errors.newPassword}
+            showPassword={showPasswords.new}
+            toggleShow={() => togglePasswordVisibility("new")}
+            onChange={handleChange}
+            disabled={saving}
+          />
+
+          <PasswordInput
+            label="Confirm New Password"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            error={errors.confirmPassword}
+            showPassword={showPasswords.confirm}
+            toggleShow={() => togglePasswordVisibility("confirm")}
+            onChange={handleChange}
+            disabled={saving}
+          />
+
+          {/* Password Requirements */}
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm font-semibold text-blue-900 mb-2">Password Requirements:</p>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li className="flex items-center">
+                <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mr-2"></span>
+                At least 6 characters long
+              </li>
+              <li className="flex items-center">
+                <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mr-2"></span>
+                Different from your current password
+              </li>
+            </ul>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={saving}
+            className={`w-full flex items-center justify-center px-6 py-3.5 rounded-lg font-semibold text-white transition-all duration-200 shadow-lg ${
+              saving
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 hover:shadow-xl transform hover:-translate-y-0.5"
             }`}
           >
-            {message.type === "success" ? (
-              <CheckCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
+            {saving ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Updating Password...
+              </>
             ) : (
-              <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
+              <>
+                <Lock className="w-5 h-5 mr-2" />
+                Update Password
+              </>
             )}
-            <p>{message.text}</p>
-          </div>
-        )}
-
-        {/* Current Password Field */}
-        <InputField
-          label="Current Password"
-          name="currentPassword"
-          value={formData.currentPassword}
-          error={errors.currentPassword}
-        />
-
-        {/* New Password Field */}
-        <InputField
-          label="New Password (min 8 characters)"
-          name="newPassword"
-          value={formData.newPassword}
-          error={errors.newPassword}
-        />
-
-        {/* Confirm Password Field */}
-        <InputField
-          label="Confirm New Password"
-          name="confirmPassword"
-          value={formData.confirmPassword}
-          error={errors.confirmPassword}
-        />
-
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={saving}
-          className={`flex items-center justify-center w-full px-6 py-3 mt-4 rounded-lg font-bold text-white transition duration-200 shadow-lg ${
-            saving
-              ? "bg-indigo-400 cursor-not-allowed"
-              : "bg-indigo-600 hover:bg-indigo-700"
-          }`}
-        >
-          {saving ? (
-            <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              Updating...
-            </>
-          ) : (
-            <>
-              <Lock className="w-5 h-5 mr-2" />
-              Set New Password
-            </>
-          )}
-        </button>
-      </form>
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

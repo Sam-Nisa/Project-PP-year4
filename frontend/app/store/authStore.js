@@ -242,6 +242,38 @@ export const useAuthStore = create((set, get) => ({
       set({ loading: false });
     }
   },
+
+  // Change password
+  changePassword: async (currentPassword, newPassword, confirmPassword) => {
+    const token = get().token;
+    if (!token) {
+      throw new Error("Authentication required");
+    }
+
+    set({ loading: true, error: null });
+
+    try {
+      const response = await request(
+        "/api/change-password",
+        "POST",
+        {
+          current_password: currentPassword,
+          new_password: newPassword,
+          confirm_password: confirmPassword,
+        },
+        {},
+        token
+      );
+
+      return response;
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || "Failed to change password";
+      set({ error: errorMsg });
+      throw err;
+    } finally {
+      set({ loading: false });
+    }
+  },
 }));
 
 // Auto-initialize when the module loads (client-side only)

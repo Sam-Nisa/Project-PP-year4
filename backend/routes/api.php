@@ -55,6 +55,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('profile', [AuthController::class, 'profile']);
     Route::post('profile', [AuthController::class, 'updateProfile']);
     Route::delete('profile/avatar', [AuthController::class, 'deleteAvatar']);
+    Route::post('change-password', [AuthController::class, 'changePassword']);
     Route::post('logout', [AuthController::class, 'logout']);
     Route::post('refresh', [AuthController::class, 'refresh']);
     Route::get('dashboard-stats', [DashboardController::class, 'index']);
