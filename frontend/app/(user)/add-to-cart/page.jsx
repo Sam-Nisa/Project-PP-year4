@@ -24,11 +24,6 @@ const ShoppingCart = () => {
     removeFromCart,
   } = useAddToCartStore();
 
-  const [discountCode, setDiscountCode] = useState("");
-  const [appliedDiscount, setAppliedDiscount] = useState(null);
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
-
   useEffect(() => {
     if (user) {
       fetchCart();
@@ -51,8 +46,8 @@ const ShoppingCart = () => {
     return total + (finalPrice * item.quantity);
   }, 0);
 
-  const shippingEstimate = subtotal > 50 ? 0 : 5.0;
-  const orderTotal = subtotal + shippingEstimate - discountAmount;
+  const shippingEstimate = 0; // FREE SHIPPING
+  const orderTotal = subtotal + shippingEstimate;
 
   const handleQuantityChange = async (item, newQuantity) => {
     if (newQuantity < 1) return;
@@ -72,51 +67,6 @@ const ShoppingCart = () => {
     } catch (error) {
       toast.error("Failed to remove item");
     }
-  };
-
-  const handleApplyDiscount = async () => {
-    if (!discountCode.trim()) {
-      toast.error("Please enter a discount code");
-      return;
-    }
-
-    setIsApplyingDiscount(true);
-    
-    try {
-      const { request } = await import("../../utils/request");
-      const { useAuthStore } = await import("../../store/authStore");
-      
-      const token = useAuthStore.getState().token;
-      
-      const response = await request(
-        "/api/discount-codes/validate",
-        "POST",
-        {
-          code: discountCode,
-          subtotal: subtotal
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      setAppliedDiscount(response.discount_code);
-      setDiscountAmount(response.discount_amount);
-      toast.success("Discount code applied successfully!");
-      
-    } catch (error) {
-      console.error("Discount validation error:", error);
-      toast.error(error.response?.data?.error || "Invalid discount code");
-    } finally {
-      setIsApplyingDiscount(false);
-    }
-  };
-
-  const handleRemoveDiscount = () => {
-    setAppliedDiscount(null);
-    setDiscountAmount(0);
-    setDiscountCode("");
-    toast.info("Discount code removed");
   };
 
   if (!user) {
@@ -317,64 +267,9 @@ const ShoppingCart = () => {
                     <span className="font-medium">${subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Shipping estimate</span>
-                    <span className="font-medium">
-                      {shippingEstimate === 0 ? "Free" : `$${shippingEstimate.toFixed(2)}`}
-                    </span>
+                    <span className="text-gray-600">Shipping</span>
+                    <span className="font-medium text-green-600">Free</span>
                   </div>
-                  {discountAmount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>Discount</span>
-                      <span>-${discountAmount.toFixed(2)}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Discount Code */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    DISCOUNT CODE
-                  </label>
-                  
-                  {appliedDiscount ? (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-mono text-sm font-bold text-green-700 bg-green-100 px-2 py-1 rounded">
-                              {appliedDiscount.code}
-                            </span>
-                            <span className="text-sm text-green-600">Applied!</span>
-                          </div>
-                          <p className="text-sm text-green-600 mt-1">{appliedDiscount.name}</p>
-                        </div>
-                        <button
-                          onClick={handleRemoveDiscount}
-                          className="text-sm text-red-600 hover:text-red-700 underline"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex space-x-2">
-                      <input
-                        type="text"
-                        value={discountCode}
-                        onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                        placeholder="Enter discount code"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        onKeyPress={(e) => e.key === "Enter" && handleApplyDiscount()}
-                      />
-                      <button
-                        onClick={handleApplyDiscount}
-                        disabled={!discountCode.trim() || isApplyingDiscount}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {isApplyingDiscount ? "Applying..." : "Apply"}
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 <div className="border-t border-gray-200 pt-4 mb-6">
@@ -386,21 +281,13 @@ const ShoppingCart = () => {
                       ${orderTotal.toFixed(2)}
                     </span>
                   </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Apply discount codes at checkout
+                  </p>
                 </div>
 
                 <Link href="/checkout">
-                  <button 
-                    className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-4 rounded-lg transition-colors mb-4"
-                    onClick={() => {
-                      // Save applied discount to localStorage for checkout
-                      if (appliedDiscount && discountAmount > 0) {
-                        localStorage.setItem('appliedDiscount', JSON.stringify({
-                          ...appliedDiscount,
-                          discount_amount: discountAmount
-                        }));
-                      }
-                    }}
-                  >
+                  <button className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-4 rounded-lg transition-colors mb-4">
                     Proceed to Checkout →
                   </button>
                 </Link>

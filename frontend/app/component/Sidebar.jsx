@@ -11,7 +11,8 @@ import {
   ChevronLeft, 
   ChevronRight,
   XCircle, 
-  Loader2
+  Loader2,
+  ShoppingBag
 } from "lucide-react"; 
 import Image from "next/image";
 
@@ -85,6 +86,7 @@ export default function Sidebar({ user, onLogout }) {
         { label: "My Profile", icon: <User className="h-5 w-5" />, href: `/profile/${user.id}/myprofile` },
         { label: "Edit Profile", icon: <User className="h-5 w-5" />, href: `/profile/${user.id}/edit` },
         { label: "Change Password", icon: <Lock className="h-5 w-5" />, href: `/profile/${user.id}/reset-password` },
+        { label: "Order History", icon: <ShoppingBag className="h-5 w-5" />, href: `/profile/${user.id}/orders` },
         { label: "Wishlist", icon: <Heart className="h-5 w-5" />, href: `/profile/${user.id}/wishlist` },
       ]
     : [];

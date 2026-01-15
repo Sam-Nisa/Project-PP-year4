@@ -46,7 +46,7 @@ class OrderController extends Controller
             $user = Auth::user();
 
             $request->validate([
-                'payment_method' => 'required|in:card,paypal,cod',
+                'payment_method' => 'required|in:card,paypal,cod,bakong',
                 'discount_code' => 'nullable|string',
                 'shipping_address' => 'required|array',
                 'shipping_address.first_name' => 'required|string|max:255',
@@ -107,9 +107,9 @@ class OrderController extends Controller
                 ];
             }
 
-            // Calculate shipping and tax
-            $shippingCost = $subtotal > 50 ? 0 : 5.0;
-            $taxAmount = $subtotal * 0.095; // 9.5% tax
+            // Calculate shipping and tax - FREE SHIPPING
+            $shippingCost = 0;
+            $taxAmount = 0; // No tax
 
             // Handle discount code if provided
             $discountCode = null;
@@ -236,6 +236,180 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Failed to retrieve order',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Delete order (User can only delete their own orders)
+    public function destroy($id)
+    {
+        try {
+            $user = Auth::user();
+            $order = Order::where('id', $id)
+                         ->where('user_id', $user->id)
+                         ->first();
+
+            if (!$order) {
+                return response()->json(['error' => 'Order not found'], 404);
+            }
+
+            // Only allow deletion of pending or cancelled orders
+            if (!in_array($order->status, ['pending', 'cancelled'])) {
+                return response()->json([
+                    'error' => 'Cannot delete orders that are processing, shipped, or delivered'
+                ], 422);
+            }
+
+            // Delete order items first
+            $order->items()->delete();
+            
+            // Delete the order
+            $order->delete();
+
+            return response()->json([
+                'message' => 'Order deleted successfully'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to delete order',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Get all orders for admin (sales tracking)
+    public function adminIndex(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'admin') {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+
+            $query = Order::with(['user:id,name,email', 'items.book:id,title,author_name,price,images_url']);
+
+            // Filter by status
+            if ($request->has('status') && $request->status !== 'all') {
+                $query->where('status', $request->status);
+            }
+
+            // Filter by payment method
+            if ($request->has('payment_method') && $request->payment_method !== 'all') {
+                $query->where('payment_method', $request->payment_method);
+            }
+
+            // Filter by date range
+            if ($request->has('start_date')) {
+                $query->whereDate('created_at', '>=', $request->start_date);
+            }
+            if ($request->has('end_date')) {
+                $query->whereDate('created_at', '<=', $request->end_date);
+            }
+
+            // Search by order ID or user name
+            if ($request->has('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('id', 'like', "%{$search}%")
+                      ->orWhereHas('user', function($q) use ($search) {
+                          $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                      });
+                });
+            }
+
+            $orders = $query->orderBy('created_at', 'desc')->paginate(20);
+
+            // Calculate statistics
+            $stats = [
+                'total_orders' => Order::count(),
+                'total_revenue' => Order::whereIn('status', ['delivered', 'paid'])->sum('total_amount'),
+                'pending_orders' => Order::where('status', 'pending')->count(),
+                'completed_orders' => Order::whereIn('status', ['delivered', 'paid'])->count(),
+            ];
+
+            return response()->json([
+                'message' => 'Orders retrieved successfully',
+                'orders' => $orders,
+                'stats' => $stats
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to retrieve orders',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Get sales for author (their books only)
+    public function authorSales(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'author') {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+
+            // Get all order items for books authored by this user
+            $query = OrderItem::with(['order.user:id,name,email', 'book:id,title,author_name,price,images_url'])
+                ->whereHas('book', function($q) use ($user) {
+                    $q->where('author_id', $user->id);
+                })
+                ->whereHas('order', function($q) {
+                    $q->whereIn('status', ['processing', 'shipped', 'delivered', 'paid']);
+                });
+
+            // Filter by date range
+            if ($request->has('start_date')) {
+                $query->whereHas('order', function($q) use ($request) {
+                    $q->whereDate('created_at', '>=', $request->start_date);
+                });
+            }
+            if ($request->has('end_date')) {
+                $query->whereHas('order', function($q) use ($request) {
+                    $q->whereDate('created_at', '<=', $request->end_date);
+                });
+            }
+
+            $sales = $query->orderBy('created_at', 'desc')->paginate(20);
+
+            // Calculate statistics
+            $totalRevenue = OrderItem::whereHas('book', function($q) use ($user) {
+                $q->where('author_id', $user->id);
+            })
+            ->whereHas('order', function($q) {
+                $q->whereIn('status', ['delivered', 'paid']);
+            })
+            ->sum('total');
+
+            $totalSold = OrderItem::whereHas('book', function($q) use ($user) {
+                $q->where('author_id', $user->id);
+            })
+            ->whereHas('order', function($q) {
+                $q->whereIn('status', ['delivered', 'paid']);
+            })
+            ->sum('quantity');
+
+            $stats = [
+                'total_revenue' => $totalRevenue,
+                'total_books_sold' => $totalSold,
+                'total_orders' => $sales->total(),
+            ];
+
+            return response()->json([
+                'message' => 'Sales retrieved successfully',
+                'sales' => $sales,
+                'stats' => $stats
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to retrieve sales',
                 'message' => $e->getMessage()
             ], 500);
         }

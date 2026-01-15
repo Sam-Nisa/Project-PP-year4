@@ -17,6 +17,7 @@ use App\Http\Controllers\DiscountCodeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthorDashboardController;
 use App\Http\Controllers\UploadController;
+use App\Http\Controllers\BakongPaymentController;
 
 // Upload file and image
 Route::post('/upload', [UploadController::class, 'upload']);
@@ -108,6 +109,13 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('orders', [OrderController::class, 'index']);
     Route::post('orders', [OrderController::class, 'store']);
     Route::get('orders/{id}', [OrderController::class, 'show']);
+    Route::delete('orders/{id}', [OrderController::class, 'destroy']); // Delete order
+
+    // Admin: View all orders (sales tracking)
+    Route::get('admin/orders', [OrderController::class, 'adminIndex']); // Admin only
+
+    // Author: View their book sales
+    Route::get('author/sales', [OrderController::class, 'authorSales']); // Author only
 
     // Order Items
     Route::post('order-items', [OrderItemController::class, 'store']);
@@ -155,6 +163,15 @@ Route::middleware(['jwt.auth'])->group(function () {
         
         // User routes
         Route::post('/validate', [DiscountCodeController::class, 'validateCode']); // Validate discount code (User)
+    });
+
+    // Bakong Payment routes
+    Route::prefix('bakong')->group(function () {
+        Route::post('/generate-qr', [BakongPaymentController::class, 'generateQRCode']);           // Generate QR for order
+        Route::get('/payment-status/{orderId}', [BakongPaymentController::class, 'checkPaymentStatus']); // Check payment status
+        Route::post('/verify-account', [BakongPaymentController::class, 'verifyAccount']);         // Verify Bakong account
+        Route::post('/decode-qr', [BakongPaymentController::class, 'decodeQRCode']);               // Decode QR code
+        Route::post('/renew-token', [BakongPaymentController::class, 'renewToken']);               // Renew API token (Admin)
     });
 
 });

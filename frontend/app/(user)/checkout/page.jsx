@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeftIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, LockClosedIcon, XMarkIcon, CheckCircleIcon, ClockIcon } from "@heroicons/react/24/outline";
 import { useAddToCartStore } from "../../store/useAddToCardStore";
 import { useAuthStore } from "../../store/authStore";
+import { QRCodeSVG } from "qrcode.react";
 
 const CheckoutPage = () => {
   const { user } = useAuthStore();
@@ -35,11 +36,20 @@ const CheckoutPage = () => {
     state: "",
     zipCode: "",
     country: "",
-    paymentMethod: "card",
+    paymentMethod: "bakong", // Default to Bakong
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [appliedDiscount, setAppliedDiscount] = useState(null);
+  const [discountCode, setDiscountCode] = useState("");
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+  
+  // QR Code Modal States
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrData, setQrData] = useState(null);
+  const [currentOrder, setCurrentOrder] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState("pending");
+  const [checkingPayment, setCheckingPayment] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -51,16 +61,6 @@ const CheckoutPage = () => {
         lastName: user.name?.split(" ").slice(1).join(" ") || "",
       }));
     }
-
-    // Get applied discount from localStorage or URL params
-    const savedDiscount = localStorage.getItem('appliedDiscount');
-    if (savedDiscount) {
-      try {
-        setAppliedDiscount(JSON.parse(savedDiscount));
-      } catch (e) {
-        console.error('Failed to parse saved discount:', e);
-      }
-    }
   }, [user, fetchCart]);
 
   const handleInputChange = (e) => {
@@ -70,9 +70,125 @@ const CheckoutPage = () => {
     });
   };
 
-  const shippingCost = subtotal > 50 ? 0 : 5.0;
+  const shippingCost = 0; // FREE SHIPPING
   const discountAmount = appliedDiscount ? (appliedDiscount.discount_amount || 0) : 0;
   const totalAmount = subtotal + shippingCost - discountAmount;
+
+  const handleApplyDiscount = async () => {
+    if (!discountCode.trim()) {
+      alert("Please enter a discount code");
+      return;
+    }
+
+    setIsApplyingDiscount(true);
+    
+    try {
+      const { request } = await import("../../utils/request");
+      const { useAuthStore } = await import("../../store/authStore");
+      
+      const token = useAuthStore.getState().token;
+      
+      const response = await request(
+        "/api/discount-codes/validate",
+        "POST",
+        {
+          code: discountCode,
+          subtotal: subtotal
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      setAppliedDiscount(response.discount_code);
+      alert("Discount code applied successfully!");
+      
+    } catch (error) {
+      console.error("Discount validation error:", error);
+      alert(error.response?.data?.error || "Invalid discount code");
+    } finally {
+      setIsApplyingDiscount(false);
+    }
+  };
+
+  const handleRemoveDiscount = () => {
+    setAppliedDiscount(null);
+    setDiscountCode("");
+  };
+
+  // Generate QR Code for Bakong Payment
+  const generateQRCode = async (orderId) => {
+    try {
+      const { request } = await import("../../utils/request");
+      const { useAuthStore } = await import("../../store/authStore");
+      const token = useAuthStore.getState().token;
+
+      const response = await request(
+        "/api/bakong/generate-qr",
+        "POST",
+        { 
+          order_id: orderId, 
+          currency: "USD" 
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.success) {
+        setQrData(response.data);
+        startPaymentStatusCheck(orderId);
+      } else {
+        alert(response.message || "Failed to generate QR code");
+      }
+    } catch (error) {
+      console.error("Error generating QR:", error);
+      alert("Failed to generate QR code. Please try again.");
+    }
+  };
+
+  // Check payment status
+  const checkPaymentStatus = async (orderId) => {
+    if (checkingPayment) return;
+    
+    setCheckingPayment(true);
+    try {
+      const { request } = await import("../../utils/request");
+      const { useAuthStore } = await import("../../store/authStore");
+      const token = useAuthStore.getState().token;
+
+      const response = await request(
+        `/api/bakong/payment-status/${orderId}`,
+        "GET",
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.success && response.data?.order_status === "paid") {
+        setPaymentStatus("completed");
+        // Redirect to success page after 2 seconds
+        setTimeout(() => {
+          window.location.href = `/order-success?orderId=${orderId}`;
+        }, 2000);
+      }
+    } catch (error) {
+      console.error("Error checking payment:", error);
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
+
+  // Start automatic payment status checking
+  const startPaymentStatusCheck = (orderId) => {
+    const interval = setInterval(() => {
+      if (paymentStatus !== "completed") {
+        checkPaymentStatus(orderId);
+      } else {
+        clearInterval(interval);
+      }
+    }, 5000); // Check every 5 seconds
+
+    // Store interval ID to clear on unmount
+    return () => clearInterval(interval);
+  };
 
 
   const handleSubmit = async (e) => {
@@ -107,11 +223,16 @@ const CheckoutPage = () => {
         }
       );
 
-      // Clear applied discount from localStorage
-      localStorage.removeItem('appliedDiscount');
-
-      // Show success message and redirect
-      window.location.href = `/order-success?orderId=${response.order.id}`;
+      // Handle based on payment method
+      if (formData.paymentMethod === 'bakong') {
+        // Show QR modal for Bakong payment
+        setCurrentOrder(response.order);
+        setShowQRModal(true);
+        await generateQRCode(response.order.id);
+      } else {
+        // Redirect for other payment methods
+        window.location.href = `/order-success?orderId=${response.order.id}`;
+      }
 
     } catch (error) {
       console.error("Checkout error:", error);
@@ -278,7 +399,21 @@ const CheckoutPage = () => {
                   Payment Method
                 </h2>
                 <div className="space-y-3">
-                  <label className="flex items-center">
+                  <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="bakong"
+                      checked={formData.paymentMethod === "bakong"}
+                      onChange={handleInputChange}
+                      className="mr-3"
+                    />
+                    <div className="flex items-center">
+                      <span className="font-medium">Bakong QR</span>
+                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Recommended</span>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input
                       type="radio"
                       name="paymentMethod"
@@ -289,7 +424,7 @@ const CheckoutPage = () => {
                     />
                     <span>Credit/Debit Card</span>
                   </label>
-                  <label className="flex items-center">
+                  <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input
                       type="radio"
                       name="paymentMethod"
@@ -300,7 +435,66 @@ const CheckoutPage = () => {
                     />
                     <span>PayPal</span>
                   </label>
+                  <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cod"
+                      checked={formData.paymentMethod === "cod"}
+                      onChange={handleInputChange}
+                      className="mr-3"
+                    />
+                    <span>Cash on Delivery</span>
+                  </label>
                 </div>
+              </div>
+
+              {/* Discount Code */}
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  Discount Code
+                </h2>
+                {appliedDiscount ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-mono text-sm font-bold text-green-700 bg-green-100 px-2 py-1 rounded">
+                            {appliedDiscount.code}
+                          </span>
+                          <span className="text-sm text-green-600">Applied!</span>
+                        </div>
+                        <p className="text-sm text-green-600 mt-1">{appliedDiscount.name}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemoveDiscount}
+                        className="text-sm text-red-600 hover:text-red-700 underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={discountCode}
+                      onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                      placeholder="Enter discount code"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleApplyDiscount())}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyDiscount}
+                      disabled={!discountCode.trim() || isApplyingDiscount}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isApplyingDiscount ? "Applying..." : "Apply"}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <button
@@ -381,9 +575,7 @@ const CheckoutPage = () => {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Shipping</span>
-                <span className="font-medium">
-                  {shippingCost === 0 ? "Free" : `$${shippingCost.toFixed(2)}`}
-                </span>
+                <span className="font-medium text-green-600">Free</span>
               </div>
               {appliedDiscount && discountAmount > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
@@ -404,6 +596,142 @@ const CheckoutPage = () => {
           </div>
         </div>
       </div>
+
+      {/* QR Code Modal */}
+      {showQRModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-xl font-bold text-gray-900">
+                {paymentStatus === "completed" ? "Payment Successful!" : "Scan to Pay"}
+              </h2>
+              {paymentStatus !== "completed" && (
+                <button
+                  onClick={() => {
+                    setShowQRModal(false);
+                    setQrData(null);
+                    setPaymentStatus("pending");
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              )}
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              {paymentStatus === "completed" ? (
+                // Success State
+                <div className="text-center py-8">
+                  <CheckCircleIcon className="w-20 h-20 text-green-500 mx-auto mb-4" />
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Payment Confirmed!</h3>
+                  <p className="text-gray-600 mb-4">
+                    Your payment has been successfully processed.
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Redirecting to order details...
+                  </p>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mt-4"></div>
+                </div>
+              ) : qrData ? (
+                // QR Code Display
+                <div className="text-center">
+                  {/* QR Code */}
+                  <div className="bg-white p-6 rounded-xl inline-block shadow-inner border-4 border-gray-100 mb-6">
+                    <QRCodeSVG 
+                      value={qrData.qr_string} 
+                      size={240}
+                      level="H"
+                      includeMargin={true}
+                    />
+                  </div>
+
+                  {/* Amount */}
+                  <div className="mb-6">
+                    <p className="text-sm text-gray-600 mb-1">Amount to Pay</p>
+                    <p className="text-4xl font-bold text-blue-600">
+                      ${parseFloat(qrData.amount).toFixed(2)}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Order #{qrData.bill_number}
+                    </p>
+                  </div>
+
+                  {/* Status */}
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-6">
+                    <div className="flex items-center justify-center space-x-2">
+                      <ClockIcon className="w-5 h-5 text-blue-600 animate-pulse" />
+                      <p className="text-sm font-medium text-blue-800">
+                        Waiting for payment...
+                      </p>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-2">
+                      Checking status automatically
+                    </p>
+                  </div>
+
+                  {/* Instructions */}
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-4 text-left">
+                    <h4 className="font-semibold text-gray-900 mb-3 text-center">How to Pay</h4>
+                    <ol className="space-y-2 text-sm text-gray-700">
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 mt-0.5">
+                          1
+                        </span>
+                        <span>Open your Bakong app</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 mt-0.5">
+                          2
+                        </span>
+                        <span>Tap "Scan QR" or camera icon</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 mt-0.5">
+                          3
+                        </span>
+                        <span>Scan the QR code above</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 mt-0.5">
+                          4
+                        </span>
+                        <span>Confirm payment in your app</span>
+                      </li>
+                    </ol>
+                  </div>
+
+                  {/* Manual Check Button */}
+                  <button
+                    onClick={() => checkPaymentStatus(currentOrder.id)}
+                    disabled={checkingPayment}
+                    className="mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
+                  >
+                    {checkingPayment ? "Checking..." : "Check Payment Status"}
+                  </button>
+                </div>
+              ) : (
+                // Loading State
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Generating QR code...</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            {paymentStatus !== "completed" && qrData && (
+              <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-2xl">
+                <p className="text-xs text-gray-500 text-center">
+                  This page will automatically update when payment is received
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FaTachometerAlt, FaBook, FaCogs } from "react-icons/fa";
+import { FaTachometerAlt, FaBook, FaCogs, FaChartLine } from "react-icons/fa";
 
 export default function AuthorSidebar() {
   const pathname = usePathname();
@@ -10,6 +10,7 @@ export default function AuthorSidebar() {
   const links = [
     { name: "Dashboard", href: "/author/dashboard", icon: <FaTachometerAlt color="#4E8D7C" /> },
     { name: "Books", href: "/author/books", icon: <FaBook color="#EF4444" /> },
+    { name: "Sales", href: "/author/sales", icon: <FaChartLine color="#EC4899" /> },
     { name: "Settings", href: "/author/setting", icon: <FaCogs color="#8B5CF6" /> },
   ];
 
