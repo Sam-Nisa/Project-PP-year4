@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -160,13 +161,13 @@ const PriceSection = ({
         )}
       </div>
     </div>
-    
+
     {hasDiscount && (
       <div className="inline-block text-green-700 px-4 py-1.5 rounded-full text-sm font-semibold border border-green-700">
         🎉 Save ${(parseFloat(originalPrice) - parseFloat(finalPrice)).toFixed(2)}
       </div>
     )}
-    
+
     <div className="flex items-center gap-3">
       <div className={`flex items-center gap-2 ${stock > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
         <div className={`w-2 h-2 rounded-full ${stock > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -180,7 +181,7 @@ const PriceSection = ({
         </span>
       )}
     </div>
-    
+
     <div className="pt-4 border-t border-gray-300 dark:border-gray-700">
       <div className="flex items-center justify-between">
         <span className="text-gray-600 dark:text-gray-400">Total:</span>
@@ -220,6 +221,7 @@ const QuantitySelector = ({ quantity, onDecrease, onIncrease }) => (
 
 const ActionButtons = ({
   onAddToCart,
+  onBuyNow,
   onWishlistToggle,
   onReadSample,
   isWishlisted,
@@ -231,17 +233,18 @@ const ActionButtons = ({
     <button
       disabled={isOutOfStock}
       onClick={onAddToCart}
-      className={`flex items-center justify-center gap-3 px-2 py-2 rounded-xl font-bold transition-all duration-300 ${
-        isOutOfStock
+      className={`flex items-center justify-center gap-3 px-2 py-2 rounded-xl font-bold transition-all duration-300 ${isOutOfStock
           ? "bg-gray-400 text-gray-700 cursor-not-allowed"
           : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-xl hover:-translate-y-1"
-      }`}
+        }`}
     >
       <ShoppingCartIcon className="w-6 h-6" />
       <span className="text-lg">Add to Cart</span>
     </button>
 
-    <button className="flex items-center justify-center gap-2 px-2 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+    <button
+      onClick={onBuyNow}
+      className="flex items-center justify-center gap-2 px-2 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
       <CheckIcon className="w-5 h-5" />
       <span className="text-lg">Buy Now</span>
     </button>
@@ -316,7 +319,7 @@ const BookDetailsTable = ({ genre, publisher, publicationDate, pageCount, hasPDF
         </div>
       </div>
     </div>
-    
+
     {/* PDF Availability */}
     <div className="mt-4 pt-4 border-t border-gray-200">
       <div className="flex items-center gap-2">
@@ -344,11 +347,10 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
           <button
             key={key}
             onClick={() => onTabChange(key)}
-            className={`relative px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
-              activeTab === key
+            className={`relative px-4 py-3 rounded-lg font-medium transition-all duration-300 ${activeTab === key
                 ? "text-blue-800 bg-blue-50 dark:bg-blue-900/30"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-black hover:bg-gray-100 dark:hover:bg-gray-200"
-            }`}
+              }`}
           >
             {label}
             {activeTab === key && (
@@ -404,6 +406,7 @@ const BookDetailsPage = ({ bookId = 1 }) => {
   const { user } = useAuthStore();
   const { addToCart } = useAddToCartStore();
   const { fetchUserReview } = useReviewStore();
+  const router = useRouter();
 
   const [book, setBook] = useState(null);
   const [quantity, setQuantity] = useState(1);
@@ -418,7 +421,7 @@ const BookDetailsPage = ({ bookId = 1 }) => {
 
     const loadBook = async () => {
       const fetched = await fetchBook(bookId);
-      console.log("fetch",fetched)
+      console.log("fetch", fetched)
       if (fetched) {
         // Process images_url to ensure it's an array
         let processedImages = fetched.images_url;
@@ -523,6 +526,24 @@ const BookDetailsPage = ({ bookId = 1 }) => {
     }
   };
 
+  const handleBuyNow = async () => {
+    if (!book) return;
+
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    try {
+      // Add to cart first
+      await addToCart(book.id, quantity);
+      // Redirect to checkout
+      router.push("/checkout");
+    } catch (err) {
+      toast.error(`Failed to process Buy Now: ${err.message}`);
+    }
+  };
+
   const handleReadSample = () => {
     if (book?.pdf_file_url) {
       setShowPDFViewer(true);
@@ -574,10 +595,10 @@ const BookDetailsPage = ({ bookId = 1 }) => {
                 description={book.description}
               />
               {/* ⭐ Rating summary under description */}
-            <RatingSummary
-              rating={book.average_rating || 0}
-              totalReviews={book.total_reviews || 0}
-            />
+              <RatingSummary
+                rating={book.average_rating || 0}
+                totalReviews={book.total_reviews || 0}
+              />
 
               <div className="space-y-6 bg-white  rounded-2xl p-6 shadow-lg border border-gray-300 ">
                 <PriceSection
@@ -589,7 +610,7 @@ const BookDetailsPage = ({ bookId = 1 }) => {
                 />
 
                 {/* Quick Rating Section */}
-                <QuickRating 
+                <QuickRating
                   bookId={book.id}
                   currentRating={book.average_rating || 0}
                   totalReviews={book.total_reviews || 0}
@@ -616,6 +637,7 @@ const BookDetailsPage = ({ bookId = 1 }) => {
 
                 <ActionButtons
                   onAddToCart={handleAddToCart}
+                  onBuyNow={handleBuyNow}
                   onWishlistToggle={handleWishlistToggle}
                   onReadSample={handleReadSample}
                   isWishlisted={isWishlisted(book.id)}
@@ -670,14 +692,14 @@ export default function BookDetailsPageWrapper(props) {
     <div className="relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute bg-" />
-      
+
       <BookDetailsPage {...props} />
-      
+
       <div className="mt-5 md:mt-3 relative z-1 max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-16 xl:px-24">
         <p className="text-2xl font-bold mb-4">Find more books.</p>
         <BooksPage />
       </div>
-      
+
       <ToastContainer
         position="top-right"
         autoClose={3000}

@@ -9,23 +9,23 @@ import { useAuthStore } from "../../store/authStore";
 const CheckoutPage = () => {
   const { user } = useAuthStore();
   const { cartItems, fetchCart } = useAddToCartStore();
-  
+
   // Calculate subtotal from cart items
   const subtotal = cartItems.reduce((total, item) => {
     const price = parseFloat(item.book?.price || 0);
     const discountValue = parseFloat(item.book?.discount_value || 0);
     const discountType = item.book?.discount_type;
-    
+
     let finalPrice = price;
     if (discountType === "percentage" && discountValue > 0) {
       finalPrice = price - (price * discountValue) / 100;
     } else if (discountType === "fixed" && discountValue > 0) {
       finalPrice = Math.max(0, price - discountValue);
     }
-    
+
     return total + (finalPrice * item.quantity);
   }, 0);
-  
+
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
@@ -82,9 +82,9 @@ const CheckoutPage = () => {
     try {
       const { request } = await import("../../utils/request");
       const { useAuthStore } = await import("../../store/authStore");
-      
+
       const token = useAuthStore.getState().token;
-      
+
       const orderData = {
         payment_method: formData.paymentMethod,
         discount_code: appliedDiscount?.code || null,
@@ -109,10 +109,10 @@ const CheckoutPage = () => {
 
       // Clear applied discount from localStorage
       localStorage.removeItem('appliedDiscount');
-      
+
       // Show success message and redirect
       window.location.href = `/order-success?orderId=${response.order.id}`;
-      
+
     } catch (error) {
       console.error("Checkout error:", error);
       alert(error.response?.data?.error || "Failed to create order. Please try again.");
@@ -306,11 +306,10 @@ const CheckoutPage = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`w-full font-medium py-3 px-4 rounded-lg transition-colors ${
-                  isSubmitting
+                className={`w-full font-medium py-3 px-4 rounded-lg transition-colors ${isSubmitting
                     ? "bg-gray-400 text-gray-700 cursor-not-allowed"
                     : "bg-teal-600 hover:bg-teal-700 text-white"
-                }`}
+                  }`}
               >
                 {isSubmitting ? "Processing..." : "Complete Order"}
               </button>
@@ -358,14 +357,14 @@ const CheckoutPage = () => {
                         const price = parseFloat(item.book?.price || 0);
                         const discountValue = parseFloat(item.book?.discount_value || 0);
                         const discountType = item.book?.discount_type;
-                        
+
                         let finalPrice = price;
                         if (discountType === "percentage" && discountValue > 0) {
                           finalPrice = price - (price * discountValue) / 100;
                         } else if (discountType === "fixed" && discountValue > 0) {
                           finalPrice = Math.max(0, price - discountValue);
                         }
-                        
+
                         return (finalPrice * item.quantity).toFixed(2);
                       })()}
                     </p>
@@ -388,7 +387,7 @@ const CheckoutPage = () => {
               </div>
               {appliedDiscount && discountAmount > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
-                  <span>Discount ({appliedDiscount.code})</span>
+                  <span >Discount ({appliedDiscount.code})</span>
                   <span>-${discountAmount.toFixed(2)}</span>
                 </div>
               )}
