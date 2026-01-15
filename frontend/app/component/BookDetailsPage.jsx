@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -221,7 +220,6 @@ const QuantitySelector = ({ quantity, onDecrease, onIncrease }) => (
 
 const ActionButtons = ({
   onAddToCart,
-  onBuyNow,
   onWishlistToggle,
   onReadSample,
   isWishlisted,
@@ -242,9 +240,7 @@ const ActionButtons = ({
       <span className="text-lg">Add to Cart</span>
     </button>
 
-    <button
-      onClick={onBuyNow}
-      className="flex items-center justify-center gap-2 px-2 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+    <button className="flex items-center justify-center gap-2 px-2 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
       <CheckIcon className="w-5 h-5" />
       <span className="text-lg">Buy Now</span>
     </button>
@@ -406,7 +402,6 @@ const BookDetailsPage = ({ bookId = 1 }) => {
   const { user } = useAuthStore();
   const { addToCart } = useAddToCartStore();
   const { fetchUserReview } = useReviewStore();
-  const router = useRouter();
 
   const [book, setBook] = useState(null);
   const [quantity, setQuantity] = useState(1);
@@ -526,24 +521,6 @@ const BookDetailsPage = ({ bookId = 1 }) => {
     }
   };
 
-  const handleBuyNow = async () => {
-    if (!book) return;
-
-    if (!user) {
-      setShowLoginPrompt(true);
-      return;
-    }
-
-    try {
-      // Add to cart first
-      await addToCart(book.id, quantity);
-      // Redirect to checkout
-      router.push("/checkout");
-    } catch (err) {
-      toast.error(`Failed to process Buy Now: ${err.message}`);
-    }
-  };
-
   const handleReadSample = () => {
     if (book?.pdf_file_url) {
       setShowPDFViewer(true);
@@ -637,7 +614,6 @@ const BookDetailsPage = ({ bookId = 1 }) => {
 
                 <ActionButtons
                   onAddToCart={handleAddToCart}
-                  onBuyNow={handleBuyNow}
                   onWishlistToggle={handleWishlistToggle}
                   onReadSample={handleReadSample}
                   isWishlisted={isWishlisted(book.id)}
