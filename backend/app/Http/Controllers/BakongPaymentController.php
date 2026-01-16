@@ -136,13 +136,19 @@ class BakongPaymentController extends Controller
             }
 
             // Check transaction status
-            $result = $this->bakongService->checkTransactionByMD5($order->payment_qr_md5);
+            $result = $this->bakongService->checkTransactionByMD5($order->payment_qr_md5, false);
+
+            Log::info('Payment check result', ['result' => $result]);
 
             if ($result['success'] && isset($result['transaction'])) {
                 $transaction = $result['transaction'];
 
+                Log::info('Transaction found', ['transaction' => $transaction]);
+
                 // Update order status if payment is successful
                 if (isset($transaction['status']) && $transaction['status'] === 'COMPLETED') {
+                    Log::info('Payment COMPLETED! Updating order', ['order_id' => $orderId]);
+                    
                     $order->update([
                         'status' => 'paid',
                         'payment_status' => 'completed',
@@ -159,6 +165,8 @@ class BakongPaymentController extends Controller
                     ]);
                 }
 
+                Log::info('Payment still pending', ['status' => $transaction['status'] ?? 'unknown']);
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Payment pending',
@@ -169,10 +177,17 @@ class BakongPaymentController extends Controller
                 ]);
             }
 
+            Log::info('Payment not found yet (normal)');
+
+            // Payment not found yet - return 200 with pending status
             return response()->json([
-                'success' => false,
-                'message' => 'Payment not found or pending'
-            ], 404);
+                'success' => true,
+                'message' => 'Payment pending',
+                'data' => [
+                    'order_status' => $order->status,
+                    'payment_found' => false
+                ]
+            ], 200);
 
         } catch (\Exception $e) {
             Log::error('Payment Status Check Error: ' . $e->getMessage());

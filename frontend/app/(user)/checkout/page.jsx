@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeftIcon, LockClosedIcon, XMarkIcon, CheckCircleIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, LockClosedIcon, XMarkIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { useAddToCartStore } from "../../store/useAddToCardStore";
 import { useAuthStore } from "../../store/authStore";
 import { QRCodeSVG } from "qrcode.react";
@@ -48,8 +48,11 @@ const CheckoutPage = () => {
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrData, setQrData] = useState(null);
   const [currentOrder, setCurrentOrder] = useState(null);
-  const [paymentStatus, setPaymentStatus] = useState("pending");
+  const [paymentStatus, setPaymentStatus] = useState("pending"); // pending, completed, failed
   const [checkingPayment, setCheckingPayment] = useState(false);
+  const [paymentCheckCount, setPaymentCheckCount] = useState(0);
+  const [paymentError, setPaymentError] = useState(null);
+  const [paymentIntervalId, setPaymentIntervalId] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -119,6 +122,7 @@ const CheckoutPage = () => {
   // Generate QR Code for Bakong Payment
   const generateQRCode = async (orderId) => {
     try {
+      console.log("Generating QR code for order:", orderId);
       const { request } = await import("../../utils/request");
       const { useAuthStore } = await import("../../store/authStore");
       const token = useAuthStore.getState().token;
@@ -133,23 +137,41 @@ const CheckoutPage = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      console.log("QR generation response:", response);
+
       if (response.success) {
         setQrData(response.data);
+        setPaymentStatus("pending");
+        setPaymentError(null);
+        setPaymentCheckCount(0);
+        console.log("Starting payment status check...");
         startPaymentStatusCheck(orderId);
       } else {
-        alert(response.message || "Failed to generate QR code");
+        console.error("QR generation failed:", response);
+        setPaymentStatus("failed");
+        setPaymentError(response.message || "Failed to generate QR code");
       }
     } catch (error) {
       console.error("Error generating QR:", error);
-      alert("Failed to generate QR code. Please try again.");
+      setPaymentStatus("failed");
+      setPaymentError(error.response?.data?.message || "Failed to generate QR code. Please try again.");
     }
   };
 
   // Check payment status
   const checkPaymentStatus = async (orderId) => {
-    if (checkingPayment) return;
+    if (checkingPayment) {
+      console.log("Already checking payment, skipping...");
+      return;
+    }
     
     setCheckingPayment(true);
+    setPaymentCheckCount(prev => {
+      const newCount = prev + 1;
+      console.log(`Checking payment status (attempt ${newCount})...`);
+      return newCount;
+    });
+    
     try {
       const { request } = await import("../../utils/request");
       const { useAuthStore } = await import("../../store/authStore");
@@ -162,15 +184,35 @@ const CheckoutPage = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      console.log("Payment status response:", response);
+
       if (response.success && response.data?.order_status === "paid") {
+        console.log("✅ Payment confirmed!");
         setPaymentStatus("completed");
+        setPaymentError(null);
+        stopPaymentStatusCheck();
         // Redirect to success page after 2 seconds
         setTimeout(() => {
           window.location.href = `/order-success?orderId=${orderId}`;
         }, 2000);
+      } else if (paymentCheckCount >= 60) {
+        // After 60 checks (5 minutes), consider it failed
+        console.log("❌ Payment timeout after 60 checks");
+        setPaymentStatus("failed");
+        setPaymentError("Payment timeout. Please try again or contact support.");
+        stopPaymentStatusCheck();
+      } else {
+        console.log("⏳ Payment still pending...");
       }
     } catch (error) {
       console.error("Error checking payment:", error);
+      // Don't set as failed immediately, might be network issue
+      if (paymentCheckCount >= 60) {
+        console.log("❌ Payment check failed after 60 attempts");
+        setPaymentStatus("failed");
+        setPaymentError("Unable to verify payment status. Please contact support.");
+        stopPaymentStatusCheck();
+      }
     } finally {
       setCheckingPayment(false);
     }
@@ -178,17 +220,45 @@ const CheckoutPage = () => {
 
   // Start automatic payment status checking
   const startPaymentStatusCheck = (orderId) => {
-    const interval = setInterval(() => {
-      if (paymentStatus !== "completed") {
-        checkPaymentStatus(orderId);
-      } else {
-        clearInterval(interval);
-      }
-    }, 5000); // Check every 5 seconds
+    // Clear any existing interval
+    if (paymentIntervalId) {
+      clearInterval(paymentIntervalId);
+    }
 
-    // Store interval ID to clear on unmount
-    return () => clearInterval(interval);
+    // Check immediately first time
+    checkPaymentStatus(orderId);
+
+    // Then check every 5 seconds
+    const interval = setInterval(() => {
+      checkPaymentStatus(orderId);
+    }, 5000);
+
+    setPaymentIntervalId(interval);
   };
+
+  // Stop payment checking
+  const stopPaymentStatusCheck = () => {
+    if (paymentIntervalId) {
+      clearInterval(paymentIntervalId);
+      setPaymentIntervalId(null);
+    }
+  };
+
+  // Effect to stop checking when payment is completed or failed
+  useEffect(() => {
+    if (paymentStatus === "completed" || paymentStatus === "failed") {
+      stopPaymentStatusCheck();
+    }
+  }, [paymentStatus]);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (paymentIntervalId) {
+        clearInterval(paymentIntervalId);
+      }
+    };
+  }, [paymentIntervalId]);
 
 
   const handleSubmit = async (e) => {
@@ -604,14 +674,22 @@ const CheckoutPage = () => {
             {/* Modal Header */}
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
               <h2 className="text-xl font-bold text-gray-900">
-                {paymentStatus === "completed" ? "Payment Successful!" : "Scan to Pay"}
+                {paymentStatus === "completed" 
+                  ? "Payment Successful!" 
+                  : paymentStatus === "failed"
+                  ? "Payment Failed"
+                  : "Scan to Pay"}
               </h2>
               {paymentStatus !== "completed" && (
                 <button
                   onClick={() => {
+                    console.log("Closing QR modal");
+                    stopPaymentStatusCheck();
                     setShowQRModal(false);
                     setQrData(null);
                     setPaymentStatus("pending");
+                    setPaymentError(null);
+                    setPaymentCheckCount(0);
                   }}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
@@ -625,18 +703,89 @@ const CheckoutPage = () => {
               {paymentStatus === "completed" ? (
                 // Success State
                 <div className="text-center py-8">
-                  <CheckCircleIcon className="w-20 h-20 text-green-500 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Payment Confirmed!</h3>
-                  <p className="text-gray-600 mb-4">
-                    Your payment has been successfully processed.
+                  <div className="mb-6">
+                    <CheckCircleIcon className="w-24 h-24 text-green-500 mx-auto animate-bounce" />
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-3">Payment Successful!</h3>
+                  <p className="text-lg text-gray-600 mb-2">
+                    Your payment has been confirmed.
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 mb-6">
+                    Order #{qrData?.bill_number}
+                  </p>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                    <p className="text-sm text-green-800 font-medium">
+                      ✓ Payment processed successfully
+                    </p>
+                    <p className="text-sm text-green-600 mt-1">
+                      Amount: ${parseFloat(qrData?.amount || 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-4">
                     Redirecting to order details...
                   </p>
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mt-4"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+                </div>
+              ) : paymentStatus === "failed" ? (
+                // Failed State
+                <div className="text-center py-8">
+                  <div className="mb-6">
+                    <XCircleIcon className="w-24 h-24 text-red-500 mx-auto" />
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-3">Payment Failed</h3>
+                  <p className="text-lg text-gray-600 mb-2">
+                    {paymentError || "We couldn't process your payment."}
+                  </p>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <p className="text-sm text-red-800 font-medium">
+                      ✗ Payment was not completed
+                    </p>
+                    <p className="text-sm text-red-600 mt-1">
+                      Please try again or use a different payment method
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        console.log("Retrying payment...");
+                        setPaymentStatus("pending");
+                        setPaymentError(null);
+                        setPaymentCheckCount(0);
+                        setQrData(null);
+                        generateQRCode(currentOrder.id);
+                      }}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                    >
+                      Try Again
+                    </button>
+                    <button
+                      onClick={() => {
+                        console.log("Choosing different payment method");
+                        stopPaymentStatusCheck();
+                        setShowQRModal(false);
+                        setQrData(null);
+                        setPaymentStatus("pending");
+                        setPaymentError(null);
+                        setPaymentCheckCount(0);
+                      }}
+                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-6 rounded-lg transition-colors"
+                    >
+                      Choose Different Payment Method
+                    </button>
+                    <button
+                      onClick={() => {
+                        console.log("Viewing orders");
+                        stopPaymentStatusCheck();
+                        window.location.href = `/profile/${user.id}/orders`;
+                      }}
+                      className="w-full text-blue-600 hover:text-blue-700 font-medium py-2 transition-colors"
+                    >
+                      View My Orders
+                    </button>
+                  </div>
                 </div>
               ) : qrData ? (
-                // QR Code Display
+                // QR Code Display (Pending State)
                 <div className="text-center">
                   {/* QR Code */}
                   <div className="bg-white p-6 rounded-xl inline-block shadow-inner border-4 border-gray-100 mb-6">
@@ -668,7 +817,7 @@ const CheckoutPage = () => {
                       </p>
                     </div>
                     <p className="text-xs text-blue-600 mt-2">
-                      Checking status automatically
+                      Checking status automatically ({paymentCheckCount} checks)
                     </p>
                   </div>
 

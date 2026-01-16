@@ -167,23 +167,56 @@ class BakongPaymentService
      * Check transaction status by MD5
      * 
      * @param string $md5Hash
+     * @param bool $isTest
      * @return array|null
      */
-    public function checkTransactionByMD5($md5Hash)
+    public function checkTransactionByMD5($md5Hash, $isTest = false)
     {
         try {
             if (!$this->bakongKhqr) {
+                Log::error('Bakong API token not configured');
                 throw new \Exception('Bakong API token not configured');
             }
 
-            $response = $this->bakongKhqr->checkTransactionByMD5($md5Hash, true);
+            Log::info('Checking Bakong transaction', [
+                'md5' => $md5Hash,
+                'isTest' => $isTest
+            ]);
+
+            $response = $this->bakongKhqr->checkTransactionByMD5($md5Hash, $isTest);
             
-            if ($response && isset($response->status) && $response->status['code'] === 0 && isset($response->data)) {
+            Log::info('Bakong transaction check response', [
+                'response_type' => gettype($response),
+                'response' => $response
+            ]);
+
+            // Check for responseCode (new format) or status.code (old format)
+            $isSuccess = false;
+            if (isset($response['responseCode']) && $response['responseCode'] === 0) {
+                $isSuccess = true;
+            } elseif (isset($response['status']) && $response['status']['code'] === 0) {
+                $isSuccess = true;
+            }
+
+            if ($isSuccess && isset($response['data'])) {
+                Log::info('Transaction found!', ['data' => $response['data']]);
+                
+                // The transaction data is in response['data']
+                // It contains: hash, fromAccountId, toAccountId, currency, amount, etc.
+                // We need to mark it as COMPLETED since the transaction exists
+                $transactionData = $response['data'];
+                $transactionData['status'] = 'COMPLETED'; // Add status field
+                
                 return [
                     'success' => true,
-                    'transaction' => $response->data
+                    'transaction' => $transactionData
                 ];
             }
+
+            Log::warning('Transaction not found or pending', [
+                'responseCode' => $response['responseCode'] ?? 'N/A',
+                'responseMessage' => $response['responseMessage'] ?? 'N/A'
+            ]);
 
             return [
                 'success' => false,
@@ -191,7 +224,13 @@ class BakongPaymentService
             ];
 
         } catch (KHQRException $e) {
-            Log::error('Bakong Transaction Check Error: ' . $e->getMessage());
+            Log::error('Bakong Transaction Check Error (KHQR Exception): ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        } catch (\Exception $e) {
+            Log::error('Bakong Transaction Check Error (General Exception): ' . $e->getMessage());
             return [
                 'success' => false,
                 'message' => $e->getMessage()

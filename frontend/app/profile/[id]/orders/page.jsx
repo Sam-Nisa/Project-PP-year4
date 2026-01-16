@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { toast } from "react-toastify";
 import Link from "next/link";
 import { 
   ShoppingBagIcon, 
@@ -91,34 +92,37 @@ export default function OrderHistoryPage() {
     setShowDeleteModal(true);
   };
 
-  const handleDeleteOrder = async () => {
-    if (!orderToDelete) return;
+const handleDeleteOrder = async () => {
+  if (!orderToDelete) return;
 
-    setDeleting(true);
-    try {
-      const { request } = await import("../../../utils/request");
-      
-      await request(
-        `/api/orders/${orderToDelete.id}`,
-        "DELETE",
-        null,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  setDeleting(true);
+  try {
+    const { request } = await import("../../../utils/request");
 
-      // Remove from list
-      setOrders(orders.filter(o => o.id !== orderToDelete.id));
-      setShowDeleteModal(false);
-      setOrderToDelete(null);
-      
-      // Show success message (you can use toast here)
-      alert("Order deleted successfully");
-    } catch (error) {
-      console.error("Error deleting order:", error);
-      alert(error.response?.data?.error || "Failed to delete order");
-    } finally {
-      setDeleting(false);
-    }
-  };
+    await request(
+      `/api/orders/${orderToDelete.id}`,
+      "DELETE",
+      null,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // Remove from list
+    setOrders(orders.filter(o => o.id !== orderToDelete.id));
+    setShowDeleteModal(false);
+    setOrderToDelete(null);
+
+    // ✅ Toast success
+    toast.success("Order deleted successfully");
+  } catch (error) {
+    console.error("Error deleting order:", error);
+
+    // ❌ Toast error
+    toast.error(error.response?.data?.error || "Failed to delete order");
+  } finally {
+    setDeleting(false);
+  }
+};
+
 
   if (loading) {
     return (

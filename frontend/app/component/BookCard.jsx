@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { HeartIcon as HeartOutlineIcon } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
-import { useState } from "react";
+import { useState, memo } from "react";
 import { toast } from "react-toastify";
 
 import { useWishlistStore } from "../store/useWishlistStore";
@@ -46,7 +46,7 @@ const LoginPromptModal = ({ onClose }) => {
   );
 };
 
-export default function BookCard({ book }) {
+const BookCardComponent = ({ book }) => {
   if (!book) return null;
 
   console.log("book: ",book)
@@ -104,6 +104,11 @@ export default function BookCard({ book }) {
             alt={title}
             fill
             className="object-contain"
+            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+            quality={75}
+            loading="lazy"
+            placeholder="blur"
+            blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
           />
         </div>
 
@@ -137,4 +142,9 @@ export default function BookCard({ book }) {
       )}
     </>
   );
-}
+};
+
+// Memoize the component to prevent unnecessary re-renders
+const BookCard = memo(BookCardComponent);
+
+export default BookCard;

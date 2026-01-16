@@ -19,7 +19,14 @@ public function __construct(ImageKitService $imageKit)
     // ✅ List all books (any user) - Only show approved books
     public function index()
     {
-        $query = Book::with(['author', 'genre'])
+        $perPage = request('per_page', 12); // Default 12 books per page
+        $paginate = request('paginate', 'false'); // Check if pagination is requested
+        
+        $query = Book::with(['author:id,name,email,role', 'genre:id,name,slug'])
+            ->select('id', 'title', 'author_id', 'genre_id', 'price', 'stock', 
+                     'cover_image_url', 'images_url', 'description', 'status',
+                     'discount_type', 'discount_value', 'average_rating', 'total_reviews',
+                     'created_at', 'updated_at')
             ->where('status', 'approved'); // Only show approved books on public interface
 
         // Filter by genre name instead of slug
@@ -34,7 +41,15 @@ public function __construct(ImageKitService $imageKit)
             $query->where('author_id', request('author_id'));
         }
 
-        $books = $query->get();
+        // Order by created_at desc for newest first
+        $query->orderBy('created_at', 'desc');
+
+        // Return paginated or all results
+        if ($paginate === 'true') {
+            $books = $query->paginate($perPage);
+        } else {
+            $books = $query->get();
+        }
 
         return response()->json($books);
     }
