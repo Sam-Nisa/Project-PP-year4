@@ -146,16 +146,24 @@ public function __construct(ImageKitService $imageKit)
         return response()->json($books);
     }
 
-    // ✅ Show a single book (any user) - Only show if approved
+    // ✅ Show a single book (any user) - Only show if approved - Optimized
     public function show($id)
     {
-        $book = Book::with(['author', 'genre'])
+        $book = Book::with(['author:id,name,email,role', 'genre:id,name,slug'])
+            ->select('id', 'title', 'author_id', 'genre_id', 'price', 'stock', 
+                     'cover_image_url', 'images_url', 'pdf_file_url', 'description', 
+                     'status', 'discount_type', 'discount_value', 'average_rating', 
+                     'total_reviews', 'created_at', 'updated_at', 'about_author',
+                     'publisher', 'page_count', 'publication_date')
             ->where('status', 'approved') // Only show approved books on public interface
             ->find($id);
 
         if (!$book) {
             return response()->json(['message' => 'Book not found or not approved'], 404);
         }
+
+        // Add author name for easier access
+        $book->author_name = $book->author->name ?? 'Unknown Author';
 
         return response()->json($book);
     }

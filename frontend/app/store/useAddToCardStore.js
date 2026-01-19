@@ -77,17 +77,18 @@ export const useAddToCartStore = create((set, get) => ({
         }
       );
 
-      // Refresh cart data after adding
-      await get().fetchCart();
+      // Optimized: Update cart count immediately without full refresh
+      set((state) => ({
+        cartCount: state.cartCount + quantity,
+        loading: false
+      }));
 
       return data.item;
     } catch (err) {
       console.error("Failed to add to cart:", err);
       const errorMessage = err.response?.data?.error || "Failed to add to cart";
-      set({ error: errorMessage });
+      set({ error: errorMessage, loading: false });
       throw new Error(errorMessage);
-    } finally {
-      set({ loading: false });
     }
   },
 

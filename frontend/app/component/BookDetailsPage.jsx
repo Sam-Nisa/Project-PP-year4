@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   ShoppingCartIcon,
   HeartIcon as HeartOutlineIcon,
@@ -109,7 +109,7 @@ const Breadcrumb = ({ genre, title }) => (
     </Link>
     <ChevronRightIcon className="w-4 h-4 text-black" />
     <Link
-      href={`/genre/${genre.toLowerCase().replace(/\s+/g, "-")}`}
+      href={`/genres/${genre.toLowerCase().replace(/\s+/g, "-")}`}
       className="font-semibold text-gray-900 capitalize hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm sm:text-base"
     >
       {genre}
@@ -419,46 +419,58 @@ const BookDetailsPage = ({ bookId = 1 }) => {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
 
-  // Fetch data on mount
+  // Fetch data on mount - optimized to reduce API calls
   useEffect(() => {
-    fetchGenres();
+    // Only fetch genres if not already loaded
+    if (genres.length === 0) {
+      fetchGenres();
+    }
+  }, [fetchGenres, genres.length]);
+
+  useEffect(() => {
     if (!bookId) return;
 
     const loadBook = async () => {
-      const fetched = await fetchBook(bookId);
-      console.log("fetch", fetched)
-      if (fetched) {
-        // Process images_url to ensure it's an array
-        let processedImages = fetched.images_url;
-        if (typeof processedImages === 'string') {
-          try {
-            processedImages = JSON.parse(processedImages);
-          } catch (e) {
-            console.error('Failed to parse images_url:', processedImages);
-            processedImages = [];
+      try {
+        const fetched = await fetchBook(bookId);
+        if (fetched) {
+          // Process images_url to ensure it's an array - optimized
+          let processedImages = [];
+          if (fetched.images_url) {
+            if (typeof fetched.images_url === 'string') {
+              try {
+                processedImages = JSON.parse(fetched.images_url);
+              } catch (e) {
+                console.warn('Failed to parse images_url, using empty array');
+                processedImages = [];
+              }
+            } else if (Array.isArray(fetched.images_url)) {
+              processedImages = fetched.images_url;
+            }
           }
-        }
-        if (!Array.isArray(processedImages)) {
-          processedImages = [];
-        }
 
-        setBook({
-          ...fetched,
-          images_url: processedImages,
-          image: processedImages, // Keep for backward compatibility
-        });
-
-        // Fetch user's review if logged in
-        if (user) {
-          fetchUserReview(bookId);
+          setBook({
+            ...fetched,
+            images_url: processedImages,
+            image: processedImages, // Keep for backward compatibility
+          });
         }
+      } catch (error) {
+        console.error('Failed to load book:', error);
       }
     };
 
     loadBook();
-  }, [bookId, fetchBook, fetchGenres, user, fetchUserReview]);
+  }, [bookId, fetchBook]);
 
-  console.log(book)
+  // Separate effect for user review to avoid unnecessary calls
+  useEffect(() => {
+    if (user && bookId) {
+      fetchUserReview(bookId);
+    }
+  }, [user, bookId, fetchUserReview]);
+
+  // Calculate genre name
 
   // Calculate genre name
   const genreName = useMemo(() => {
@@ -489,12 +501,12 @@ const BookDetailsPage = ({ bookId = 1 }) => {
     };
   }, [book, quantity]);
 
-  // Handlers
-  const handleQuantityChange = (delta) => {
+  // Handlers - memoized for better performance
+  const handleQuantityChange = useCallback((delta) => {
     setQuantity((prev) => Math.max(1, prev + delta));
-  };
+  }, []);
 
-  const handleWishlistToggle = async () => {
+  const handleWishlistToggle = useCallback(async () => {
     if (!book) return;
 
     if (!user) {
@@ -513,9 +525,9 @@ const BookDetailsPage = ({ bookId = 1 }) => {
     } catch (error) {
       toast.error("Failed to update wishlist");
     }
-  };
+  }, [book, user, isWishlisted, removeWishlist, addWishlist]);
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = useCallback(async () => {
     if (!book) return;
 
     if (!user) {
@@ -524,14 +536,15 @@ const BookDetailsPage = ({ bookId = 1 }) => {
     }
 
     try {
+      // Optimized: Don't wait for full cart refresh, just add the item
       await addToCart(book.id, quantity);
       toast.success(`Added ${quantity} x "${book.title}" to cart!`);
     } catch (err) {
       toast.error(`Failed to add to cart: ${err.message}`);
     }
-  };
+  }, [book, user, addToCart, quantity]);
 
-  const handleBuyNow = async () => {
+  const handleBuyNow = useCallback(async () => {
     if (!book) return;
 
     if (!user) {
@@ -540,26 +553,27 @@ const BookDetailsPage = ({ bookId = 1 }) => {
     }
 
     try {
-      // Add to cart first
-      await addToCart(book.id, quantity);
+      // Optimized: Add to cart and redirect immediately without waiting for full refresh
+      const addPromise = addToCart(book.id, quantity);
       
-      // Show success message
+      // Show success message immediately
       toast.success(`Added ${quantity} x "${book.title}" to cart!`);
       
-      // Redirect to checkout page after a short delay
-      setTimeout(() => {
-        router.push('/checkout');
-      }, 500);
+      // Redirect immediately while add to cart completes in background
+      router.push('/checkout');
+      
+      // Ensure the add to cart completes
+      await addPromise;
     } catch (err) {
       toast.error(`Failed to proceed to checkout: ${err.message}`);
     }
-  };
+  }, [book, user, addToCart, quantity, router]);
 
-  const handleReadSample = () => {
+  const handleReadSample = useCallback(() => {
     if (book?.pdf_file_url) {
       setShowPDFViewer(true);
     }
-  };
+  }, [book?.pdf_file_url]);
 
   // Loading state
   const isLoading = bookLoading || genreLoading || !book;
