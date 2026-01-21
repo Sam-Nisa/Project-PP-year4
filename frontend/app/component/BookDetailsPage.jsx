@@ -195,29 +195,58 @@ const PriceSection = ({
 
 
 
-const QuantitySelector = ({ quantity, onDecrease, onIncrease }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center  gap-4 p-4 rounded-xl">
-    <span className="text-sm font-medium text-gray-700">Quantity:</span>
-    <div className="flex items-center gap-4">
-      <button
-        onClick={onDecrease}
-        className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-500 dark:to-gray-500 hover:from-gray-200 hover:to-gray-100 dark:hover:from-gray-500 dark:hover:to-gray-400 border border-gray-300 dark:border-gray-700 transition-all duration-300 active:scale-95 disabled:opacity-50"
-        disabled={quantity <= 1}
-      >
-        <MinusIcon className="w-5 h-5" />
-      </button>
-      <div className="w-20 h-12 flex items-center justify-center bg-white border-2 border-blue-500 rounded-lg font-bold text-lg">
-        {quantity}
+const QuantitySelector = ({ quantity, onChange }) => {
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+
+    // Allow empty while typing
+    if (value === "") {
+      onChange(1);
+      return;
+    }
+
+    const number = parseInt(value, 10);
+
+    if (!isNaN(number) && number >= 1) {
+      onChange(number);
+    }
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl">
+      <span className="text-sm font-medium text-gray-700">Quantity:</span>
+
+      <div className="flex items-center gap-3">
+        {/* Minus */}
+        <button
+          onClick={() => onChange(Math.max(1, quantity - 1))}
+          disabled={quantity <= 1}
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 border border-gray-300 disabled:opacity-50"
+        >
+          <MinusIcon className="w-5 h-5" />
+        </button>
+
+        {/* Input */}
+        <input
+          type="number"
+          min="1"
+          value={quantity}
+          onChange={handleInputChange}
+          className="w-20 h-12 text-center border-2 border-blue-500 rounded-lg font-bold text-lg focus:outline-none"
+        />
+
+        {/* Plus */}
+        <button
+          onClick={() => onChange(quantity + 1)}
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-100 border border-blue-300"
+        >
+          <PlusIcon className="w-5 h-5" />
+        </button>
       </div>
-      <button
-        onClick={onIncrease}
-        className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-500/30 dark:to-blue-800/30 hover:from-blue-200 hover:to-blue-100 dark:hover:from-blue-800 dark:hover:to-blue-700 border border-blue-300 dark:border-blue-700 transition-all duration-300 active:scale-95"
-      >
-        <PlusIcon className="w-5 h-5" />
-      </button>
     </div>
-  </div>
-);
+  );
+};
+
 
 const ActionButtons = ({
   onAddToCart,
@@ -297,7 +326,7 @@ const ActionButtons = ({
 );
 
 
-const BookDetailsTable = ({ genre, publisher, publicationDate, pageCount, hasPDF }) => (
+const BookDetailsTable = ({ genre, publisher, publicationDate, pageCount, hasPDF, author }) => (
   <div className=" dark:to-gray-800/50 rounded-2xl p-6 border border-gray-200">
     <h3 className="text-xl font-bold mb-6  text-black bg-clip-text ">
       📚 Book Details
@@ -311,6 +340,10 @@ const BookDetailsTable = ({ genre, publisher, publicationDate, pageCount, hasPDF
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Publisher</p>
           <p className="font-medium">{publisher}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Author</p>
+          <p className="font-medium">{author}</p>
         </div>
       </div>
       <div className="space-y-4">
@@ -392,11 +425,7 @@ const TabContent = ({
       <div className=" text-black rounded-2xl shadow-lg p-8">
         <h4 className="text-xl font-bold mb-6">About the Author</h4>
         <p className=" leading-relaxed">
-          {aboutAuthor ||
-            `The author of "${title}" is an accomplished writer with several
-            bestselling titles to their name. Known for their captivating
-            storytelling and rich character development, they have earned
-            critical acclaim and a dedicated readership worldwide.`}
+          {aboutAuthor || $title}
         </p>
       </div>
     )}
@@ -614,11 +643,13 @@ const BookDetailsPage = ({ bookId = 1 }) => {
             <ImageGallery images={book.images_url} title={book.title} hasPDF={!!(book.pdf_file_url)} />
 
             <div className="flex flex-col gap-8 px-4 sm:px-6 lg:px-0">
-              <BookHeader
+             <BookHeader
                 title={book.title}
-                author={book.author_name}
+                author={book.author_name || "Unknown Author"}
                 description={book.description}
               />
+
+
               {/* ⭐ Rating summary under description */}
               <RatingSummary
                 rating={book.average_rating || 0}
@@ -654,11 +685,12 @@ const BookDetailsPage = ({ bookId = 1 }) => {
                   }}
                 />
 
-                <QuantitySelector
-                  quantity={quantity}
-                  onDecrease={() => handleQuantityChange(-1)}
-                  onIncrease={() => handleQuantityChange(1)}
-                />
+              <QuantitySelector
+              quantity={quantity}
+              onChange={setQuantity}
+            />
+
+
 
                 <ActionButtons
                   onAddToCart={handleAddToCart}
@@ -671,13 +703,15 @@ const BookDetailsPage = ({ bookId = 1 }) => {
                 />
               </div>
 
-              <BookDetailsTable
-                genre={genreName}
-                publisher={book.publisher || "N/A"}
-                publicationDate={book.created_at ? book.created_at.split("T")[0] : "N/A"}
-                pageCount={book.page_count || "N/A"}
-                hasPDF={!!(book.pdf_file_url)}
-              />
+               <BookDetailsTable
+                  genre={genreName}
+                  publisher={book.publisher || "N/A"}
+                  author={book.author_name}
+                  publicationDate={book.created_at ? book.created_at.split("T")[0] : "N/A"}
+                  pageCount={book.page_count || "N/A"}
+                  hasPDF={!!(book.pdf_file_url)}
+                />
+
             </div>
           </div>
 

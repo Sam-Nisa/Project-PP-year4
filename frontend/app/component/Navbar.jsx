@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ShoppingCart,
   Search,
@@ -13,6 +14,7 @@ import { useAuthStore } from "../store/authStore";
 import { useGenreStore } from "../store/useGenreStore";
 import { useAddToCartStore } from "../store/useAddToCardStore";
 import { useWishlistStore } from "../store/useWishlistStore";
+import { useSearchStore } from "../store/useSearchStore";
 
 const slugify = (text) =>
   text
@@ -24,6 +26,7 @@ const slugify = (text) =>
     .replace(/\-\-+/g, "-");
 
 export default function Header() {
+  const router = useRouter();
   const { user, isInitialized, loading, logout } = useAuthStore();
   const {
     genres,
@@ -33,9 +36,12 @@ export default function Header() {
   } = useGenreStore();
   const { cartItems, cartCount, fetchCartCount } = useAddToCartStore();
   const { wishlists } = useWishlistStore();
+  const { clearSearch } = useSearchStore();
+  
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isGenresDropdownOpen, setIsGenresDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef(null);
 
   // Fetch genres and cart count once on mount
@@ -56,6 +62,29 @@ export default function Header() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Handle search functionality
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Clear previous search results
+      clearSearch();
+      // Navigate to search page with query
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      // Close mobile search if open
+      setIsMobileSearchOpen(false);
+    }
+  };
+
+  const handleSearchInputChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch(e);
+    }
+  };
 
   // Close mobile menu when clicking on links
   const handleMobileMenuClose = () => {
@@ -107,14 +136,22 @@ export default function Header() {
 
           {/* Desktop Search */}
           <div className="hidden md:flex items-center flex-1 max-w-md mx-4 lg:mx-8">
-            <div className="relative w-full">
+            <form onSubmit={handleSearch} className="relative w-full">
               <input
                 type="text"
-                placeholder="Search books..."
+                placeholder="Search books by name..."
+                value={searchQuery}
+                onChange={handleSearchInputChange}
+                onKeyPress={handleSearchKeyPress}
                 className="w-full py-2 pl-10 pr-4 rounded-full bg-white/20 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all"
               />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-200 w-4 h-4" />
-            </div>
+              <button
+                type="submit"
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-200 hover:text-white transition-colors"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            </form>
           </div>
 
           {/* Actions */}
@@ -190,21 +227,31 @@ export default function Header() {
         {/* Mobile Search Bar */}
         {isMobileSearchOpen && (
           <div className="pb-4 md:hidden">
-            <div className="relative">
+            <form onSubmit={handleSearch} className="relative">
               <input
                 type="text"
-                placeholder="Search books..."
+                placeholder="Search books by name..."
+                value={searchQuery}
+                onChange={handleSearchInputChange}
+                onKeyPress={handleSearchKeyPress}
                 className="w-full py-2 pl-10 pr-10 rounded-full bg-white/20 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-white/50"
+                autoFocus
               />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-200 w-4 h-4" />
               <button
+                type="submit"
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-200 hover:text-white transition-colors"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
                 onClick={() => setIsMobileSearchOpen(false)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white hover:text-pink-300"
                 aria-label="Close search"
               >
                 <X className="w-4 h-4" />
               </button>
-            </div>
+            </form>
           </div>
         )}
       </div>

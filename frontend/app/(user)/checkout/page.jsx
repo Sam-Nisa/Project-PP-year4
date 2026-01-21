@@ -39,6 +39,8 @@ const CheckoutPage = () => {
     paymentMethod: "bakong", // Default to Bakong
   });
 
+  const [errors, setErrors] = useState({});
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [discountCode, setDiscountCode] = useState("");
@@ -379,6 +381,7 @@ const CheckoutPage = () => {
                   <input
                     type="email"
                     name="email"
+                    disabled
                     value={formData.email}
                     onChange={handleInputChange}
                     required
@@ -395,20 +398,25 @@ const CheckoutPage = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      First Name
+                      First Name <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="text"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-2 rounded-lg border 
+                      ${errors.firstName ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"}
+                      focus:ring-2 focus:border-transparent`}
+                  />
+                  {errors.firstName && (
+                    <p className="text-sm text-red-600 mt-1">{errors.firstName}</p>
+                  )}
+
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Last Name
+                      Last Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -422,7 +430,7 @@ const CheckoutPage = () => {
                 </div>
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Address
+                    Address <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -436,7 +444,7 @@ const CheckoutPage = () => {
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      City
+                      City <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -449,7 +457,7 @@ const CheckoutPage = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      ZIP Code
+                      ZIP Code <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -466,7 +474,7 @@ const CheckoutPage = () => {
               {/* Payment Method */}
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Payment Method
+                  Payment Method <span className="text-red-500">*</span>
                 </h2>
                 <div className="space-y-3">
                   <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
