@@ -139,7 +139,7 @@ class OrderController extends Controller
 
             $totalAmount = $subtotal + $shippingCost + $taxAmount - $discountAmount;
 
-            // Create order
+            // Create order with 'paid' status but payment_status as 'pending'
             $order = Order::create([
                 'user_id' => $user->id,
                 'total_amount' => $totalAmount,
@@ -149,8 +149,9 @@ class OrderController extends Controller
                 'discount_code_id' => $discountCode ? $discountCode->id : null,
                 'discount_code' => $discountCode ? $discountCode->code : null,
                 'discount_amount' => $discountAmount,
-                'status' => 'pending',
+                'status' => 'paid',
                 'payment_method' => $request->payment_method,
+                'payment_status' => 'pending', // Payment not confirmed yet
                 'shipping_address' => json_encode($request->shipping_address),
             ]);
 
@@ -254,10 +255,10 @@ class OrderController extends Controller
                 return response()->json(['error' => 'Order not found'], 404);
             }
 
-            // Only allow deletion of pending or cancelled orders
-            if (!in_array($order->status, ['pending', 'cancelled'])) {
+            // Only allow deletion of orders with pending payment or cancelled orders
+            if (!in_array($order->status, ['cancelled']) && $order->payment_status !== 'pending') {
                 return response()->json([
-                    'error' => 'Cannot delete orders that are processing, shipped, or delivered'
+                    'error' => 'Cannot delete orders that have been paid or are being processed'
                 ], 422);
             }
 

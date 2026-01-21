@@ -80,7 +80,7 @@ export default function Header() {
     setSearchQuery(e.target.value);
   };
 
-  const handleSearchKeyPress = (e) => {
+  const handleSearchKeyDown = (e) => {
     if (e.key === 'Enter') {
       handleSearch(e);
     }
@@ -142,7 +142,7 @@ export default function Header() {
                 placeholder="Search books by name..."
                 value={searchQuery}
                 onChange={handleSearchInputChange}
-                onKeyPress={handleSearchKeyPress}
+                onKeyDown={handleSearchKeyDown}
                 className="w-full py-2 pl-10 pr-4 rounded-full bg-white/20 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all"
               />
               <button
@@ -233,7 +233,7 @@ export default function Header() {
                 placeholder="Search books by name..."
                 value={searchQuery}
                 onChange={handleSearchInputChange}
-                onKeyPress={handleSearchKeyPress}
+                onKeyDown={handleSearchKeyDown}
                 className="w-full py-2 pl-10 pr-10 rounded-full bg-white/20 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-white/50"
                 autoFocus
               />

@@ -188,7 +188,7 @@ const CheckoutPage = () => {
 
       console.log("Payment status response:", response);
 
-      if (response.success && response.data?.order_status === "paid") {
+      if (response.success && response.data?.payment_status === "completed") {
         console.log("✅ Payment confirmed!");
         setPaymentStatus("completed");
         setPaymentError(null);

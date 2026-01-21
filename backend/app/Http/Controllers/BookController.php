@@ -29,6 +29,18 @@ public function __construct(ImageKitService $imageKit)
                      'created_at', 'updated_at')
             ->where('status', 'approved'); // Only show approved books on public interface
 
+        // Search functionality - search by title, description, or author name (case-insensitive)
+        if (request()->filled('search')) {
+            $search = request('search');
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(title) LIKE ?', ['%' . strtolower($search) . '%'])
+                  ->orWhereRaw('LOWER(description) LIKE ?', ['%' . strtolower($search) . '%'])
+                  ->orWhereHas('author', function ($authorQuery) use ($search) {
+                      $authorQuery->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%']);
+                  });
+            });
+        }
+
         // Filter by genre name instead of slug
         if (request()->has('genre')) {
             $query->whereHas('genre', function ($q) {
@@ -50,6 +62,11 @@ public function __construct(ImageKitService $imageKit)
         } else {
             $books = $query->get();
         }
+
+        // Add author_name to each book for easier frontend access
+        $books->each(function ($book) {
+            $book->author_name = $book->author->name ?? 'Unknown Author';
+        });
 
         return response()->json($books);
     }

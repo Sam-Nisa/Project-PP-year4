@@ -25,6 +25,7 @@ class Order extends Model
         'discount_code_id',
         'discount_code',
         'discount_amount',
+        'qr_expires_at',
     ];
 
     protected $casts = [
@@ -34,6 +35,7 @@ class Order extends Model
         'tax_amount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'shipping_address' => 'array',
+        'qr_expires_at' => 'datetime',
     ];
 
     /**
@@ -66,5 +68,31 @@ class Order extends Model
     public function discountCode()
     {
         return $this->belongsTo(DiscountCode::class);
+    }
+
+    /**
+     * Check if the QR code has expired
+     */
+    public function isQRExpired()
+    {
+        return $this->qr_expires_at && $this->qr_expires_at->isPast();
+    }
+
+    /**
+     * Check if the order is expired and should be deleted
+     */
+    public function shouldBeDeleted()
+    {
+        return $this->isQRExpired() && $this->payment_status === 'pending' && !$this->payment_transaction_id;
+    }
+
+    /**
+     * Scope to get expired orders that should be deleted
+     */
+    public function scopeExpiredUnpaid($query)
+    {
+        return $query->where('qr_expires_at', '<', now())
+                    ->where('payment_status', 'pending')
+                    ->whereNull('payment_transaction_id');
     }
 }

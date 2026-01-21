@@ -24,20 +24,35 @@ export const useSearchStore = create((set, get) => ({
 
     try {
       const data = await request(
-        `/api/books?search=${encodeURIComponent(query)}`,
-        "GET"
+        `/api/books`,
+        "GET",
+        { search: query }
       );
 
+      // Ensure data is an array
+      const results = Array.isArray(data) ? data : [];
+
       set({ 
-        searchResults: data || [],
+        searchResults: results,
         loading: false,
         hasSearched: true
       });
 
-      return data;
+      return results;
     } catch (err) {
       console.error("Failed to search books:", err);
-      const errorMessage = err.response?.data?.message || "Failed to search books";
+      let errorMessage = "Failed to search books";
+      
+      if (err.response?.status === 404) {
+        errorMessage = "No books found matching your search";
+      } else if (err.response?.status === 500) {
+        errorMessage = "Server error occurred while searching";
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       set({ 
         error: errorMessage,
         loading: false,

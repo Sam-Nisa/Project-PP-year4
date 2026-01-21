@@ -52,9 +52,23 @@ export default function OrderHistoryPage() {
     }
   };
 
+  const getDisplayStatus = (order) => {
+    // If payment_status exists and is pending, show "Payment Pending"
+    if (order.payment_status === 'pending') {
+      return 'payment_pending';
+    }
+    // If payment_status is completed, show the actual order status
+    if (order.payment_status === 'completed') {
+      return order.status;
+    }
+    // Fallback to order status for non-Bakong payments
+    return order.status;
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      payment_pending: "bg-orange-100 text-orange-800 border-orange-200",
       processing: "bg-blue-100 text-blue-800 border-blue-200",
       shipped: "bg-purple-100 text-purple-800 border-purple-200",
       delivered: "bg-green-100 text-green-800 border-green-200",
@@ -67,6 +81,7 @@ export default function OrderHistoryPage() {
   const getStatusIcon = (status) => {
     switch (status) {
       case "pending":
+      case "payment_pending":
         return <ClockIcon className="w-5 h-5" />;
       case "processing":
         return <ShoppingBagIcon className="w-5 h-5" />;
@@ -79,6 +94,25 @@ export default function OrderHistoryPage() {
         return <XCircleIcon className="w-5 h-5" />;
       default:
         return <ClockIcon className="w-5 h-5" />;
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case "payment_pending":
+        return "Payment Pending";
+      case "paid":
+        return "Paid";
+      case "processing":
+        return "Processing";
+      case "shipped":
+        return "Shipped";
+      case "delivered":
+        return "Delivered";
+      case "cancelled":
+        return "Cancelled";
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
     }
   };
 
@@ -173,9 +207,9 @@ const handleDeleteOrder = async () => {
                       <h3 className="text-lg font-semibold text-gray-900">
                         Order #{String(order.id).padStart(6, '0')}
                       </h3>
-                      <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
-                        {getStatusIcon(order.status)}
-                        <span className="capitalize">{order.status}</span>
+                      <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(getDisplayStatus(order))}`}>
+                        {getStatusIcon(getDisplayStatus(order))}
+                        <span>{getStatusLabel(getDisplayStatus(order))}</span>
                       </span>
                     </div>
                     <p className="text-sm text-gray-600">
@@ -263,7 +297,7 @@ const handleDeleteOrder = async () => {
                       <span>View Details</span>
                     </button>
                     
-                    {(order.status === 'pending' || order.status === 'cancelled') && (
+                    {(getDisplayStatus(order) === 'payment_pending' || order.status === 'cancelled') && (
                      <button
                       onClick={() => confirmDelete(order)}
                       className="inline-flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
@@ -274,7 +308,7 @@ const handleDeleteOrder = async () => {
                     )}
                   </div>
                   
-                  {order.payment_method === 'bakong' && order.status === 'pending' && (
+                  {order.payment_method === 'bakong' && order.payment_status === 'pending' && (
                     <Link
                       href={`/payment/${order.id}`}
                       className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -311,9 +345,9 @@ const handleDeleteOrder = async () => {
               {/* Order Status */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <span className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium border ${getStatusColor(selectedOrder.status)}`}>
-                    {getStatusIcon(selectedOrder.status)}
-                    <span className="capitalize">{selectedOrder.status}</span>
+                  <span className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium border ${getStatusColor(getDisplayStatus(selectedOrder))}`}>
+                    {getStatusIcon(getDisplayStatus(selectedOrder))}
+                    <span>{getStatusLabel(getDisplayStatus(selectedOrder))}</span>
                   </span>
                   <p className="text-sm text-gray-600">
                     {new Date(selectedOrder.created_at).toLocaleDateString('en-US', {
