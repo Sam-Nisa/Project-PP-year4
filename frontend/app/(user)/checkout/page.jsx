@@ -208,7 +208,17 @@ const CheckoutPage = () => {
       }
     } catch (error) {
       console.error("Error checking payment:", error);
-      // Don't set as failed immediately, might be network issue
+      
+      // Handle case where order was deleted due to expiration
+      if (error.response?.status === 410) {
+        console.log("❌ Order expired and was deleted");
+        setPaymentStatus("failed");
+        setPaymentError("Payment expired. The order has been cancelled. Please try again.");
+        stopPaymentStatusCheck();
+        return;
+      }
+      
+      // Don't set as failed immediately for other errors, might be network issue
       if (paymentCheckCount >= 60) {
         console.log("❌ Payment check failed after 60 attempts");
         setPaymentStatus("failed");

@@ -75,7 +75,7 @@ class Order extends Model
      */
     public function isQRExpired()
     {
-        return $this->qr_expires_at && $this->qr_expires_at->isPast();
+        return $this->qr_expires_at?->isPast() ?? false;
     }
 
     /**
@@ -83,16 +83,6 @@ class Order extends Model
      */
     public function shouldBeDeleted()
     {
-        return $this->isQRExpired() && $this->payment_status === 'pending' && !$this->payment_transaction_id;
-    }
-
-    /**
-     * Scope to get expired orders that should be deleted
-     */
-    public function scopeExpiredUnpaid($query)
-    {
-        return $query->where('qr_expires_at', '<', now())
-                    ->where('payment_status', 'pending')
-                    ->whereNull('payment_transaction_id');
+        return $this->isQRExpired() && $this->payment_status === 'failed' && !$this->payment_transaction_id;
     }
 }

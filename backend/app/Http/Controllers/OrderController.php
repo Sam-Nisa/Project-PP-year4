@@ -11,6 +11,8 @@ use App\Models\DiscountCodeUsage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -19,10 +21,13 @@ class OrderController extends Controller
     {
         try {
             $user = Auth::user();
+            // Only show orders that are paid AND payment is completed
             $orders = Order::with(['items.book' => function($query) {
                 $query->select('id', 'title', 'author_name', 'price', 'images_url');
             }])
             ->where('user_id', $user->id)
+            ->where('status', 'paid')
+            ->where('payment_status', 'completed')
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -131,7 +136,7 @@ class OrderController extends Controller
                     DB::rollBack();
                     $message = 'Discount code is valid but no discount applied';
                     if ($discountCode->minimum_amount && $subtotal < $discountCode->minimum_amount) {
-                        $message = "Minimum order amount of $" . number_format($discountCode->minimum_amount, 2) . " required";
+                        $message = "Minimum order amount of $" . number_format((float)$discountCode->minimum_amount, 2) . " required";
                     }
                     return response()->json(['error' => $message], 422);
                 }
@@ -139,19 +144,55 @@ class OrderController extends Controller
 
             $totalAmount = $subtotal + $shippingCost + $taxAmount - $discountAmount;
 
-            // Create order with 'paid' status but payment_status as 'pending'
+            // For Bakong payment - store order data in cache, don't create order yet
+            if ($request->payment_method === 'bakong') {
+                // Generate a unique pending order ID
+                $pendingOrderId = 'pending_' . time() . '_' . $user->id;
+                
+                // Store order data in cache for 15 minutes
+                $orderData = [
+                    'user_id' => $user->id,
+                    'total_amount' => $totalAmount,
+                    'subtotal' => $subtotal,
+                    'shipping_cost' => $shippingCost,
+                    'tax_amount' => $taxAmount,
+                    'discount_code_id' => $discountCode?->id,
+                    'discount_code' => $discountCode?->code,
+                    'discount_amount' => $discountAmount,
+                    'payment_method' => $request->payment_method,
+                    'shipping_address' => $request->shipping_address,
+                    'order_items' => $orderItems,
+                    'cart_id' => $cart->id,
+                ];
+                
+                Cache::put("pending_order_{$pendingOrderId}", $orderData, now()->addMinutes(15));
+                
+                DB::commit();
+                
+                return response()->json([
+                    'message' => 'Order prepared for payment',
+                    'order' => [
+                        'id' => $pendingOrderId,
+                        'total_amount' => $totalAmount,
+                        'payment_method' => $request->payment_method,
+                        'items' => $orderItems
+                    ]
+                ], 201);
+            }
+
+            // For other payment methods - create order immediately (assumed paid)
             $order = Order::create([
                 'user_id' => $user->id,
                 'total_amount' => $totalAmount,
                 'subtotal' => $subtotal,
                 'shipping_cost' => $shippingCost,
                 'tax_amount' => $taxAmount,
-                'discount_code_id' => $discountCode ? $discountCode->id : null,
-                'discount_code' => $discountCode ? $discountCode->code : null,
+                'discount_code_id' => $discountCode?->id,
+                'discount_code' => $discountCode?->code,
                 'discount_amount' => $discountAmount,
                 'status' => 'paid',
                 'payment_method' => $request->payment_method,
-                'payment_status' => 'pending', // Payment not confirmed yet
+                'payment_status' => 'completed',
                 'shipping_address' => json_encode($request->shipping_address),
             ]);
 
@@ -183,29 +224,20 @@ class OrderController extends Controller
                     'discount_amount' => $discountAmount,
                 ]);
 
-                // Increment usage count
-                $discountCode->incrementUsage();
+                // Update usage count
+                $discountCode->increment('used_count');
             }
 
             DB::commit();
 
-            // Load the order with items for response
-            $order->load(['items.book' => function($query) {
-                $query->select('id', 'title', 'author_name', 'images_url');
-            }]);
-
             return response()->json([
                 'message' => 'Order created successfully',
-                'order' => $order
+                'order' => $order->load('items.book')
             ], 201);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'error' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Order creation failed: ' . $e->getMessage());
             return response()->json([
                 'error' => 'Failed to create order',
                 'message' => $e->getMessage()
@@ -213,206 +245,85 @@ class OrderController extends Controller
         }
     }
 
-    // View single order
-    public function show($id)
+    /**
+     * Create order from cached data when Bakong payment is completed
+     */
+    public function createFromPendingOrder($pendingOrderId, $transactionId = null)
     {
         try {
-            $user = Auth::user();
-            $order = Order::with(['items.book' => function($query) {
-                $query->select('id', 'title', 'author_name', 'price', 'images_url');
-            }])
-            ->where('id', $id)
-            ->where('user_id', $user->id)
-            ->first();
-
-            if (!$order) {
-                return response()->json(['error' => 'Order not found'], 404);
-            }
-
-            return response()->json([
-                'message' => 'Order retrieved successfully',
-                'order' => $order
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to retrieve order',
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    // Delete order (User can only delete their own orders)
-    public function destroy($id)
-    {
-        try {
-            $user = Auth::user();
-            $order = Order::where('id', $id)
-                         ->where('user_id', $user->id)
-                         ->first();
-
-            if (!$order) {
-                return response()->json(['error' => 'Order not found'], 404);
-            }
-
-            // Only allow deletion of orders with pending payment or cancelled orders
-            if (!in_array($order->status, ['cancelled']) && $order->payment_status !== 'pending') {
-                return response()->json([
-                    'error' => 'Cannot delete orders that have been paid or are being processed'
-                ], 422);
-            }
-
-            // Delete order items first
-            $order->items()->delete();
+            // Get cached order data
+            $orderData = Cache::get("pending_order_{$pendingOrderId}");
             
-            // Delete the order
-            $order->delete();
+            if (!$orderData) {
+                throw new \Exception('Pending order data not found or expired');
+            }
 
-            return response()->json([
-                'message' => 'Order deleted successfully'
-            ], 200);
+            DB::beginTransaction();
+
+            // Create the actual order
+            $order = Order::create([
+                'user_id' => $orderData['user_id'],
+                'total_amount' => $orderData['total_amount'],
+                'subtotal' => $orderData['subtotal'],
+                'shipping_cost' => $orderData['shipping_cost'],
+                'tax_amount' => $orderData['tax_amount'],
+                'discount_code_id' => $orderData['discount_code_id'],
+                'discount_code' => $orderData['discount_code'],
+                'discount_amount' => $orderData['discount_amount'],
+                'status' => 'paid',
+                'payment_method' => $orderData['payment_method'],
+                'payment_status' => 'completed',
+                'payment_transaction_id' => $transactionId,
+                'shipping_address' => json_encode($orderData['shipping_address']),
+            ]);
+
+            // Create order items and update stock
+            foreach ($orderData['order_items'] as $itemData) {
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'book_id' => $itemData['book_id'],
+                    'quantity' => $itemData['quantity'],
+                    'price' => $itemData['price'],
+                    'total' => $itemData['total']
+                ]);
+
+                // Update book stock
+                $book = Book::find($itemData['book_id']);
+                $book->decrement('stock', $itemData['quantity']);
+            }
+
+            // Clear the cart
+            $cart = Cart::find($orderData['cart_id']);
+            if ($cart) {
+                $cart->items()->delete();
+            }
+
+            // Handle discount code usage
+            if ($orderData['discount_code_id'] && $orderData['discount_amount'] > 0) {
+                DiscountCodeUsage::create([
+                    'discount_code_id' => $orderData['discount_code_id'],
+                    'user_id' => $orderData['user_id'],
+                    'order_id' => $order->id,
+                    'discount_amount' => $orderData['discount_amount'],
+                ]);
+
+                $discountCode = DiscountCode::find($orderData['discount_code_id']);
+                if ($discountCode) {
+                    $discountCode->increment('used_count');
+                }
+            }
+
+            // Remove cached data
+            Cache::forget("pending_order_{$pendingOrderId}");
+
+            DB::commit();
+
+            return $order->load('items.book');
 
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to delete order',
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    // Get all orders for admin (sales tracking)
-    public function adminIndex(Request $request)
-    {
-        try {
-            $user = Auth::user();
-            
-            if ($user->role !== 'admin') {
-                return response()->json(['error' => 'Unauthorized'], 403);
-            }
-
-            $query = Order::with(['user:id,name,email', 'items.book:id,title,author_name,price,images_url']);
-
-            // Filter by status
-            if ($request->has('status') && $request->status !== 'all') {
-                $query->where('status', $request->status);
-            }
-
-            // Filter by payment method
-            if ($request->has('payment_method') && $request->payment_method !== 'all') {
-                $query->where('payment_method', $request->payment_method);
-            }
-
-            // Filter by date range
-            if ($request->has('start_date')) {
-                $query->whereDate('created_at', '>=', $request->start_date);
-            }
-            if ($request->has('end_date')) {
-                $query->whereDate('created_at', '<=', $request->end_date);
-            }
-
-            // Search by order ID or user name
-            if ($request->has('search')) {
-                $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('id', 'like', "%{$search}%")
-                      ->orWhereHas('user', function($q) use ($search) {
-                          $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%");
-                      });
-                });
-            }
-
-            $orders = $query->orderBy('created_at', 'desc')->paginate(20);
-
-            // Calculate statistics
-            $stats = [
-                'total_orders' => Order::count(),
-                'total_revenue' => Order::whereIn('status', ['delivered', 'paid'])->sum('total_amount'),
-                'pending_orders' => Order::where('status', 'pending')->count(),
-                'completed_orders' => Order::whereIn('status', ['delivered', 'paid'])->count(),
-            ];
-
-            return response()->json([
-                'message' => 'Orders retrieved successfully',
-                'orders' => $orders,
-                'stats' => $stats
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to retrieve orders',
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    // Get sales for author (their books only)
-    public function authorSales(Request $request)
-    {
-        try {
-            $user = Auth::user();
-            
-            if ($user->role !== 'author') {
-                return response()->json(['error' => 'Unauthorized'], 403);
-            }
-
-            // Get all order items for books authored by this user
-            $query = OrderItem::with(['order.user:id,name,email', 'book:id,title,author_name,price,images_url'])
-                ->whereHas('book', function($q) use ($user) {
-                    $q->where('author_id', $user->id);
-                })
-                ->whereHas('order', function($q) {
-                    $q->whereIn('status', ['processing', 'shipped', 'delivered', 'paid']);
-                });
-
-            // Filter by date range
-            if ($request->has('start_date')) {
-                $query->whereHas('order', function($q) use ($request) {
-                    $q->whereDate('created_at', '>=', $request->start_date);
-                });
-            }
-            if ($request->has('end_date')) {
-                $query->whereHas('order', function($q) use ($request) {
-                    $q->whereDate('created_at', '<=', $request->end_date);
-                });
-            }
-
-            $sales = $query->orderBy('created_at', 'desc')->paginate(20);
-
-            // Calculate statistics
-            $totalRevenue = OrderItem::whereHas('book', function($q) use ($user) {
-                $q->where('author_id', $user->id);
-            })
-            ->whereHas('order', function($q) {
-                $q->whereIn('status', ['delivered', 'paid']);
-            })
-            ->sum('total');
-
-            $totalSold = OrderItem::whereHas('book', function($q) use ($user) {
-                $q->where('author_id', $user->id);
-            })
-            ->whereHas('order', function($q) {
-                $q->whereIn('status', ['delivered', 'paid']);
-            })
-            ->sum('quantity');
-
-            $stats = [
-                'total_revenue' => $totalRevenue,
-                'total_books_sold' => $totalSold,
-                'total_orders' => $sales->total(),
-            ];
-
-            return response()->json([
-                'message' => 'Sales retrieved successfully',
-                'sales' => $sales,
-                'stats' => $stats
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to retrieve sales',
-                'message' => $e->getMessage()
-            ], 500);
+            DB::rollBack();
+            Log::error('Failed to create order from pending: ' . $e->getMessage());
+            throw $e;
         }
     }
 }

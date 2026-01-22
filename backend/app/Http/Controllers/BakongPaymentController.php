@@ -7,6 +7,7 @@ use App\Services\BakongPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class BakongPaymentController extends Controller
 {
@@ -27,29 +28,48 @@ class BakongPaymentController extends Controller
     {
         try {
             $validated = $request->validate([
-                'order_id' => 'required|exists:orders,id',
+                'order_id' => 'required|string', // Now accepts pending order IDs
                 'currency' => 'sometimes|in:USD,KHR',
             ]);
 
             $user = Auth::user();
-            $order = Order::where('id', $validated['order_id'])
-                         ->where('user_id', $user->id)
-                         ->first();
+            $orderId = $validated['order_id'];
+            
+            // Check if this is a pending order (cached)
+            if (str_starts_with($orderId, 'pending_')) {
+                $orderData = Cache::get("pending_order_{$orderId}");
+                
+                if (!$orderData || $orderData['user_id'] !== $user->id) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Pending order not found or expired'
+                    ], 404);
+                }
+                
+                $totalAmount = $orderData['total_amount'];
+            } else {
+                // Regular order lookup (for backward compatibility)
+                $order = Order::where('id', $orderId)
+                             ->where('user_id', $user->id)
+                             ->first();
 
-            if (!$order) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Order not found'
-                ], 404);
+                if (!$order) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Order not found'
+                    ], 404);
+                }
+                
+                $totalAmount = $order->total_amount;
             }
 
             // Generate QR code
             $currency = $validated['currency'] ?? 'USD';
-            $billNumber = 'ORD-' . str_pad($order->id, 6, '0', STR_PAD_LEFT);
+            $billNumber = 'ORD-' . str_replace('pending_', '', $orderId);
             $storeLabel = config('app.name', 'Bookstore');
 
             $result = $this->bakongService->generateQRCode(
-                (float) $order->total_amount,
+                (float) $totalAmount,
                 $currency,
                 $billNumber,
                 $storeLabel
@@ -59,12 +79,14 @@ class BakongPaymentController extends Controller
                 // Set QR expiration to 10 minutes from now
                 $expiresAt = now()->addMinutes(10);
                 
-                // Update order with QR info and expiration
-                $order->update([
-                    'payment_qr_code' => $result['qr_string'],
-                    'payment_qr_md5' => $result['md5'],
-                    'qr_expires_at' => $expiresAt,
-                ]);
+                // Store QR info in cache with the pending order ID
+                Cache::put("qr_data_{$orderId}", [
+                    'qr_string' => $result['qr_string'],
+                    'md5' => $result['md5'],
+                    'expires_at' => $expiresAt,
+                    'amount' => $result['amount'],
+                    'currency' => $result['currency'],
+                ], $expiresAt);
 
                 return response()->json([
                     'success' => true,
@@ -74,7 +96,7 @@ class BakongPaymentController extends Controller
                         'md5' => $result['md5'],
                         'amount' => $result['amount'],
                         'currency' => $result['currency'],
-                        'order_id' => $order->id,
+                        'order_id' => $orderId,
                         'expires_at' => $expiresAt->toISOString(),
                         'bill_number' => $billNumber
                     ]
@@ -84,8 +106,8 @@ class BakongPaymentController extends Controller
             // Log the error for debugging
             Log::error('Bakong QR Generation Failed', [
                 'result' => $result,
-                'order_id' => $order->id,
-                'amount' => $order->total_amount
+                'order_id' => $orderId,
+                'amount' => $totalAmount
             ]);
 
             return response()->json([
@@ -122,6 +144,80 @@ class BakongPaymentController extends Controller
     {
         try {
             $user = Auth::user();
+            
+            // Check if this is a pending order
+            if (str_starts_with($orderId, 'pending_')) {
+                $orderData = Cache::get("pending_order_{$orderId}");
+                $qrData = Cache::get("qr_data_{$orderId}");
+                
+                if (!$orderData || $orderData['user_id'] !== $user->id) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Pending order not found or expired',
+                        'expired' => true
+                    ], 410);
+                }
+                
+                if (!$qrData) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'QR code not found or expired',
+                        'expired' => true
+                    ], 410);
+                }
+                
+                // Check if QR has expired
+                if (now()->isAfter($qrData['expires_at'])) {
+                    // Clean up expired data
+                    Cache::forget("pending_order_{$orderId}");
+                    Cache::forget("qr_data_{$orderId}");
+                    
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Payment expired. Please try again.',
+                        'expired' => true
+                    ], 410);
+                }
+                
+                // Check transaction status using MD5
+                $result = $this->bakongService->checkTransactionByMD5($qrData['md5'], false);
+                
+                if ($result['success'] && isset($result['transaction'])) {
+                    $transaction = $result['transaction'];
+                    
+                    if (isset($transaction['status']) && $transaction['status'] === 'COMPLETED') {
+                        Log::info('Payment COMPLETED! Creating order from pending data', ['pending_order_id' => $orderId]);
+                        
+                        // Create the actual order
+                        $orderController = new OrderController();
+                        $order = $orderController->createFromPendingOrder($orderId, $transaction['transactionId'] ?? null);
+                        
+                        return response()->json([
+                            'success' => true,
+                            'message' => 'Payment completed successfully',
+                            'data' => [
+                                'order_id' => $order->id,
+                                'order_status' => 'paid',
+                                'payment_status' => 'completed',
+                                'transaction' => $transaction
+                            ]
+                        ]);
+                    }
+                }
+                
+                // Payment not completed yet
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Payment not completed yet',
+                    'data' => [
+                        'payment_found' => false,
+                        'expires_at' => $qrData['expires_at']->toISOString(),
+                        'is_expired' => false
+                    ]
+                ], 200);
+            }
+            
+            // Handle regular orders (for backward compatibility)
             $order = Order::where('id', $orderId)
                          ->where('user_id', $user->id)
                          ->first();
@@ -131,21 +227,6 @@ class BakongPaymentController extends Controller
                     'success' => false,
                     'message' => 'Order not found'
                 ], 404);
-            }
-
-            // Check if QR code has expired (10 minutes)
-            if ($order->qr_expires_at && $order->qr_expires_at->isPast()) {
-                // Delete the expired order if payment is still pending
-                if ($order->payment_status === 'pending' || !$order->payment_transaction_id) {
-                    $order->items()->delete();
-                    $order->delete();
-                    
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Payment expired. Order has been cancelled and removed.',
-                        'expired' => true
-                    ], 410); // 410 Gone
-                }
             }
 
             // If payment is already completed, return success
@@ -161,58 +242,10 @@ class BakongPaymentController extends Controller
                 ]);
             }
 
-            if (!$order->payment_qr_md5) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No payment QR code found for this order'
-                ], 400);
-            }
-
-            // Check transaction status
-            $result = $this->bakongService->checkTransactionByMD5($order->payment_qr_md5, false);
-
-            Log::info('Payment check result', ['result' => $result]);
-
-            if ($result['success'] && isset($result['transaction'])) {
-                $transaction = $result['transaction'];
-
-                Log::info('Transaction found', ['transaction' => $transaction]);
-
-                // Update order when payment is successful
-                if (isset($transaction['status']) && $transaction['status'] === 'COMPLETED') {
-                    Log::info('Payment COMPLETED! Updating order', ['order_id' => $orderId]);
-                    
-                    $order->update([
-                        'payment_status' => 'completed', // Mark payment as completed
-                        'payment_transaction_id' => $transaction['transactionId'] ?? null,
-                    ]);
-
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Payment completed successfully',
-                        'data' => [
-                            'order_status' => 'paid',
-                            'payment_status' => 'completed',
-                            'transaction' => $transaction
-                        ]
-                    ]);
-                }
-            }
-
-            Log::info('Payment not found yet (normal)');
-
-            // Payment not found yet - return pending status
             return response()->json([
-                'success' => true,
-                'message' => 'Payment not completed yet',
-                'data' => [
-                    'order_status' => $order->status,
-                    'payment_status' => $order->payment_status, // Show actual payment status
-                    'payment_found' => false,
-                    'expires_at' => $order->qr_expires_at ? $order->qr_expires_at->toISOString() : null,
-                    'is_expired' => $order->qr_expires_at ? $order->qr_expires_at->isPast() : false
-                ]
-            ], 200);
+                'success' => false,
+                'message' => 'Order found but payment not completed'
+            ], 400);
 
         } catch (\Exception $e) {
             Log::error('Payment Status Check Error: ' . $e->getMessage());
