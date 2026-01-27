@@ -11,11 +11,23 @@ class User extends Authenticatable implements JWTSubject
     use HasFactory;
 
     protected $fillable = [
-        'name', 'email', 'password_hash', 'role', 'avatar', 'avatar_url', 'bio',
+        'name', 'email', 'password_hash', 'role', 'avatar', 'avatar_url',
+        'bank_name', 'bank_account_number', 'bank_account_name', 'bank_branch',
+        'payment_method', 'payment_verified', 'payment_verified_at',
+        'bakong_account_id', 'bakong_merchant_name', 'bakong_merchant_city',
+        'bakong_merchant_id', 'bakong_acquiring_bank', 'bakong_mobile_number',
+        'bakong_account_verified', 'bakong_verified_at',
     ];
 
     protected $hidden = [
         'password_hash',
+    ];
+
+    protected $casts = [
+        'bakong_account_verified' => 'boolean',
+        'bakong_verified_at' => 'datetime',
+        'payment_verified' => 'boolean',
+        'payment_verified_at' => 'datetime',
     ];
 
     // Accessor for avatar_url - prioritize avatar_url, fallback to avatar

@@ -655,6 +655,22 @@ const CheckoutPage = () => {
               ))}
             </div>
 
+            {/* Payment Method Info */}
+            {formData.paymentMethod === 'bakong' && cartItems.length > 0 && (
+              <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <p className="text-sm font-medium text-blue-800">Bakong Payment</p>
+                </div>
+                <p className="text-sm text-blue-700">
+                  Payment will go directly to the author's Bakong account
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Author: {cartItems[0]?.book?.author_name}
+                </p>
+              </div>
+            )}
+
             {/* Totals */}
             <div className="space-y-3 border-t border-gray-200 pt-4">
               <div className="flex justify-between text-sm">
@@ -825,6 +841,22 @@ const CheckoutPage = () => {
                       Order #{qrData.bill_number}
                     </p>
                   </div>
+
+                  {/* Author Payment Info */}
+                  {qrData.merchant_name && qrData.author_account && (
+                    <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center justify-center space-x-2 mb-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <p className="text-sm font-medium text-green-800">Payment goes directly to author</p>
+                      </div>
+                      <p className="text-sm text-green-700">
+                        <span className="font-medium">{qrData.merchant_name}</span>
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">
+                        Account: {qrData.author_account}
+                      </p>
+                    </div>
+                  )}
 
                   {/* Status */}
                   <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-6">

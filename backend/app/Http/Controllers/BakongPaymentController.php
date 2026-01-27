@@ -19,7 +19,7 @@ class BakongPaymentController extends Controller
     }
 
     /**
-     * Generate Bakong QR code for an order
+     * Generate Bakong QR code for an order using author's account
      * 
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -47,9 +47,10 @@ class BakongPaymentController extends Controller
                 }
                 
                 $totalAmount = $orderData['total_amount'];
+                $orderItems = $orderData['order_items'];
             } else {
                 // Regular order lookup (for backward compatibility)
-                $order = Order::where('id', $orderId)
+                $order = Order::with('items.book.author')->where('id', $orderId)
                              ->where('user_id', $user->id)
                              ->first();
 
@@ -61,14 +62,31 @@ class BakongPaymentController extends Controller
                 }
                 
                 $totalAmount = $order->total_amount;
+                $orderItems = $order->items->map(function($item) {
+                    return [
+                        'book_id' => $item->book_id,
+                        'book' => $item->book
+                    ];
+                })->toArray();
             }
 
-            // Generate QR code
+            // Determine which author's Bakong account to use
+            $authorBakongAccount = $this->getAuthorBakongAccount($orderItems, $orderId);
+            
+            if (!$authorBakongAccount) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Author Bakong account not configured or verified'
+                ], 400);
+            }
+
+            // Generate QR code using author's account
             $currency = $validated['currency'] ?? 'USD';
             $billNumber = 'ORD-' . str_replace('pending_', '', $orderId);
-            $storeLabel = config('app.name', 'Bookstore');
+            $storeLabel = $authorBakongAccount['merchant_name'];
 
-            $result = $this->bakongService->generateQRCode(
+            $result = $this->generateQRWithAuthorAccount(
+                $authorBakongAccount,
                 (float) $totalAmount,
                 $currency,
                 $billNumber,
@@ -86,6 +104,7 @@ class BakongPaymentController extends Controller
                     'expires_at' => $expiresAt,
                     'amount' => $result['amount'],
                     'currency' => $result['currency'],
+                    'author_account' => $authorBakongAccount['account_id'],
                 ], $expiresAt);
 
                 return response()->json([
@@ -98,7 +117,9 @@ class BakongPaymentController extends Controller
                         'currency' => $result['currency'],
                         'order_id' => $orderId,
                         'expires_at' => $expiresAt->toISOString(),
-                        'bill_number' => $billNumber
+                        'bill_number' => $billNumber,
+                        'merchant_name' => $authorBakongAccount['merchant_name'],
+                        'author_account' => $authorBakongAccount['account_id']
                     ]
                 ]);
             }
@@ -107,7 +128,8 @@ class BakongPaymentController extends Controller
             Log::error('Bakong QR Generation Failed', [
                 'result' => $result,
                 'order_id' => $orderId,
-                'amount' => $totalAmount
+                'amount' => $totalAmount,
+                'author_account' => $authorBakongAccount['account_id']
             ]);
 
             return response()->json([
@@ -130,6 +152,116 @@ class BakongPaymentController extends Controller
                 'message' => 'An error occurred while generating QR code',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Get author's Bakong account for the order
+     */
+    private function getAuthorBakongAccount($orderItems, $orderId)
+    {
+        try {
+            // For multi-author orders, we'll use the first author's account
+            // In the future, this could be enhanced to split payments
+            $firstBookId = null;
+            
+            if (str_starts_with($orderId, 'pending_')) {
+                // Get book from order items
+                $firstBookId = $orderItems[0]['book_id'] ?? null;
+            } else {
+                // Get book from order items
+                $firstBookId = $orderItems[0]['book_id'] ?? null;
+            }
+            
+            if (!$firstBookId) {
+                return null;
+            }
+            
+            $book = \App\Models\Book::with('author')->find($firstBookId);
+            if (!$book || !$book->author) {
+                return null;
+            }
+            
+            $author = $book->author;
+            
+            // Check if author has verified Bakong account
+            if (!$author->bakong_account_verified || !$author->bakong_account_id) {
+                Log::warning('Author Bakong account not verified', [
+                    'author_id' => $author->id,
+                    'author_name' => $author->name,
+                    'verified' => $author->bakong_account_verified
+                ]);
+                return null;
+            }
+            
+            return [
+                'account_id' => $author->bakong_account_id,
+                'merchant_name' => $author->bakong_merchant_name,
+                'merchant_city' => $author->bakong_merchant_city,
+                'merchant_id' => $author->bakong_merchant_id,
+                'acquiring_bank' => $author->bakong_acquiring_bank,
+                'mobile_number' => $author->bakong_mobile_number,
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Error getting author Bakong account: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Generate QR code using specific author's account
+     */
+    private function generateQRWithAuthorAccount($authorAccount, $amount, $currency, $billNumber, $storeLabel)
+    {
+        try {
+            // Create a temporary service instance with author's configuration
+            $originalConfig = [
+                'services.bakong.account_id' => config('services.bakong.account_id'),
+                'services.bakong.merchant_name' => config('services.bakong.merchant_name'),
+                'services.bakong.merchant_city' => config('services.bakong.merchant_city'),
+                'services.bakong.merchant_id' => config('services.bakong.merchant_id'),
+                'services.bakong.acquiring_bank' => config('services.bakong.acquiring_bank'),
+                'services.bakong.mobile_number' => config('services.bakong.mobile_number'),
+            ];
+
+            // Temporarily set author's configuration
+            config([
+                'services.bakong.account_id' => $authorAccount['account_id'],
+                'services.bakong.merchant_name' => $authorAccount['merchant_name'],
+                'services.bakong.merchant_city' => $authorAccount['merchant_city'],
+                'services.bakong.merchant_id' => $authorAccount['merchant_id'],
+                'services.bakong.acquiring_bank' => $authorAccount['acquiring_bank'],
+                'services.bakong.mobile_number' => $authorAccount['mobile_number'],
+            ]);
+
+            // Create new service instance with author's config
+            $authorBakongService = new BakongPaymentService();
+            
+            $result = $authorBakongService->generateQRCode(
+                $amount,
+                $currency,
+                $billNumber,
+                $storeLabel
+            );
+
+            // Restore original configuration
+            config($originalConfig);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            // Restore original configuration on error
+            if (isset($originalConfig)) {
+                config($originalConfig);
+            }
+            
+            Log::error('Author QR Generation Error: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Failed to generate QR with author account',
+                'error' => $e->getMessage()
+            ];
         }
     }
 

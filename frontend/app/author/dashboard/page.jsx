@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DollarSign, BookOpen, Users, TrendingUp } from "lucide-react";
+import { DollarSign, BookOpen, Users, TrendingUp, RefreshCw, CreditCard, CheckCircle, AlertCircle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useAuthStore } from "../../store/authStore";
 import { request } from "../../utils/request";
@@ -9,34 +9,117 @@ import { request } from "../../utils/request";
 export default function AuthorDashboardPage() {
   const { user, token } = useAuthStore();
   const [stats, setStats] = useState(null);
+  const [bakongStatus, setBakongStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchAuthorDashboardData = async () => {
-      if (!token) return;
+  const fetchAuthorDashboardData = async () => {
+    if (!token) {
+      setError("Authentication required. Please log in.");
+      setLoading(false);
+      return;
+    }
 
-      try {
-        setLoading(true);
-        const response = await request("/api/author-dashboard-stats", "GET", null, {}, token);
-        
-        if (response && response.data) {
-          setStats(response.data);
-        }
-      } catch (err) {
-        console.error("Dashboard fetch error:", err);
-        setError("Failed to load dashboard data");
-      } finally {
-        setLoading(false);
+    if (!user || user.role !== 'author') {
+      setError("Author access required. Please contact admin to upgrade your account.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log("Fetching author dashboard data...");
+      
+      // Fetch dashboard stats and Bakong status in parallel
+      const [dashboardResponse, paymentResponse] = await Promise.all([
+        request("/api/author-dashboard-stats", "GET", null, {}, token),
+        request("/api/author/payment/info", "GET", null, {}, token).catch(() => null)
+      ]);
+      
+      console.log("Dashboard API response:", dashboardResponse);
+      
+      if (dashboardResponse && dashboardResponse.success && dashboardResponse.data) {
+        setStats(dashboardResponse.data);
+        console.log("Dashboard data loaded successfully:", dashboardResponse.data);
+      } else {
+        throw new Error(dashboardResponse?.message || "Invalid response format");
       }
-    };
 
+      // Set payment status if available
+      if (paymentResponse && paymentResponse.success) {
+        const paymentData = paymentResponse.data;
+        setBakongStatus({
+          hasAccount: !!(paymentData.bakong_account_id),
+          isVerified: paymentData.bakong_account_verified || false,
+          accountId: paymentData.bakong_account_id || null,
+          paymentMethod: paymentData.payment_method || 'bank'
+        });
+      }
+      
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
+      
+      // More specific error messages
+      if (err.response?.status === 401) {
+        setError("Authentication failed. Please log in again.");
+      } else if (err.response?.status === 403) {
+        setError("Access denied. Author privileges required.");
+      } else if (err.response?.status === 500) {
+        setError("Server error. Please try again later.");
+      } else {
+        setError(err.response?.data?.message || err.message || "Failed to load dashboard data");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchAuthorDashboardData();
-  }, [token]);
+  }, [token, user]);
 
-  if (loading) return <div className="p-10">Loading Dashboard...</div>;
-  if (error) return <div className="p-10 text-red-500">{error}</div>;
-  if (!stats) return <div className="p-10">No data available</div>;
+  if (loading) return (
+    <div className="flex-1 p-6 bg-background-dark">
+      <div className="mx-auto max-w-7xl flex flex-col items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <p className="mt-4 text-gray-600">Loading Dashboard...</p>
+      </div>
+    </div>
+  );
+  
+  if (error) return (
+    <div className="flex-1 p-6 bg-background-dark">
+      <div className="mx-auto max-w-7xl flex flex-col items-center justify-center min-h-[400px]">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md w-full text-center">
+          <div className="text-red-500 text-xl mb-2">⚠️</div>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Dashboard Error</h3>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={fetchAuthorDashboardData}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+  
+  if (!stats) return (
+    <div className="flex-1 p-6 bg-background-dark">
+      <div className="mx-auto max-w-7xl flex flex-col items-center justify-center min-h-[400px]">
+        <p className="text-gray-600">No data available</p>
+        <button
+          onClick={fetchAuthorDashboardData}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+        >
+          Load Data
+        </button>
+      </div>
+    </div>
+  );
 
   // KPI Data for author dashboard
   const kpiData = [
@@ -91,9 +174,19 @@ export default function AuthorDashboardPage() {
             <h2 className="text-2xl font-bold">Author Dashboard</h2>
             <p className="text-gray-600">Welcome back, {user?.name}!</p>
           </div>
-          <span className="text-sm text-slate-400">
-            Last update: {new Date().toLocaleTimeString()}
-          </span>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={fetchAuthorDashboardData}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+            <span className="text-sm text-slate-400">
+              Last update: {new Date().toLocaleTimeString()}
+            </span>
+          </div>
         </div>
 
         {/* KPI Cards */}
@@ -116,6 +209,59 @@ export default function AuthorDashboardPage() {
               </div>
             );
           })}
+        </div>
+
+        {/* Bakong Payment Status */}
+        <div className="rounded-2xl bg-white p-6 shadow-lg">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <CreditCard className="w-5 h-5" />
+            Bakong Payment Status
+          </h3>
+          
+          {bakongStatus ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {bakongStatus.bakong_account_verified ? (
+                  <CheckCircle className="w-6 h-6 text-green-500" />
+                ) : (
+                  <AlertCircle className="w-6 h-6 text-yellow-500" />
+                )}
+                <div>
+                  <p className="font-medium">
+                    {bakongStatus.bakong_account_verified ? 'Account Verified' : 'Setup Required'}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {bakongStatus.bakong_account_verified 
+                      ? `Account: ${bakongStatus.bakong_account_id}` 
+                      : 'Configure your Bakong account to receive payments'
+                    }
+                  </p>
+                </div>
+              </div>
+              <a
+                href="/author/payment"
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+              >
+                {bakongStatus.bakong_account_verified ? 'Manage' : 'Setup Now'}
+              </a>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-6 h-6 text-gray-400" />
+                <div>
+                  <p className="font-medium text-gray-600">Payment Setup</p>
+                  <p className="text-sm text-gray-500">Configure Bakong to receive payments</p>
+                </div>
+              </div>
+              <a
+                href="/author/payment"
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+              >
+                Setup Now
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Charts Section */}

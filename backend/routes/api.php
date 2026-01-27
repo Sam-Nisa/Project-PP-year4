@@ -16,6 +16,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\DiscountCodeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthorDashboardController;
+use App\Http\Controllers\AuthorPaymentController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\BakongPaymentController;
 
@@ -172,6 +173,18 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::post('/verify-account', [BakongPaymentController::class, 'verifyAccount']);         // Verify Bakong account
         Route::post('/decode-qr', [BakongPaymentController::class, 'decodeQRCode']);               // Decode QR code
         Route::post('/renew-token', [BakongPaymentController::class, 'renewToken']);               // Renew API token (Admin)
+    });
+
+    // Author Payment Management (Bank + Bakong)
+    Route::prefix('author/payment')->group(function () {
+        Route::get('/info', [AuthorPaymentController::class, 'getPaymentInfo']);                  // Get all payment info
+        Route::post('/bank', [AuthorPaymentController::class, 'updateBankInfo']);                 // Update bank info
+        Route::post('/bakong', [AuthorPaymentController::class, 'updateBakongInfo']);             // Update Bakong info
+        Route::post('/verify-bank', [AuthorPaymentController::class, 'verifyBankAccount']);       // Verify bank account
+        Route::post('/verify-bakong', [AuthorPaymentController::class, 'verifyBakongAccount']);   // Verify Bakong account
+        Route::post('/test-qr', [AuthorPaymentController::class, 'testQRGeneration']);            // Test QR generation
+        Route::get('/banks', [AuthorPaymentController::class, 'getBanks']);                       // Get bank list
+        Route::get('/bakong-banks', [AuthorPaymentController::class, 'getBakongBanks']);          // Get Bakong bank list
     });
 
 });
