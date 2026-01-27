@@ -4,12 +4,16 @@ import Link from "next/link";
 import Image from "next/image";
 import { HeartIcon as HeartOutlineIcon } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
+import {ShoppingCartIcon as ShoppingCartIcon} from "@heroicons/react/24/outline";
 import { useState, memo } from "react";
 import { toast } from "react-toastify";
+
+
 
 import { useWishlistStore } from "../store/useWishlistStore";
 import { useAuthStore } from "../store/authStore";
 import StarRating from "./StarRating";
+import { useAddToCartStore } from "../store/useAddToCardStore";
 
 const LoginPromptModal = ({ onClose }) => {
   return (
@@ -62,16 +66,22 @@ const BookCardComponent = ({ book }) => {
 
   const { addWishlist, removeWishlist, isWishlisted } = useWishlistStore();
   const { user } = useAuthStore();
+  const { addToCart } = useAddToCartStore();
 
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
   const isCurrentlyWishlisted = isWishlisted(book.id);
 
-  const toggleWishlist = async () => {
-    if (!user) {
-      setShowLoginPrompt(true);
-      return;
-    }
+const toggleWishlist = async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
 
+  if (!user) {
+    setShowLoginPrompt(true);
+    return;
+  }
+
+  try {
     if (isCurrentlyWishlisted) {
       await removeWishlist(book.id);
       toast.info("Removed from wishlist");
@@ -79,63 +89,79 @@ const BookCardComponent = ({ book }) => {
       await addWishlist(book.id);
       toast.success("Added to wishlist");
     }
-  };
+  } catch {
+    toast.error("Wishlist action failed");
+  }
+};
+
+const handleAddToCart = async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (!user) {
+    setShowLoginPrompt(true);
+    return;
+  }
+
+  try {
+    await addToCart(book.id, 1); // quantity = 1 on card
+    toast.success(`"${book.title}" added to cart`);
+  } catch (err) {
+    toast.error("Failed to add to cart");
+  }
+};
+
+
+
 
   return (
     <>
-      <div className="hover:scale-105 duration-400 transition relative bg-white border rounded-lg shadow-sm mb-6 hover:shadow-md overflow-hidden">
-        
-        {/* Wishlist */}
-        <button
-          onClick={toggleWishlist}
-          className="absolute top-2 right-2 bg-white rounded-full p-1 shadow z-10 hover:bg-gray-200 transition"
-        >
-          {isCurrentlyWishlisted ? (
-            <HeartSolidIcon className="w-5 h-5 text-red-500" />
-          ) : (
-            <HeartOutlineIcon className="w-5 h-5 text-gray-400" />
-          )}
-        </button>
+<div className="hover:scale-105 transition relative bg-white border rounded-lg shadow-sm mb-6 hover:shadow-md overflow-hidden">
+  
+  {/* Clickable area */}
+  <Link href={`/book/${book.id}`}>
+    <div className="relative h-56 w-full">
+      <Image
+        src={coverImageUrl}
+        alt={title}
+        fill
+        className="object-contain"
+      />
+    </div>
 
-        {/* Image */}
-        <div className="group relative h-56 w-full bg-transparent">
-          <Image
-            src={coverImageUrl}
-            alt={title}
-            fill
-            className="object-contain"
-            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-            quality={75}
-            loading="lazy"
-            placeholder="blur"
-            blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
-          />
-        </div>
+    <div className="p-3">
+      <h3 className="text-sm font-semibold line-clamp-2">{title}</h3>
+      <p className="text-blue-600 font-bold text-sm">${price}</p>
+    </div>
+  </Link>
 
-        {/* Content */}
-        <div className="p-3 flex flex-col gap-1">
-          <h3 className="text-sm font-semibold line-clamp-2">{title}</h3>
-          
-          {/* Rating */}
-          {book.average_rating > 0 && (
-            <div className="flex items-center gap-2">
-              <StarRating rating={book.average_rating} readonly size="sm" />
-              <span className="text-xs text-gray-500">
-                ({book.total_reviews})
-              </span>
-            </div>
-          )}
-          
-          <p className="text-blue-600 font-bold text-sm">${price}</p>
+  {/* Actions (NOT inside Link) */}
+  <div className="px-3 pb-3 flex justify-between items-center">
+    
+    {/* Wishlist */}
+    <button
+      onClick={toggleWishlist}
+      className="bg-white p-2 rounded-lg shadow hover:bg-gray-200"
+    >
+      {isCurrentlyWishlisted ? (
+        <HeartSolidIcon className="w-5 h-5 text-red-500" />
+      ) : (
+        <HeartOutlineIcon className="w-5 h-5 text-red-600" />
+      )}
+    </button>
 
-          <Link
-            href={`/book/${book.id}`}
-            className="mt-2 text-center text-sm bg-blue-500 text-white py-1.5 rounded-md hover:bg-blue-600 transition"
-          >
-            View Details
-          </Link>
-        </div>
-      </div>
+    {/* Add to Cart */}
+    <button
+      onClick={handleAddToCart}
+      className="flex items-center gap-2 px-10 py-2 rounded-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-600 text-white hover:shadow-xl"
+    >
+      <ShoppingCartIcon className="w-5 h-5" />
+      <span className="text-sm">Add to Cart</span>
+    </button>
+  </div>
+</div>
+
+
 
       {showLoginPrompt && (
         <LoginPromptModal onClose={() => setShowLoginPrompt(false)} />

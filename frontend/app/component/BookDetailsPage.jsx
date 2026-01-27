@@ -535,7 +535,7 @@ const BookDetailsPage = ({ bookId = 1 }) => {
     setQuantity((prev) => Math.max(1, prev + delta));
   }, []);
 
-  const handleWishlistToggle = useCallback(async () => {
+  const handleWishlistToggle = useCallback(() => {
     if (!book) return;
 
     if (!user) {
@@ -543,20 +543,29 @@ const BookDetailsPage = ({ bookId = 1 }) => {
       return;
     }
 
-    try {
-      if (isWishlisted(book.id)) {
-        await removeWishlist(book.id);
-        toast.info(`Removed "${book.title}" from wishlist.`);
-      } else {
-        await addWishlist(book.id);
-        toast.success(`Added "${book.title}" to wishlist!`);
-      }
-    } catch (error) {
-      toast.error("Failed to update wishlist");
+    const alreadyWishlisted = isWishlisted(book.id);
+
+    // ✅ instant UI feedback
+    if (alreadyWishlisted) {
+      toast.info(`Removed "${book.title}" from wishlist.`);
+    } else {
+      toast.success(`Added "${book.title}" to wishlist!`);
     }
+
+    // ✅ background sync
+    const action = alreadyWishlisted
+      ? removeWishlist(book.id)
+      : addWishlist(book.id);
+
+    action.catch((err) => {
+      toast.error("Wishlist update failed");
+      console.error(err);
+    });
+
   }, [book, user, isWishlisted, removeWishlist, addWishlist]);
 
-  const handleAddToCart = useCallback(async () => {
+
+  const handleAddToCart = useCallback(() => {
     if (!book) return;
 
     if (!user) {
@@ -564,14 +573,17 @@ const BookDetailsPage = ({ bookId = 1 }) => {
       return;
     }
 
-    try {
-      // Optimized: Don't wait for full cart refresh, just add the item
-      await addToCart(book.id, quantity);
-      toast.success(`Added ${quantity} x "${book.title}" to cart!`);
-    } catch (err) {
-      toast.error(`Failed to add to cart: ${err.message}`);
-    }
+    // ✅ instant feedback
+    toast.success(`Added ${quantity} x "${book.title}" to cart!`);
+
+    // ✅ background sync
+    addToCart(book.id, quantity).catch((err) => {
+      toast.error("Failed to add to cart");
+      console.error(err);
+    });
+
   }, [book, user, addToCart, quantity]);
+
 
   const handleBuyNow = useCallback(async () => {
     if (!book) return;
