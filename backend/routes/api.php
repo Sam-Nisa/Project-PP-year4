@@ -110,13 +110,16 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('orders', [OrderController::class, 'index']);
     Route::post('orders', [OrderController::class, 'store']);
     Route::get('orders/{id}', [OrderController::class, 'show']);
-    Route::delete('orders/{id}', [OrderController::class, 'destroy']); // Delete order
+    Route::delete('orders/{id}', [OrderController::class, 'destroy']); // Admin only - Delete order
 
     // Admin: View all orders (sales tracking)
     Route::get('admin/orders', [OrderController::class, 'adminIndex']); // Admin only
 
     // Author: View their book sales
     Route::get('author/sales', [OrderController::class, 'authorSales']); // Author only
+
+    // Delete sale (order item) - Admin can delete any, Author can delete their own
+    Route::delete('sales/{orderItemId}', [OrderController::class, 'deleteSale']);
 
     // Order Items
     Route::post('order-items', [OrderItemController::class, 'store']);

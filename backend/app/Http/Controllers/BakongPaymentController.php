@@ -83,15 +83,33 @@ class BakongPaymentController extends Controller
                 $authorAccount = $this->getAuthorBakongAccount($orderItems, $orderId);
                 
                 if ($authorAccount) {
-                    // Check if this is actually admin account (book created by admin)
+                    // Check if this is actually admin account (book created by admin or multi-vendor)
                     if ($authorAccount['account_id'] === config('services.bakong.account_id')) {
                         $bakongAccount = $authorAccount;
                         $accountType = 'admin';
-                        $reason = 'book_created_by_admin';
+                        
+                        // Determine specific reason for admin account usage
+                        $authorIds = [];
+                        foreach ($orderItems as $item) {
+                            $bookId = $item['book_id'] ?? null;
+                            if ($bookId) {
+                                $book = \App\Models\Book::find($bookId);
+                                if ($book && $book->author_id) {
+                                    $authorIds[] = $book->author_id;
+                                }
+                            }
+                        }
+                        $uniqueAuthors = array_unique($authorIds);
+                        
+                        if (count($uniqueAuthors) > 1) {
+                            $reason = 'multi_vendor_order';
+                        } else {
+                            $reason = 'book_created_by_admin';
+                        }
                     } else {
                         $bakongAccount = $authorAccount;
                         $accountType = 'author';
-                        $reason = 'regular_author_payment';
+                        $reason = 'single_author_payment';
                     }
                 } else {
                     // Fallback to admin account if author account not available
@@ -225,8 +243,31 @@ class BakongPaymentController extends Controller
     private function getAuthorBakongAccount($orderItems, $orderId)
     {
         try {
-            // For multi-author orders, we'll use the first author's account
-            // In the future, this could be enhanced to split payments
+            // First, check if this is a multi-vendor order
+            $authorIds = [];
+            foreach ($orderItems as $item) {
+                $bookId = $item['book_id'] ?? null;
+                if ($bookId) {
+                    $book = \App\Models\Book::find($bookId);
+                    if ($book && $book->author_id) {
+                        $authorIds[] = $book->author_id;
+                    }
+                }
+            }
+            
+            $uniqueAuthors = array_unique($authorIds);
+            
+            // If multiple authors detected, use admin account
+            if (count($uniqueAuthors) > 1) {
+                Log::info('Multi-vendor order detected, using admin account', [
+                    'authors' => $uniqueAuthors,
+                    'author_count' => count($uniqueAuthors),
+                    'order_id' => $orderId
+                ]);
+                return $this->getAdminBakongAccount();
+            }
+            
+            // Single author order - proceed with existing logic
             $firstBookId = null;
             
             if (str_starts_with($orderId, 'pending_')) {

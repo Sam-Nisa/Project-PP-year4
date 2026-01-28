@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { ArrowLeftIcon, LockClosedIcon, XMarkIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { useAddToCartStore } from "../../store/useAddToCardStore";
@@ -10,22 +10,84 @@ import { QRCodeSVG } from "qrcode.react";
 const CheckoutPage = () => {
   const { user } = useAuthStore();
   const { cartItems, fetchCart } = useAddToCartStore();
+  const [isBuyNow, setIsBuyNow] = useState(false);
+  const [buyNowProduct, setBuyNowProduct] = useState(null);
 
-  // Calculate subtotal from cart items
-  const subtotal = cartItems.reduce((total, item) => {
-    const price = parseFloat(item.book?.price || 0);
-    const discountValue = parseFloat(item.book?.discount_value || 0);
-    const discountType = item.book?.discount_type;
-
-    let finalPrice = price;
-    if (discountType === "percentage" && discountValue > 0) {
-      finalPrice = price - (price * discountValue) / 100;
-    } else if (discountType === "fixed" && discountValue > 0) {
-      finalPrice = Math.max(0, price - discountValue);
+  // Check if this is a "Buy Now" checkout
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const buyNowFlag = urlParams.get('buyNow');
+    
+    if (buyNowFlag === 'true') {
+      const storedProduct = sessionStorage.getItem('buyNowProduct');
+      if (storedProduct) {
+        try {
+          const productData = JSON.parse(storedProduct);
+          setBuyNowProduct(productData);
+          setIsBuyNow(true);
+        } catch (error) {
+          console.error('Error parsing buy now product:', error);
+          setIsBuyNow(false);
+        }
+      }
+    } else {
+      setIsBuyNow(false);
+      setBuyNowProduct(null);
     }
+  }, []);
 
-    return total + (finalPrice * item.quantity);
-  }, 0);
+  // Use either buy now product or cart items
+  const checkoutItems = useMemo(() => {
+    return isBuyNow && buyNowProduct ? [buyNowProduct] : cartItems;
+  }, [isBuyNow, buyNowProduct, cartItems]);
+
+  // Check if cart has multiple vendors (authors)
+  const isMultiVendor = useMemo(() => {
+    if (!checkoutItems || checkoutItems.length === 0) return false;
+    
+    const authorIds = new Set();
+    checkoutItems.forEach(item => {
+      const book = item.book || item;
+      if (book.author_id) {
+        authorIds.add(book.author_id);
+      }
+    });
+    
+    return authorIds.size > 1;
+  }, [checkoutItems]);
+
+  // Get unique authors for display
+  const uniqueAuthors = useMemo(() => {
+    if (!checkoutItems || checkoutItems.length === 0) return [];
+    
+    const authorsMap = new Map();
+    checkoutItems.forEach(item => {
+      const book = item.book || item;
+      if (book.author_id && book.author_name) {
+        authorsMap.set(book.author_id, book.author_name);
+      }
+    });
+    
+    return Array.from(authorsMap.values());
+  }, [checkoutItems]);
+
+  // Calculate subtotal from checkout items
+  const subtotal = useMemo(() => {
+    return checkoutItems.reduce((total, item) => {
+      const price = parseFloat(item.book?.price || item.price || 0);
+      const discountValue = parseFloat(item.book?.discount_value || item.discount_value || 0);
+      const discountType = item.book?.discount_type || item.discount_type;
+
+      let finalPrice = price;
+      if (discountType === "percentage" && discountValue > 0) {
+        finalPrice = price - (price * discountValue) / 100;
+      } else if (discountType === "fixed" && discountValue > 0) {
+        finalPrice = Math.max(0, price - discountValue);
+      }
+
+      return total + (finalPrice * (item.quantity || 1));
+    }, 0);
+  }, [checkoutItems]);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -58,7 +120,10 @@ const CheckoutPage = () => {
 
   useEffect(() => {
     if (user) {
-      fetchCart();
+      // Only fetch cart if not in buy now mode
+      if (!isBuyNow) {
+        fetchCart();
+      }
       setFormData(prev => ({
         ...prev,
         email: user.email || "",
@@ -66,7 +131,7 @@ const CheckoutPage = () => {
         lastName: user.name?.split(" ").slice(1).join(" ") || "",
       }));
     }
-  }, [user, fetchCart]);
+  }, [user, fetchCart, isBuyNow]);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -310,6 +375,11 @@ const CheckoutPage = () => {
       setShowQRModal(true);
       await generateQRCode(response.order.id);
 
+      // Clear buy now product from session storage after successful order creation
+      if (isBuyNow) {
+        sessionStorage.removeItem('buyNowProduct');
+      }
+
     } catch (error) {
       console.error("Checkout error:", error);
       alert(error.response?.data?.error || "Failed to create order. Please try again.");
@@ -336,12 +406,12 @@ const CheckoutPage = () => {
     );
   }
 
-  if (cartItems.length === 0) {
+  if (checkoutItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-            Your cart is empty
+            {isBuyNow ? "No product selected" : "Your cart is empty"}
           </h2>
           <Link
             href="/"
@@ -360,13 +430,15 @@ const CheckoutPage = () => {
         {/* Header */}
         <div className="mb-8">
           <Link
-            href="/add-to-cart"
+            href={isBuyNow ? `/book/${buyNowProduct?.id}` : "/add-to-cart"}
             className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-4"
           >
             <ArrowLeftIcon className="w-5 h-5" />
-            <span>Back to Cart</span>
+            <span>{isBuyNow ? "Back to Product" : "Back to Cart"}</span>
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Checkout</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isBuyNow ? "Buy Now - Checkout" : "Checkout"}
+          </h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -593,57 +665,63 @@ const CheckoutPage = () => {
 
             {/* Items */}
             <div className="space-y-4 mb-6">
-              {cartItems.map((item) => (
-                <div key={item.id} className="flex items-center space-x-4">
-                  <img
-                    src={(() => {
-                      const images = item.book?.images_url;
-                      if (typeof images === 'string') {
-                        try {
-                          const parsed = JSON.parse(images);
-                          return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : "/placeholder-book.jpg";
-                        } catch {
-                          return "/placeholder-book.jpg";
+              {checkoutItems.map((item, index) => {
+                // Handle both cart items and buy now products
+                const book = item.book || item; // For buy now, item IS the book
+                const quantity = item.quantity || 1;
+                
+                return (
+                  <div key={item.id || index} className="flex items-center space-x-4">
+                    <img
+                      src={(() => {
+                        const images = book.images_url;
+                        if (typeof images === 'string') {
+                          try {
+                            const parsed = JSON.parse(images);
+                            return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : "/placeholder-book.jpg";
+                          } catch {
+                            return "/placeholder-book.jpg";
+                          }
                         }
-                      }
-                      return Array.isArray(images) && images.length > 0 ? images[0] : "/placeholder-book.jpg";
-                    })()}
-                    alt={item.book?.title}
-                    className="w-16 h-20 object-cover rounded"
-                  />
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">
-                      {item.book?.title}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      by {item.book?.author_name}
-                    </p>
-                    <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">
-                      ${(() => {
-                        const price = parseFloat(item.book?.price || 0);
-                        const discountValue = parseFloat(item.book?.discount_value || 0);
-                        const discountType = item.book?.discount_type;
-
-                        let finalPrice = price;
-                        if (discountType === "percentage" && discountValue > 0) {
-                          finalPrice = price - (price * discountValue) / 100;
-                        } else if (discountType === "fixed" && discountValue > 0) {
-                          finalPrice = Math.max(0, price - discountValue);
-                        }
-
-                        return (finalPrice * item.quantity).toFixed(2);
+                        return Array.isArray(images) && images.length > 0 ? images[0] : "/placeholder-book.jpg";
                       })()}
-                    </p>
+                      alt={book.title}
+                      className="w-16 h-20 object-cover rounded"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900">
+                        {book.title}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        by {book.author_name}
+                      </p>
+                      <p className="text-sm text-gray-600">Qty: {quantity}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">
+                        ${(() => {
+                          const price = parseFloat(book.price || 0);
+                          const discountValue = parseFloat(book.discount_value || 0);
+                          const discountType = book.discount_type;
+
+                          let finalPrice = price;
+                          if (discountType === "percentage" && discountValue > 0) {
+                            finalPrice = price - (price * discountValue) / 100;
+                          } else if (discountType === "fixed" && discountValue > 0) {
+                            finalPrice = Math.max(0, price - discountValue);
+                          }
+
+                          return (finalPrice * quantity).toFixed(2);
+                        })()}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Payment Method Info */}
-            {cartItems.length > 0 && (
+            {checkoutItems.length > 0 && (
               <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-center space-x-2 mb-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -658,6 +736,24 @@ const CheckoutPage = () => {
                       Merchant: NISA SAM • Account: nisa_sam@bkrt
                     </p>
                   </div>
+                ) : isMultiVendor ? (
+                  <div>
+                    <p className="text-sm text-blue-700">
+                      <strong>Multi-Vendor Order</strong> - Payment will go to Admin Account
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Merchant: NISA SAM • Account: nisa_sam@bkrt
+                    </p>
+                    <div className="mt-2 p-2 bg-blue-100 rounded">
+                      <p className="text-xs text-blue-800 font-medium">📚 Authors in this order:</p>
+                      <p className="text-xs text-blue-700">
+                        {uniqueAuthors.join(', ')}
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">
+                        Admin will distribute payments to each author
+                      </p>
+                    </div>
+                  </div>
                 ) : (
                   <div>
                     <p className="text-sm text-blue-700">
@@ -667,6 +763,11 @@ const CheckoutPage = () => {
                       • Author books → Author's account<br/>
                       • Admin books → Admin account (nisa_sam@bkrt)
                     </p>
+                    {isBuyNow && buyNowProduct && (
+                      <p className="text-xs text-blue-600 mt-2 font-medium">
+                        📦 Buy Now: {buyNowProduct.title}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -864,7 +965,8 @@ const CheckoutPage = () => {
                         <p className="text-xs text-green-600 mt-1">
                           {qrData.reason === 'discount_code_applied' && '(Discount code applied)'}
                           {qrData.reason === 'book_created_by_admin' && '(Book created by admin)'}
-                          {qrData.reason === 'regular_author_payment' && '(Author payment)'}
+                          {qrData.reason === 'single_author_payment' && '(Author payment)'}
+                          {qrData.reason === 'multi_vendor_order' && '(Multi-vendor order - Admin will distribute to authors)'}
                           {qrData.reason === 'author_account_not_configured' && '(Author account not configured - using admin account)'}
                         </p>
                       )}

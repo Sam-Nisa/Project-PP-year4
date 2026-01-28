@@ -326,4 +326,378 @@ class OrderController extends Controller
             throw $e;
         }
     }
+
+    /**
+     * Admin: Get all orders with stats for sales tracking
+     * Separates admin sales (admin-created books) from author sales
+     */
+    public function adminIndex(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            Log::info('Admin orders endpoint called', [
+                'user_id' => $user?->id,
+                'user_role' => $user?->role,
+                'filters' => $request->all()
+            ]);
+            
+            // Check if user is admin
+            if ($user->role !== 'admin') {
+                Log::warning('Unauthorized access to admin orders', ['user_id' => $user->id, 'role' => $user->role]);
+                return response()->json([
+                    'error' => 'Unauthorized'
+                ], 403);
+            }
+
+            // Get admin user IDs (users with admin role)
+            $adminUserIds = \App\Models\User::where('role', 'admin')->pluck('id');
+
+            // Build query for orders containing books created by admin
+            $query = Order::with(['user:id,name,email', 'items.book:id,title,author_name,author_id'])
+                          ->where('status', 'paid')
+                          ->where('payment_status', 'completed')
+                          ->whereHas('items.book', function($q) use ($adminUserIds) {
+                              $q->whereIn('author_id', $adminUserIds);
+                          });
+
+            // Apply filters
+            if ($request->status && $request->status !== 'all') {
+                $query->where('status', $request->status);
+            }
+
+            if ($request->payment_method && $request->payment_method !== 'all') {
+                $query->where('payment_method', $request->payment_method);
+            }
+
+            if ($request->start_date) {
+                $query->whereDate('created_at', '>=', $request->start_date);
+            }
+
+            if ($request->end_date) {
+                $query->whereDate('created_at', '<=', $request->end_date);
+            }
+
+            if ($request->search) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('id', 'like', "%{$search}%")
+                      ->orWhereHas('user', function($userQuery) use ($search) {
+                          $userQuery->where('name', 'like', "%{$search}%")
+                                   ->orWhere('email', 'like', "%{$search}%");
+                      });
+                });
+            }
+
+            // Get paginated orders
+            $orders = $query->orderBy('created_at', 'desc')->paginate(20);
+
+            // Calculate stats for admin sales only
+            $statsQuery = Order::where('status', 'paid')
+                              ->where('payment_status', 'completed')
+                              ->whereHas('items.book', function($q) use ($adminUserIds) {
+                                  $q->whereIn('author_id', $adminUserIds);
+                              });
+
+            // Apply same date filters to stats
+            if ($request->start_date) {
+                $statsQuery->whereDate('created_at', '>=', $request->start_date);
+            }
+            if ($request->end_date) {
+                $statsQuery->whereDate('created_at', '<=', $request->end_date);
+            }
+
+            // Calculate admin-specific revenue (only from admin books)
+            $adminRevenue = OrderItem::whereHas('order', function($q) use ($request) {
+                                $q->where('status', 'paid')->where('payment_status', 'completed');
+                                if ($request->start_date) {
+                                    $q->whereDate('created_at', '>=', $request->start_date);
+                                }
+                                if ($request->end_date) {
+                                    $q->whereDate('created_at', '<=', $request->end_date);
+                                }
+                            })
+                            ->whereHas('book', function($q) use ($adminUserIds) {
+                                $q->whereIn('author_id', $adminUserIds);
+                            })
+                            ->sum('total');
+
+            $stats = [
+                'total_orders' => $statsQuery->count(),
+                'total_revenue' => $adminRevenue,
+                'pending_orders' => Order::where('status', 'processing')->count(),
+                'completed_orders' => $statsQuery->count(),
+            ];
+
+            Log::info('Admin orders response', [
+                'orders_count' => $orders->count(),
+                'stats' => $stats
+            ]);
+
+            return response()->json([
+                'message' => 'Admin sales retrieved successfully',
+                'orders' => $orders,
+                'stats' => $stats
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Admin orders fetch error: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Failed to retrieve admin sales',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Author: Get sales data for their books
+     */
+    public function authorSales(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            Log::info('Author sales endpoint called', [
+                'user_id' => $user?->id,
+                'user_role' => $user?->role,
+                'filters' => $request->all()
+            ]);
+            
+            // Check if user is author
+            if ($user->role !== 'author') {
+                Log::warning('Unauthorized access to author sales', ['user_id' => $user->id, 'role' => $user->role]);
+                return response()->json([
+                    'error' => 'Unauthorized'
+                ], 403);
+            }
+
+            // Get author's books
+            $authorBooks = Book::where('author_id', $user->id)->pluck('id');
+
+            if ($authorBooks->isEmpty()) {
+                return response()->json([
+                    'message' => 'No books found',
+                    'sales' => ['data' => []],
+                    'stats' => [
+                        'total_revenue' => 0,
+                        'total_books_sold' => 0,
+                        'total_orders' => 0
+                    ]
+                ], 200);
+            }
+
+            // Build query for order items of author's books
+            $query = OrderItem::with([
+                'book:id,title,author_name,price',
+                'order' => function($q) {
+                    $q->select('id', 'user_id', 'created_at', 'status', 'payment_status')
+                      ->where('status', 'paid')
+                      ->where('payment_status', 'completed')
+                      ->with('user:id,name,email');
+                }
+            ])
+            ->whereIn('book_id', $authorBooks)
+            ->whereHas('order', function($q) {
+                $q->where('status', 'paid')
+                  ->where('payment_status', 'completed');
+            });
+
+            // Apply date filters
+            if ($request->start_date) {
+                $query->whereHas('order', function($q) use ($request) {
+                    $q->whereDate('created_at', '>=', $request->start_date);
+                });
+            }
+
+            if ($request->end_date) {
+                $query->whereHas('order', function($q) use ($request) {
+                    $q->whereDate('created_at', '<=', $request->end_date);
+                });
+            }
+
+            // Get paginated sales
+            $sales = $query->orderBy('created_at', 'desc')->paginate(20);
+
+            // Calculate stats
+            $statsQuery = OrderItem::whereIn('book_id', $authorBooks)
+                                  ->whereHas('order', function($q) {
+                                      $q->where('status', 'paid')
+                                        ->where('payment_status', 'completed');
+                                  });
+
+            // Apply same date filters to stats
+            if ($request->start_date) {
+                $statsQuery->whereHas('order', function($q) use ($request) {
+                    $q->whereDate('created_at', '>=', $request->start_date);
+                });
+            }
+            if ($request->end_date) {
+                $statsQuery->whereHas('order', function($q) use ($request) {
+                    $q->whereDate('created_at', '<=', $request->end_date);
+                });
+            }
+
+            $stats = [
+                'total_revenue' => $statsQuery->sum('total'),
+                'total_books_sold' => $statsQuery->sum('quantity'),
+                'total_orders' => $statsQuery->distinct('order_id')->count('order_id'),
+            ];
+
+            Log::info('Author sales response', [
+                'sales_count' => $sales->count(),
+                'stats' => $stats,
+                'author_books_count' => $authorBooks->count()
+            ]);
+
+            return response()->json([
+                'message' => 'Sales retrieved successfully',
+                'sales' => $sales,
+                'stats' => $stats
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Author sales fetch error: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Failed to retrieve sales',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete an order (Admin only)
+     */
+    public function destroy($id)
+    {
+        try {
+            $user = Auth::user();
+            
+            // Check if user is admin
+            if ($user->role !== 'admin') {
+                return response()->json([
+                    'error' => 'Unauthorized. Only admins can delete orders.'
+                ], 403);
+            }
+
+            $order = Order::with('items')->find($id);
+            
+            if (!$order) {
+                return response()->json([
+                    'error' => 'Order not found'
+                ], 404);
+            }
+
+            DB::beginTransaction();
+
+            // Restore book stock for each item
+            foreach ($order->items as $item) {
+                $book = Book::find($item->book_id);
+                if ($book) {
+                    $book->increment('stock', $item->quantity);
+                }
+            }
+
+            // Delete order items first (foreign key constraint)
+            $order->items()->delete();
+            
+            // Delete the order
+            $order->delete();
+
+            DB::commit();
+
+            Log::info('Order deleted by admin', [
+                'order_id' => $id,
+                'admin_id' => $user->id,
+                'admin_name' => $user->name
+            ]);
+
+            return response()->json([
+                'message' => 'Order deleted successfully'
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Order deletion failed: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Failed to delete order',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a sale (order item) - Author can delete their own book sales, Admin can delete any
+     */
+    public function deleteSale($orderItemId)
+    {
+        try {
+            $user = Auth::user();
+            
+            $orderItem = OrderItem::with(['order', 'book'])->find($orderItemId);
+            
+            if (!$orderItem) {
+                return response()->json([
+                    'error' => 'Sale not found'
+                ], 404);
+            }
+
+            // Check authorization
+            if ($user->role === 'admin') {
+                // Admin can delete any sale
+            } elseif ($user->role === 'author') {
+                // Author can only delete sales of their own books
+                if ($orderItem->book->author_id !== $user->id) {
+                    return response()->json([
+                        'error' => 'Unauthorized. You can only delete sales of your own books.'
+                    ], 403);
+                }
+            } else {
+                return response()->json([
+                    'error' => 'Unauthorized'
+                ], 403);
+            }
+
+            DB::beginTransaction();
+
+            // Restore book stock
+            $book = Book::find($orderItem->book_id);
+            if ($book) {
+                $book->increment('stock', $orderItem->quantity);
+            }
+
+            // Update order total
+            $order = $orderItem->order;
+            $order->total_amount = (float)$order->total_amount - (float)$orderItem->total;
+            $order->save();
+
+            // Delete the order item
+            $orderItem->delete();
+
+            // If this was the last item in the order, delete the order too
+            if ($order->items()->count() === 0) {
+                $order->delete();
+            }
+
+            DB::commit();
+
+            Log::info('Sale deleted', [
+                'order_item_id' => $orderItemId,
+                'user_id' => $user->id,
+                'user_role' => $user->role,
+                'book_id' => $orderItem->book_id
+            ]);
+
+            return response()->json([
+                'message' => 'Sale deleted successfully'
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Sale deletion failed: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Failed to delete sale',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

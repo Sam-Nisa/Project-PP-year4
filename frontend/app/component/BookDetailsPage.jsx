@@ -594,21 +594,32 @@ const BookDetailsPage = ({ bookId = 1 }) => {
     }
 
     try {
-      // Optimized: Add to cart and redirect immediately without waiting for full refresh
-      const addPromise = addToCart(book.id, quantity);
+      // For Buy Now, we'll pass the product data directly to checkout
+      // without adding to the persistent cart
+      const productData = {
+        id: book.id,
+        title: book.title,
+        price: book.price,
+        author_name: book.author_name,
+        images_url: book.images_url,
+        discount_type: book.discount_type,
+        discount_value: book.discount_value,
+        quantity: quantity
+      };
+
+      // Store the buy now product in sessionStorage for checkout
+      sessionStorage.setItem('buyNowProduct', JSON.stringify(productData));
       
-      // Show success message immediately
-      toast.success(`Added ${quantity} x "${book.title}" to cart!`);
+      // Show success message
+      toast.success(`Proceeding to checkout with "${book.title}"`);
       
-      // Redirect immediately while add to cart completes in background
-      router.push('/checkout');
-      
-      // Ensure the add to cart completes
-      await addPromise;
+      // Redirect to checkout with buy now flag
+      router.push('/checkout?buyNow=true');
     } catch (err) {
       toast.error(`Failed to proceed to checkout: ${err.message}`);
+      console.error('Buy Now error:', err);
     }
-  }, [book, user, addToCart, quantity, router]);
+  }, [book, user, quantity, router]);
 
   const handleReadSample = useCallback(() => {
     if (book?.pdf_file_url) {
