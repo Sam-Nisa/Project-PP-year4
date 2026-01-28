@@ -19,7 +19,7 @@ class BakongPaymentController extends Controller
     }
 
     /**
-     * Generate Bakong QR code for an order using author's account
+     * Generate Bakong QR code for an order using author's account or admin account for discount codes
      * 
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -48,6 +48,7 @@ class BakongPaymentController extends Controller
                 
                 $totalAmount = $orderData['total_amount'];
                 $orderItems = $orderData['order_items'];
+                $hasDiscountCode = !empty($orderData['discount_code']) && $orderData['discount_code'] !== null;
             } else {
                 // Regular order lookup (for backward compatibility)
                 $order = Order::with('items.book.author')->where('id', $orderId)
@@ -68,25 +69,54 @@ class BakongPaymentController extends Controller
                         'book' => $item->book
                     ];
                 })->toArray();
+                $hasDiscountCode = !empty($order->discount_code) && $order->discount_code !== null;
             }
 
-            // Determine which author's Bakong account to use
-            $authorBakongAccount = $this->getAuthorBakongAccount($orderItems, $orderId);
+            // Determine which account to use based on discount code and book author
+            if ($hasDiscountCode) {
+                // If there's a discount code, always use admin account
+                $bakongAccount = $this->getAdminBakongAccount();
+                $accountType = 'admin';
+                $reason = 'discount_code_applied';
+            } else {
+                // Try to get author's account first
+                $authorAccount = $this->getAuthorBakongAccount($orderItems, $orderId);
+                
+                if ($authorAccount) {
+                    // Check if this is actually admin account (book created by admin)
+                    if ($authorAccount['account_id'] === config('services.bakong.account_id')) {
+                        $bakongAccount = $authorAccount;
+                        $accountType = 'admin';
+                        $reason = 'book_created_by_admin';
+                    } else {
+                        $bakongAccount = $authorAccount;
+                        $accountType = 'author';
+                        $reason = 'regular_author_payment';
+                    }
+                } else {
+                    // Fallback to admin account if author account not available
+                    $bakongAccount = $this->getAdminBakongAccount();
+                    $accountType = 'admin';
+                    $reason = 'author_account_not_configured';
+                }
+            }
             
-            if (!$authorBakongAccount) {
+            if (!$bakongAccount) {
+                $message = 'Bakong account not configured. Please contact support.';
+                    
                 return response()->json([
                     'success' => false,
-                    'message' => 'Author Bakong account not configured or verified'
+                    'message' => $message
                 ], 400);
             }
 
-            // Generate QR code using author's account
+            // Generate QR code using the appropriate account
             $currency = $validated['currency'] ?? 'USD';
             $billNumber = 'ORD-' . str_replace('pending_', '', $orderId);
-            $storeLabel = $authorBakongAccount['merchant_name'];
+            $storeLabel = $bakongAccount['merchant_name'];
 
-            $result = $this->generateQRWithAuthorAccount(
-                $authorBakongAccount,
+            $result = $this->generateQRWithSpecificAccount(
+                $bakongAccount,
                 (float) $totalAmount,
                 $currency,
                 $billNumber,
@@ -104,7 +134,9 @@ class BakongPaymentController extends Controller
                     'expires_at' => $expiresAt,
                     'amount' => $result['amount'],
                     'currency' => $result['currency'],
-                    'author_account' => $authorBakongAccount['account_id'],
+                    'account_id' => $bakongAccount['account_id'],
+                    'account_type' => $accountType,
+                    'reason' => $reason,
                 ], $expiresAt);
 
                 return response()->json([
@@ -118,8 +150,10 @@ class BakongPaymentController extends Controller
                         'order_id' => $orderId,
                         'expires_at' => $expiresAt->toISOString(),
                         'bill_number' => $billNumber,
-                        'merchant_name' => $authorBakongAccount['merchant_name'],
-                        'author_account' => $authorBakongAccount['account_id']
+                        'merchant_name' => $bakongAccount['merchant_name'],
+                        'author_account' => $bakongAccount['account_id'],
+                        'account_type' => $accountType,
+                        'reason' => $reason
                     ]
                 ]);
             }
@@ -129,7 +163,8 @@ class BakongPaymentController extends Controller
                 'result' => $result,
                 'order_id' => $orderId,
                 'amount' => $totalAmount,
-                'author_account' => $authorBakongAccount['account_id']
+                'account_id' => $bakongAccount['account_id'],
+                'account_type' => $accountType
             ]);
 
             return response()->json([
@@ -156,6 +191,35 @@ class BakongPaymentController extends Controller
     }
 
     /**
+     * Get admin's Bakong account from .env configuration
+     */
+    private function getAdminBakongAccount()
+    {
+        try {
+            $accountId = config('services.bakong.account_id');
+            $merchantName = config('services.bakong.merchant_name');
+            
+            if (!$accountId || !$merchantName) {
+                Log::warning('Admin Bakong account not configured in .env');
+                return null;
+            }
+            
+            return [
+                'account_id' => $accountId,
+                'merchant_name' => $merchantName,
+                'merchant_city' => config('services.bakong.merchant_city'),
+                'merchant_id' => config('services.bakong.merchant_id'),
+                'acquiring_bank' => config('services.bakong.acquiring_bank'),
+                'mobile_number' => config('services.bakong.mobile_number'),
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Error getting admin Bakong account: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Get author's Bakong account for the order
      */
     private function getAuthorBakongAccount($orderItems, $orderId)
@@ -178,8 +242,27 @@ class BakongPaymentController extends Controller
             }
             
             $book = \App\Models\Book::with('author')->find($firstBookId);
-            if (!$book || !$book->author) {
+            if (!$book) {
                 return null;
+            }
+            
+            // Check if book has an author and if the author is not an admin
+            if (!$book->author) {
+                Log::warning('Book has no author assigned', [
+                    'book_id' => $book->id,
+                    'book_title' => $book->title
+                ]);
+                return null;
+            }
+            
+            // If the book's author is an admin, use admin account from .env
+            if ($book->author->role === 'admin') {
+                Log::info('Book created by admin, using admin Bakong account', [
+                    'book_id' => $book->id,
+                    'author_id' => $book->author->id,
+                    'author_role' => $book->author->role
+                ]);
+                return $this->getAdminBakongAccount();
             }
             
             $author = $book->author;
@@ -210,9 +293,9 @@ class BakongPaymentController extends Controller
     }
 
     /**
-     * Generate QR code using specific author's account
+     * Generate QR code using specific account (admin or author)
      */
-    private function generateQRWithAuthorAccount($authorAccount, $amount, $currency, $billNumber, $storeLabel)
+    private function generateQRWithSpecificAccount($account, $amount, $currency, $billNumber, $storeLabel)
     {
         try {
             // Create a temporary service instance with author's configuration
@@ -225,20 +308,20 @@ class BakongPaymentController extends Controller
                 'services.bakong.mobile_number' => config('services.bakong.mobile_number'),
             ];
 
-            // Temporarily set author's configuration
+            // Temporarily set account configuration
             config([
-                'services.bakong.account_id' => $authorAccount['account_id'],
-                'services.bakong.merchant_name' => $authorAccount['merchant_name'],
-                'services.bakong.merchant_city' => $authorAccount['merchant_city'],
-                'services.bakong.merchant_id' => $authorAccount['merchant_id'],
-                'services.bakong.acquiring_bank' => $authorAccount['acquiring_bank'],
-                'services.bakong.mobile_number' => $authorAccount['mobile_number'],
+                'services.bakong.account_id' => $account['account_id'],
+                'services.bakong.merchant_name' => $account['merchant_name'],
+                'services.bakong.merchant_city' => $account['merchant_city'],
+                'services.bakong.merchant_id' => $account['merchant_id'],
+                'services.bakong.acquiring_bank' => $account['acquiring_bank'],
+                'services.bakong.mobile_number' => $account['mobile_number'],
             ]);
 
-            // Create new service instance with author's config
-            $authorBakongService = new BakongPaymentService();
+            // Create new service instance with account config
+            $bakongService = new BakongPaymentService();
             
-            $result = $authorBakongService->generateQRCode(
+            $result = $bakongService->generateQRCode(
                 $amount,
                 $currency,
                 $billNumber,
@@ -256,10 +339,10 @@ class BakongPaymentController extends Controller
                 config($originalConfig);
             }
             
-            Log::error('Author QR Generation Error: ' . $e->getMessage());
+            Log::error('QR Generation Error: ' . $e->getMessage());
             return [
                 'success' => false,
-                'message' => 'Failed to generate QR with author account',
+                'message' => 'Failed to generate QR with account',
                 'error' => $e->getMessage()
             ];
         }

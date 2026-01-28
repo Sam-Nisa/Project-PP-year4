@@ -51,7 +51,7 @@ class OrderController extends Controller
             $user = Auth::user();
 
             $request->validate([
-                'payment_method' => 'required|in:card,paypal,cod,bakong',
+                'payment_method' => 'required|in:bakong', // Only allow Bakong
                 'discount_code' => 'nullable|string',
                 'shipping_address' => 'required|array',
                 'shipping_address.first_name' => 'required|string|max:255',

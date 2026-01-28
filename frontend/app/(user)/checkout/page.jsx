@@ -34,8 +34,8 @@ const CheckoutPage = () => {
     address: "",
     city: "",
     state: "",
-    zipCode: "",
     country: "",
+    zipCode: "", // Add zip code field
     paymentMethod: "bakong", // Default to Bakong
   });
 
@@ -284,7 +284,7 @@ const CheckoutPage = () => {
       const token = useAuthStore.getState().token;
 
       const orderData = {
-        payment_method: formData.paymentMethod,
+        payment_method: 'bakong', // Always use Bakong
         discount_code: appliedDiscount?.code || null,
         shipping_address: {
           first_name: formData.firstName,
@@ -292,7 +292,7 @@ const CheckoutPage = () => {
           email: formData.email,
           address: formData.address,
           city: formData.city,
-          zip_code: formData.zipCode,
+          zip_code: formData.zipCode, // Add zip code
         }
       };
 
@@ -305,16 +305,10 @@ const CheckoutPage = () => {
         }
       );
 
-      // Handle based on payment method
-      if (formData.paymentMethod === 'bakong') {
-        // Show QR modal for Bakong payment
-        setCurrentOrder(response.order);
-        setShowQRModal(true);
-        await generateQRCode(response.order.id);
-      } else {
-        // Redirect for other payment methods
-        window.location.href = `/order-success?orderId=${response.order.id}`;
-      }
+      // Always show QR modal for Bakong payment
+      setCurrentOrder(response.order);
+      setShowQRModal(true);
+      await generateQRCode(response.order.id);
 
     } catch (error) {
       console.error("Checkout error:", error);
@@ -438,6 +432,9 @@ const CheckoutPage = () => {
                     />
                   </div>
                 </div>
+
+
+                <div className="grid grid-cols-2 gap-4">
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Address <span className="text-red-500">*</span>
@@ -451,7 +448,7 @@ const CheckoutPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="mt-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       City <span className="text-red-500">*</span>
@@ -465,9 +462,25 @@ const CheckoutPage = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
+                </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      ZIP Code <span className="text-red-500">*</span>
+                      State/Province
+                    </label>
+                    <input
+                      type="text"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Zip Code <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -479,61 +492,35 @@ const CheckoutPage = () => {
                     />
                   </div>
                 </div>
+
+                
               </div>
 
               {/* Payment Method */}
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Payment Method <span className="text-red-500">*</span>
+                  Payment Method
                 </h2>
                 <div className="space-y-3">
-                  <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="bakong"
-                      checked={formData.paymentMethod === "bakong"}
-                      onChange={handleInputChange}
-                      className="mr-3"
-                    />
+                  <div className="p-4 border-2 border-blue-500 bg-blue-50 rounded-lg">
                     <div className="flex items-center">
-                      <span className="font-medium">Bakong QR</span>
-                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Recommended</span>
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="bakong"
+                        checked={true}
+                        readOnly
+                        className="mr-3"
+                      />
+                      <div className="flex items-center">
+                        <span className="font-medium text-blue-800">Bakong QR Payment</span>
+                        <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-1 rounded">Only Available</span>
+                      </div>
                     </div>
-                  </label>
-                  <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="card"
-                      checked={formData.paymentMethod === "card"}
-                      onChange={handleInputChange}
-                      className="mr-3"
-                    />
-                    <span>Credit/Debit Card</span>
-                  </label>
-                  <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="paypal"
-                      checked={formData.paymentMethod === "paypal"}
-                      onChange={handleInputChange}
-                      className="mr-3"
-                    />
-                    <span>PayPal</span>
-                  </label>
-                  <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="cod"
-                      checked={formData.paymentMethod === "cod"}
-                      onChange={handleInputChange}
-                      className="mr-3"
-                    />
-                    <span>Cash on Delivery</span>
-                  </label>
+                    <p className="text-sm text-blue-700 mt-2 ml-6">
+                      Secure instant payment via Cambodia's national payment system
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -656,18 +643,32 @@ const CheckoutPage = () => {
             </div>
 
             {/* Payment Method Info */}
-            {formData.paymentMethod === 'bakong' && cartItems.length > 0 && (
+            {cartItems.length > 0 && (
               <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-center space-x-2 mb-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   <p className="text-sm font-medium text-blue-800">Bakong Payment</p>
                 </div>
-                <p className="text-sm text-blue-700">
-                  Payment will go directly to the author's Bakong account
-                </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  Author: {cartItems[0]?.book?.author_name}
-                </p>
+                {appliedDiscount ? (
+                  <div>
+                    <p className="text-sm text-blue-700">
+                      Payment will go to <strong>Admin Account</strong> (discount applied)
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Merchant: NISA SAM • Account: nisa_sam@bkrt
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm text-blue-700">
+                      Payment destination will be determined based on book author
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      • Author books → Author's account<br/>
+                      • Admin books → Admin account (nisa_sam@bkrt)
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -842,12 +843,16 @@ const CheckoutPage = () => {
                     </p>
                   </div>
 
-                  {/* Author Payment Info */}
+                  {/* Account Payment Info */}
                   {qrData.merchant_name && qrData.author_account && (
                     <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
                       <div className="flex items-center justify-center space-x-2 mb-2">
                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <p className="text-sm font-medium text-green-800">Payment goes directly to author</p>
+                        <p className="text-sm font-medium text-green-800">
+                          {qrData.account_type === 'admin' 
+                            ? 'Payment goes to Admin Account' 
+                            : 'Payment goes to Author Account'}
+                        </p>
                       </div>
                       <p className="text-sm text-green-700">
                         <span className="font-medium">{qrData.merchant_name}</span>
@@ -855,6 +860,14 @@ const CheckoutPage = () => {
                       <p className="text-xs text-green-600 mt-1">
                         Account: {qrData.author_account}
                       </p>
+                      {qrData.reason && (
+                        <p className="text-xs text-green-600 mt-1">
+                          {qrData.reason === 'discount_code_applied' && '(Discount code applied)'}
+                          {qrData.reason === 'book_created_by_admin' && '(Book created by admin)'}
+                          {qrData.reason === 'regular_author_payment' && '(Author payment)'}
+                          {qrData.reason === 'author_account_not_configured' && '(Author account not configured - using admin account)'}
+                        </p>
+                      )}
                     </div>
                   )}
 
