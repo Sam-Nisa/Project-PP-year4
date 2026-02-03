@@ -128,6 +128,23 @@ class BakongPaymentController extends Controller
                 ], 400);
             }
 
+            // Ensure amount is properly rounded to avoid floating-point precision issues
+            $totalAmount = round((float) $totalAmount, 2);
+            
+            // Validate amount is positive and reasonable
+            if ($totalAmount <= 0) {
+                Log::error('Invalid order amount', [
+                    'order_id' => $orderId,
+                    'amount' => $totalAmount,
+                    'original_amount' => $orderData['total_amount'] ?? 'N/A'
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid order amount'
+                ], 400);
+            }
+
             // Generate QR code using the appropriate account
             $currency = $validated['currency'] ?? 'USD';
             $billNumber = 'ORD-' . str_replace('pending_', '', $orderId);
@@ -135,7 +152,7 @@ class BakongPaymentController extends Controller
 
             $result = $this->generateQRWithSpecificAccount(
                 $bakongAccount,
-                (float) $totalAmount,
+                $totalAmount,
                 $currency,
                 $billNumber,
                 $storeLabel

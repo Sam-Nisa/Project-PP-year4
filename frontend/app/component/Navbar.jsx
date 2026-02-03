@@ -132,6 +132,7 @@ export default function Header() {
             />
             <NavLink href="/best-seller">Bestsellers</NavLink>
             <NavLink href="/about-us">About Us</NavLink>
+            <NavLink href="/contact-us">Contact Us</NavLink>
           </nav>
 
           {/* Desktop Search */}
@@ -442,6 +443,9 @@ const MobileMenu = ({
             </MobileNavLink>
             <MobileNavLink href="/about-us" onClick={onClose}>
               About Us
+            </MobileNavLink>
+            <MobileNavLink href="/contact-us" onClick={onClose}>
+              Contact Us
             </MobileNavLink>
           </nav>
 

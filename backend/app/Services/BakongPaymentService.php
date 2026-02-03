@@ -42,13 +42,56 @@ class BakongPaymentService
     public function generateQRCode($amount, $currency = 'USD', $billNumber = null, $storeLabel = null)
     {
         try {
+            // Ensure amount is properly rounded and validated
+            $amount = round((float) $amount, 2);
+            
             // Log input parameters
             Log::info('Bakong QR Generation Started', [
                 'amount' => $amount,
                 'currency' => $currency,
                 'billNumber' => $billNumber,
-                'storeLabel' => $storeLabel
+                'storeLabel' => $storeLabel,
+                'account_id' => $this->bakongAccountId,
+                'merchant_name' => $this->merchantName
             ]);
+
+            // Validate amount
+            if ($amount <= 0) {
+                Log::error('Invalid amount provided', ['amount' => $amount]);
+                return [
+                    'success' => false,
+                    'message' => 'Amount must be greater than 0',
+                    'error' => 'INVALID_AMOUNT'
+                ];
+            }
+
+            if ($amount > 999999.99) {
+                Log::error('Amount too large', ['amount' => $amount]);
+                return [
+                    'success' => false,
+                    'message' => 'Amount exceeds maximum limit',
+                    'error' => 'AMOUNT_TOO_LARGE'
+                ];
+            }
+
+            // Validate required fields
+            if (empty($this->bakongAccountId)) {
+                Log::error('Bakong account ID is empty');
+                return [
+                    'success' => false,
+                    'message' => 'Bakong account ID not configured',
+                    'error' => 'BAKONG_ACCOUNT_ID is empty'
+                ];
+            }
+
+            if (empty($this->merchantName)) {
+                Log::error('Bakong merchant name is empty');
+                return [
+                    'success' => false,
+                    'message' => 'Bakong merchant name not configured',
+                    'error' => 'BAKONG_MERCHANT_NAME is empty'
+                ];
+            }
 
             // Convert currency code to KHQR format
             $currencyCode = $currency === 'USD' ? KHQRData::CURRENCY_USD : KHQRData::CURRENCY_KHR;
@@ -94,7 +137,7 @@ class BakongPaymentService
             $response = BakongKHQR::generateMerchant($merchantInfo);
 
             Log::info('Bakong Response', [
-                'response_type' => gettype($response),
+                'response_type' => \gettype($response),
                 'response' => $response
             ]);
 
@@ -186,7 +229,7 @@ class BakongPaymentService
             $response = $this->bakongKhqr->checkTransactionByMD5($md5Hash, $isTest);
             
             Log::info('Bakong transaction check response', [
-                'response_type' => gettype($response),
+                'response_type' => \gettype($response),
                 'response' => $response
             ]);
 

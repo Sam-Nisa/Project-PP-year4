@@ -97,18 +97,22 @@ class OrderController extends Controller
                 $finalPrice = $price;
                 if ($discountType === 'percentage' && $discountValue > 0) {
                     $finalPrice = $price - ($price * $discountValue / 100);
+                    // Round to 2 decimal places to avoid floating-point precision issues
+                    $finalPrice = round($finalPrice, 2);
                 } elseif ($discountType === 'fixed' && $discountValue > 0) {
                     $finalPrice = max(0, $price - $discountValue);
+                    // Round to 2 decimal places to avoid floating-point precision issues
+                    $finalPrice = round($finalPrice, 2);
                 }
 
-                $itemTotal = $finalPrice * $cartItem->quantity;
+                $itemTotal = round($finalPrice * $cartItem->quantity, 2);
                 $subtotal += $itemTotal;
 
                 $orderItems[] = [
                     'book_id' => $book->id,
                     'quantity' => $cartItem->quantity,
-                    'price' => $finalPrice,
-                    'total' => $itemTotal
+                    'price' => round($finalPrice, 2),
+                    'total' => round($itemTotal, 2)
                 ];
             }
 
@@ -142,7 +146,7 @@ class OrderController extends Controller
                 }
             }
 
-            $totalAmount = $subtotal + $shippingCost + $taxAmount - $discountAmount;
+            $totalAmount = round($subtotal + $shippingCost + $taxAmount - $discountAmount, 2);
 
             // For Bakong payment - store order data in cache, don't create order yet
             if ($request->payment_method === 'bakong') {

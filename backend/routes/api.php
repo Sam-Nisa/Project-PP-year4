@@ -19,6 +19,7 @@ use App\Http\Controllers\AuthorDashboardController;
 use App\Http\Controllers\AuthorPaymentController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\BakongPaymentController;
+use App\Http\Controllers\ContactController;
 
 // Upload file and image
 Route::post('/upload', [UploadController::class, 'upload']);
@@ -26,6 +27,10 @@ Route::post('/upload', [UploadController::class, 'upload']);
 // Public API routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+
+// Contact routes (public)
+Route::post('/contact', [ContactController::class, 'submitContactForm']);
+Route::get('/contact/info', [ContactController::class, 'getContactInfo']);
 
 
 // books

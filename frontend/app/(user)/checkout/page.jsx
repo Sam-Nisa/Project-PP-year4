@@ -81,11 +81,17 @@ const CheckoutPage = () => {
       let finalPrice = price;
       if (discountType === "percentage" && discountValue > 0) {
         finalPrice = price - (price * discountValue) / 100;
+        // Round to 2 decimal places to avoid floating-point precision issues
+        finalPrice = Math.round(finalPrice * 100) / 100;
       } else if (discountType === "fixed" && discountValue > 0) {
         finalPrice = Math.max(0, price - discountValue);
+        // Round to 2 decimal places to avoid floating-point precision issues
+        finalPrice = Math.round(finalPrice * 100) / 100;
       }
 
-      return total + (finalPrice * (item.quantity || 1));
+      const itemTotal = finalPrice * (item.quantity || 1);
+      // Round the item total to avoid accumulating precision errors
+      return total + Math.round(itemTotal * 100) / 100;
     }, 0);
   }, [checkoutItems]);
 
@@ -110,6 +116,7 @@ const CheckoutPage = () => {
   
   // QR Code Modal States
   const [showQRModal, setShowQRModal] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0); // seconds
   const [qrData, setQrData] = useState(null);
   const [currentOrder, setCurrentOrder] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState("pending"); // pending, completed, failed
@@ -117,6 +124,7 @@ const CheckoutPage = () => {
   const [paymentCheckCount, setPaymentCheckCount] = useState(0);
   const [paymentError, setPaymentError] = useState(null);
   const [paymentIntervalId, setPaymentIntervalId] = useState(null);
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -142,7 +150,7 @@ const CheckoutPage = () => {
 
   const shippingCost = 0; // FREE SHIPPING
   const discountAmount = appliedDiscount ? (appliedDiscount.discount_amount || 0) : 0;
-  const totalAmount = subtotal + shippingCost - discountAmount;
+  const totalAmount = Math.round((subtotal + shippingCost - discountAmount) * 100) / 100;
 
   const handleApplyDiscount = async () => {
     if (!discountCode.trim()) {
@@ -208,6 +216,14 @@ const CheckoutPage = () => {
 
       if (response.success) {
         setQrData(response.data);
+
+        // ⏳ Calculate remaining time from backend expires_at
+        const expiresAt = new Date(response.data.expires_at).getTime();
+        const now = Date.now();
+        const diffSeconds = Math.max(Math.floor((expiresAt - now) / 1000), 0);
+
+        setTimeLeft(diffSeconds);
+
         setPaymentStatus("pending");
         setPaymentError(null);
         setPaymentCheckCount(0);
@@ -313,6 +329,13 @@ const CheckoutPage = () => {
     setPaymentIntervalId(interval);
   };
 
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+
   // Stop payment checking
   const stopPaymentStatusCheck = () => {
     if (paymentIntervalId) {
@@ -336,6 +359,24 @@ const CheckoutPage = () => {
       }
     };
   }, [paymentIntervalId]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!showQRModal || paymentStatus !== "pending" || !qrData) return;
+
+    if (timeLeft <= 0) {
+      setPaymentStatus("failed");
+      setPaymentError("QR code expired. Please generate a new QR code.");
+      stopPaymentStatusCheck();
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, showQRModal, paymentStatus, qrData]);
 
 
   const handleSubmit = async (e) => {
@@ -372,8 +413,50 @@ const CheckoutPage = () => {
 
       // Always show QR modal for Bakong payment
       setCurrentOrder(response.order);
-      setShowQRModal(true);
-      await generateQRCode(response.order.id);
+      
+      // Generate QR code first, then show modal only if successful
+      setIsGeneratingQR(true);
+      console.log("Generating QR code for order:", response.order.id);
+      const { request: qrRequest } = await import("../../utils/request");
+      const qrToken = useAuthStore.getState().token;
+
+      const qrResponse = await qrRequest(
+        "/api/bakong/generate-qr",
+        "POST",
+        { 
+          order_id: response.order.id, 
+          currency: "USD" 
+        },
+        { headers: { Authorization: `Bearer ${qrToken}` } }
+      );
+
+      setIsGeneratingQR(false);
+
+      if (qrResponse.success) {
+        // Set QR data first
+        setQrData(qrResponse.data);
+
+        // Calculate remaining time from backend expires_at
+        const expiresAt = new Date(qrResponse.data.expires_at).getTime();
+        const now = Date.now();
+        const diffSeconds = Math.max(Math.floor((expiresAt - now) / 1000), 0);
+
+        setTimeLeft(diffSeconds);
+        setPaymentStatus("pending");
+        setPaymentError(null);
+        setPaymentCheckCount(0);
+
+        // Now show the modal with QR data ready
+        setShowQRModal(true);
+        
+        console.log("Starting payment status check...");
+        startPaymentStatusCheck(response.order.id);
+      } else {
+        // QR generation failed, show error
+        setPaymentStatus("failed");
+        setPaymentError(qrResponse.message || "Failed to generate QR code");
+        setShowQRModal(true);
+      }
 
       // Clear buy now product from session storage after successful order creation
       if (isBuyNow) {
@@ -646,13 +729,13 @@ const CheckoutPage = () => {
 
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className={`w-full font-medium py-3 px-4 rounded-lg transition-colors ${isSubmitting
+                disabled={isSubmitting || isGeneratingQR}
+                className={`w-full font-medium py-3 px-4 rounded-lg transition-colors ${isSubmitting || isGeneratingQR
                     ? "bg-gray-400 text-gray-700 cursor-not-allowed"
                     : "bg-teal-600 hover:bg-teal-700 text-white"
                   }`}
               >
-                {isSubmitting ? "Processing..." : "Complete Order"}
+                {isSubmitting ? "Processing..." : isGeneratingQR ? "Generating QR..." : "Complete Order"}
               </button>
             </form>
           </div>
@@ -707,11 +790,16 @@ const CheckoutPage = () => {
                           let finalPrice = price;
                           if (discountType === "percentage" && discountValue > 0) {
                             finalPrice = price - (price * discountValue) / 100;
+                            // Round to 2 decimal places to avoid floating-point precision issues
+                            finalPrice = Math.round(finalPrice * 100) / 100;
                           } else if (discountType === "fixed" && discountValue > 0) {
                             finalPrice = Math.max(0, price - discountValue);
+                            // Round to 2 decimal places to avoid floating-point precision issues
+                            finalPrice = Math.round(finalPrice * 100) / 100;
                           }
 
-                          return (finalPrice * quantity).toFixed(2);
+                          const itemTotal = finalPrice * quantity;
+                          return (Math.round(itemTotal * 100) / 100).toFixed(2);
                         })()}
                       </p>
                     </div>
@@ -882,17 +970,61 @@ const CheckoutPage = () => {
                   </div>
                   <div className="space-y-3">
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         console.log("Retrying payment...");
+                        setIsGeneratingQR(true);
                         setPaymentStatus("pending");
                         setPaymentError(null);
                         setPaymentCheckCount(0);
                         setQrData(null);
-                        generateQRCode(currentOrder.id);
+                        setTimeLeft(0);
+                        
+                        try {
+                          const { request: retryRequest } = await import("../../utils/request");
+                          const { useAuthStore } = await import("../../store/authStore");
+                          const retryToken = useAuthStore.getState().token;
+
+                          const retryResponse = await retryRequest(
+                            "/api/bakong/generate-qr",
+                            "POST",
+                            { 
+                              order_id: currentOrder.id, 
+                              currency: "USD" 
+                            },
+                            { headers: { Authorization: `Bearer ${retryToken}` } }
+                          );
+
+                          setIsGeneratingQR(false);
+
+                          if (retryResponse.success) {
+                            setQrData(retryResponse.data);
+
+                            const expiresAt = new Date(retryResponse.data.expires_at).getTime();
+                            const now = Date.now();
+                            const diffSeconds = Math.max(Math.floor((expiresAt - now) / 1000), 0);
+
+                            setTimeLeft(diffSeconds);
+                            setPaymentStatus("pending");
+                            setPaymentError(null);
+                            setPaymentCheckCount(0);
+                            
+                            console.log("Starting payment status check...");
+                            startPaymentStatusCheck(currentOrder.id);
+                          } else {
+                            setPaymentStatus("failed");
+                            setPaymentError(retryResponse.message || "Failed to generate QR code");
+                          }
+                        } catch (error) {
+                          console.error("Retry error:", error);
+                          setIsGeneratingQR(false);
+                          setPaymentStatus("failed");
+                          setPaymentError("Failed to generate QR code. Please try again.");
+                        }
                       }}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                      disabled={isGeneratingQR}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Try Again
+                      {isGeneratingQR ? "Generating QR..." : "Try Again"}
                     </button>
                     <button
                       onClick={() => {
@@ -929,7 +1061,7 @@ const CheckoutPage = () => {
                       value={qrData.qr_string} 
                       size={240}
                       level="H"
-                      includeMargin={true}
+                      marginSize={4}
                     />
                   </div>
 
@@ -943,6 +1075,17 @@ const CheckoutPage = () => {
                       Order #{qrData.bill_number}
                     </p>
                   </div>
+
+                  {/* Countdown Timer */}
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800 font-medium text-center">
+                    ⏳ QR expires in:{" "}
+                    <span className="font-bold text-yellow-900">
+                      {formatTime(timeLeft)}
+                    </span>
+                  </p>
+                </div>
+
 
                   {/* Account Payment Info */}
                   {qrData.merchant_name && qrData.author_account && (
@@ -973,18 +1116,6 @@ const CheckoutPage = () => {
                     </div>
                   )}
 
-                  {/* Status */}
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-6">
-                    <div className="flex items-center justify-center space-x-2">
-                      <ClockIcon className="w-5 h-5 text-blue-600 animate-pulse" />
-                      <p className="text-sm font-medium text-blue-800">
-                        Waiting for payment...
-                      </p>
-                    </div>
-                    <p className="text-xs text-blue-600 mt-2">
-                      Checking status automatically ({paymentCheckCount} checks)
-                    </p>
-                  </div>
 
                   {/* Instructions */}
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-4 text-left">
@@ -1026,11 +1157,18 @@ const CheckoutPage = () => {
                     {checkingPayment ? "Checking..." : "Check Payment Status"}
                   </button>
                 </div>
-              ) : (
-                // Loading State
+              ) : isGeneratingQR ? (
+                // QR Generation Loading State
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Generating QR code...</p>
+                  <p className="text-gray-600 mb-2">Generating QR code...</p>
+                  <p className="text-sm text-gray-500">Please wait while we prepare your payment</p>
+                </div>
+              ) : (
+                // Generic Loading State
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading...</p>
                 </div>
               )}
             </div>

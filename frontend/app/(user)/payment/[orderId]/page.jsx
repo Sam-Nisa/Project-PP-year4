@@ -77,7 +77,7 @@ export default function BakongPaymentPage() {
         "/api/bakong/generate-qr",
         "POST",
         { 
-          order_id: parseInt(orderId), 
+          order_id: orderId, // Don't parse as int - keep as string for pending orders
           currency: "USD" 
         },
         {},
@@ -142,6 +142,7 @@ export default function BakongPaymentPage() {
     // Cleanup on unmount
     return () => clearInterval(interval);
   };
+
 
   useEffect(() => {
     if (!token || !user) {
@@ -273,7 +274,7 @@ export default function BakongPaymentPage() {
                     value={qrData.qr_string} 
                     size={280}
                     level="H"
-                    includeMargin={true}
+                    marginSize={4}
                   />
                 </div>
 

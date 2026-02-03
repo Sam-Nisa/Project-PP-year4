@@ -1,10 +1,8 @@
 // components/Footer.js
-import React from "react";
 import Link from "next/link";
 import {
   Home,
   Info,
-  ShoppingBag,
   Mail,
   Facebook,
   Twitter,
@@ -55,21 +53,11 @@ const Footer = () => {
 
               <li>
                 <Link
-                  href="/shop"
-                  className="flex justify-center md:justify-start items-center gap-2 hover:text-yellow-300 transition"
-                >
-                  <ShoppingBag size={18} />
-                  Shop
-                </Link>
-              </li>
-
-              <li>
-                <Link
-                  href="/contact"
+                  href="/contact-us"
                   className="flex justify-center md:justify-start items-center gap-2 hover:text-yellow-300 transition"
                 >
                   <Mail size={18} />
-                  Contact
+                  Contact Us
                 </Link>
               </li>
             </ul>
