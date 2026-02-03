@@ -177,7 +177,7 @@ const BestSellerPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white">
+      <div className="bg-gradient-to-r  from-blue-700 via-purple-800 to-pink-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
             <div className="flex justify-center mb-4">
@@ -190,21 +190,6 @@ const BestSellerPage = () => {
               Discover the most popular books with 3+ sales
             </p>
             
-            {/* Stats */}
-            {stats && (
-              <div className="flex justify-center space-x-8 text-center">
-                <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
-                  <div className="text-2xl font-bold">{stats.total_best_sellers}</div>
-                  <div className="text-sm opacity-80">Best Sellers</div>
-                </div>
-                {stats.top_best_seller && (
-                  <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
-                    <div className="text-2xl font-bold">{stats.top_best_seller.total_sold}</div>
-                    <div className="text-sm opacity-80">Top Sales</div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -292,20 +277,6 @@ const BestSellerPage = () => {
           )}
         </div>
 
-        {/* Top Best Seller Highlight */}
-        {stats?.top_best_seller && (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-6 mb-8">
-            <div className="flex items-center mb-2">
-              <FireIcon className="h-6 w-6 text-orange-500 mr-2" />
-              <h2 className="text-lg font-semibold text-gray-900">Top Best Seller</h2>
-            </div>
-            <p className="text-gray-700">
-              <span className="font-medium">{stats.top_best_seller.title}</span> by{" "}
-              <span className="font-medium">{stats.top_best_seller.author}</span> -{" "}
-              <span className="text-orange-600 font-bold">{stats.top_best_seller.total_sold} copies sold</span>
-            </p>
-          </div>
-        )}
 
         {/* Loading State */}
         {loading && (
