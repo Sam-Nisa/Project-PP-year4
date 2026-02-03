@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Book;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use App\Services\ImageKitService;
 
 class BookController extends Controller
@@ -399,5 +400,172 @@ public function __construct(ImageKitService $imageKit)
         $book->delete();
 
         return response()->json(['message' => 'Book deleted successfully']);
+    }
+
+    /**
+     * Get best seller books (books with 3+ sales)
+     */
+    public function bestSellers(Request $request)
+    {
+        try {
+            $limit = $request->get('limit', 20); // Default limit of 20 books
+            $perPage = $request->get('per_page', 12); // For pagination
+            $paginate = $request->get('paginate', 'false');
+
+            // Use a subquery approach to avoid GROUP BY issues
+            $bestSellerIds = DB::table('books')
+                ->select('books.id')
+                ->join('order_items', 'books.id', '=', 'order_items.book_id')
+                ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                ->where('orders.status', 'paid')
+                ->where('orders.payment_status', 'completed')
+                ->where('books.status', 'approved')
+                ->groupBy('books.id')
+                ->havingRaw('SUM(order_items.quantity) >= 3')
+                ->pluck('books.id');
+
+            if ($bestSellerIds->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No best seller books found',
+                    'data' => $paginate === 'true' ? ['data' => [], 'total' => 0, 'per_page' => $perPage, 'current_page' => 1, 'last_page' => 1] : []
+                ]);
+            }
+
+            // Now get the books with their sales data
+            $query = Book::whereIn('id', $bestSellerIds)
+                ->with(['author:id,name,email,role', 'genre:id,name,slug']);
+
+            // Add sales count using a separate query for each book
+            $query->selectRaw('books.*, (
+                SELECT SUM(order_items.quantity) 
+                FROM order_items 
+                INNER JOIN orders ON order_items.order_id = orders.id 
+                WHERE order_items.book_id = books.id 
+                AND orders.status = "paid" 
+                AND orders.payment_status = "completed"
+            ) as total_sold');
+
+            // Search functionality
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->whereRaw('LOWER(title) LIKE ?', ['%' . strtolower($search) . '%'])
+                      ->orWhereRaw('LOWER(description) LIKE ?', ['%' . strtolower($search) . '%']);
+                });
+            }
+
+            // Filter by genre
+            if ($request->filled('genre')) {
+                $query->whereHas('genre', function ($q) use ($request) {
+                    $q->where('slug', $request->genre);
+                });
+            }
+
+            // Order by sales count
+            $query->orderByRaw('(
+                SELECT SUM(order_items.quantity) 
+                FROM order_items 
+                INNER JOIN orders ON order_items.order_id = orders.id 
+                WHERE order_items.book_id = books.id 
+                AND orders.status = "paid" 
+                AND orders.payment_status = "completed"
+            ) DESC');
+
+            // Return paginated or limited results
+            if ($paginate === 'true') {
+                $books = $query->paginate($perPage);
+            } else {
+                if ($limit) {
+                    $query->limit($limit);
+                }
+                $books = $query->get();
+            }
+
+            // Add author_name to each book for easier frontend access
+            if ($paginate === 'true') {
+                $books->getCollection()->each(function ($book) {
+                    $book->author_name = $book->author->name ?? 'Unknown Author';
+                });
+            } else {
+                $books->each(function ($book) {
+                    $book->author_name = $book->author->name ?? 'Unknown Author';
+                });
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Best seller books retrieved successfully',
+                'data' => $books
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve best seller books',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get best sellers stats for dashboard
+     */
+    public function bestSellersStats()
+    {
+        try {
+            // Count total best sellers using a direct count approach
+            $bestSellerIds = DB::table('books')
+                ->select('books.id')
+                ->join('order_items', 'books.id', '=', 'order_items.book_id')
+                ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                ->where('orders.status', 'paid')
+                ->where('orders.payment_status', 'completed')
+                ->where('books.status', 'approved')
+                ->groupBy('books.id')
+                ->havingRaw('SUM(order_items.quantity) >= 3')
+                ->pluck('books.id');
+
+            $totalBestSellers = $bestSellerIds->count();
+
+            // Get top best seller
+            $topBestSellerData = DB::table('books')
+                ->select('books.id', 'books.title', 'books.author_id')
+                ->selectRaw('SUM(order_items.quantity) as total_sold')
+                ->join('order_items', 'books.id', '=', 'order_items.book_id')
+                ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                ->where('orders.status', 'paid')
+                ->where('orders.payment_status', 'completed')
+                ->where('books.status', 'approved')
+                ->groupBy('books.id', 'books.title', 'books.author_id')
+                ->havingRaw('SUM(order_items.quantity) >= 3')
+                ->orderByRaw('SUM(order_items.quantity) DESC')
+                ->first();
+
+            $topBestSeller = null;
+            if ($topBestSellerData) {
+                $author = \App\Models\User::find($topBestSellerData->author_id);
+                $topBestSeller = [
+                    'title' => $topBestSellerData->title,
+                    'author' => $author ? $author->name : 'Unknown',
+                    'total_sold' => $topBestSellerData->total_sold
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_best_sellers' => $totalBestSellers,
+                    'top_best_seller' => $topBestSeller
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve best sellers stats',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

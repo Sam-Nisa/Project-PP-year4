@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FaTachometerAlt, FaUsers, FaBook, FaCogs, FaTags, FaTicketAlt, FaChartLine } from "react-icons/fa";
+import { FaTachometerAlt, FaUsers, FaBook, FaCogs, FaTags, FaTicketAlt, FaChartLine, FaDollarSign } from "react-icons/fa";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
@@ -14,6 +14,7 @@ export default function AdminSidebar() {
     { name: "Books", href: "/admin/books", icon: <FaBook color="#EF4444" /> },
     { name: "Discount Codes", href: "/admin/discount-codes", icon: <FaTicketAlt color="#10B981" /> },
     { name: "Sales", href: "/admin/sales", icon: <FaChartLine color="#EC4899" /> },
+    { name: "Payouts", href: "/admin/payouts", icon: <FaDollarSign color="#10B981" /> },
     { name: "Settings", href: "/admin/settings", icon: <FaCogs color="#8B5CF6" /> },
   ];
 

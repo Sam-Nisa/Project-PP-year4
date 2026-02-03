@@ -434,7 +434,7 @@ const MobileMenu = ({
               </div>
             </details>
 
-            <MobileNavLink href="/bestsellers" onClick={onClose}>
+            <MobileNavLink href="/best-seller" onClick={onClose}>
               Bestsellers
             </MobileNavLink>
             <MobileNavLink href="/authors" onClick={onClose}>

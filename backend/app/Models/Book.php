@@ -162,4 +162,74 @@ class Book extends Model
     {
         return $this->reviews()->where('user_id', $userId)->exists();
     }
+
+    /**
+     * Get total quantity sold for this book
+     */
+    public function getTotalSoldAttribute()
+    {
+        return $this->orderItems()
+                   ->whereHas('order', function($query) {
+                       $query->where('status', 'paid')
+                             ->where('payment_status', 'completed');
+                   })
+                   ->sum('quantity');
+    }
+
+    /**
+     * Get order items for this book
+     */
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Check if this book is a best seller (3+ sales)
+     */
+    public function isBestSeller()
+    {
+        return $this->total_sold >= 3;
+    }
+
+    /**
+     * Scope to get best seller books
+     */
+    public function scopeBestSellers($query)
+    {
+        return $query->whereHas('orderItems', function($q) {
+            $q->whereHas('order', function($orderQuery) {
+                $orderQuery->where('status', 'paid')
+                          ->where('payment_status', 'completed');
+            });
+        }, '>=', 3)
+        ->withCount(['orderItems as total_sold' => function($q) {
+            $q->whereHas('order', function($orderQuery) {
+                $orderQuery->where('status', 'paid')
+                          ->where('payment_status', 'completed');
+            })->select(\DB::raw('SUM(quantity)'));
+        }]);
+    }
+
+    /**
+     * Get best seller books with sales count
+     */
+    public static function getBestSellers($limit = null)
+    {
+        $query = static::select('books.*')
+            ->join('order_items', 'books.id', '=', 'order_items.book_id')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->where('orders.status', 'paid')
+            ->where('orders.payment_status', 'completed')
+            ->groupBy('books.id')
+            ->havingRaw('SUM(order_items.quantity) >= 3')
+            ->selectRaw('books.*, SUM(order_items.quantity) as total_sold')
+            ->orderByRaw('SUM(order_items.quantity) DESC');
+
+        if ($limit) {
+            $query->limit($limit);
+        }
+
+        return $query->get();
+    }
 }

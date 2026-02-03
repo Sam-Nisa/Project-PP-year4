@@ -29,6 +29,8 @@ Route::post('/register', [AuthController::class, 'register']);
 
 
 // books
+Route::get('books/best-sellers', [BookController::class, 'bestSellers']); // Public - Get best seller books
+Route::get('books/best-sellers/stats', [BookController::class, 'bestSellersStats']); // Public - Get best sellers stats
 Route::get('books', [BookController::class, 'index']);       // All logged-in users
 Route::get('books/{id}', [BookController::class, 'show']);   // All logged-in users
 
