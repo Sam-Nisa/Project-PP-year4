@@ -12,34 +12,25 @@ export default function GoogleSuccess() {
     if (initialized.current) return;
     initialized.current = true;
 
-    const handleGoogleLogin = async () => {
-      const token = searchParams.get("token");
+    const token = searchParams.get("token");
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
 
-      if (!token) {
-        router.replace("/login");
-        return;
-      }
-
-      try {
-        // Use the dedicated Google login handler
-        const user = await useAuthStore.getState().handleGoogleLogin(token);
-
-        // Small delay to ensure state propagates
-        new Promise((resolve) => setTimeout(resolve, 100));
-
-        console.log("Google login successful, user:", user);
-        // Redirect to home after successful login
+    useAuthStore
+      .getState()
+      .handleGoogleLogin(token)
+      .then((user) => {
         if (user.role === "admin") router.replace("/admin/dashboard");
         else if (user.role === "author") router.replace("/author/dashboard");
         else router.replace("/");
-      } catch (error) {
-        console.error("Google login failed:", error);
+      })
+      .catch(() => {
         router.replace("/login?error=google_auth_failed");
-      }
-    };
-
-    handleGoogleLogin();
+      });
   }, [router, searchParams]);
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white">

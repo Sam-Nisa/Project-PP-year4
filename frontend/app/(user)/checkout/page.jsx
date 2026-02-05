@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { ArrowLeftIcon, LockClosedIcon, XMarkIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, LockClosedIcon } from "@heroicons/react/24/outline";
 import { useAddToCartStore } from "../../store/useAddToCardStore";
 import { useAuthStore } from "../../store/authStore";
-import { QRCodeSVG } from "qrcode.react";
+import KHQRModal from "../../component/KHQRModal";
 
 const CheckoutPage = () => {
   const { user } = useAuthStore();
@@ -891,299 +891,79 @@ const CheckoutPage = () => {
         </div>
       </div>
 
-      {/* QR Code Modal */}
-      {showQRModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-              <h2 className="text-xl font-bold text-gray-900">
-                {paymentStatus === "completed" 
-                  ? "Payment Successful!" 
-                  : paymentStatus === "failed"
-                  ? "Payment Failed"
-                  : "Scan to Pay"}
-              </h2>
-              {paymentStatus !== "completed" && (
-                <button
-                  onClick={() => {
-                    console.log("Closing QR modal");
-                    stopPaymentStatusCheck();
-                    setShowQRModal(false);
-                    setQrData(null);
-                    setPaymentStatus("pending");
-                    setPaymentError(null);
-                    setPaymentCheckCount(0);
-                  }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <XMarkIcon className="w-6 h-6" />
-                </button>
-              )}
-            </div>
+      {/* KHQR Modal */}
+      <KHQRModal
+        showModal={showQRModal}
+        onClose={() => {
+          console.log("Closing QR modal");
+          stopPaymentStatusCheck();
+          setShowQRModal(false);
+          setQrData(null);
+          setPaymentStatus("pending");
+          setPaymentError(null);
+          setPaymentCheckCount(0);
+        }}
+        qrData={qrData}
+        timeLeft={timeLeft}
+        formatTime={formatTime}
+        paymentStatus={paymentStatus}
+        paymentError={paymentError}
+        paymentCheckCount={paymentCheckCount}
+        checkingPayment={checkingPayment}
+        onCheckPayment={() => checkPaymentStatus(currentOrder.id)}
+        onRetry={async () => {
+          console.log("Retrying payment...");
+          setIsGeneratingQR(true);
+          setPaymentStatus("pending");
+          setPaymentError(null);
+          setPaymentCheckCount(0);
+          setQrData(null);
+          setTimeLeft(0);
+          
+          try {
+            const { request: retryRequest } = await import("../../utils/request");
+            const { useAuthStore } = await import("../../store/authStore");
+            const retryToken = useAuthStore.getState().token;
 
-            {/* Modal Content */}
-            <div className="p-6">
-              {paymentStatus === "completed" ? (
-                // Success State
-                <div className="text-center py-8">
-                  <div className="mb-6">
-                    <CheckCircleIcon className="w-24 h-24 text-green-500 mx-auto animate-bounce" />
-                  </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-3">Payment Successful!</h3>
-                  <p className="text-lg text-gray-600 mb-2">
-                    Your payment has been confirmed.
-                  </p>
-                  <p className="text-sm text-gray-500 mb-6">
-                    Order #{qrData?.bill_number}
-                  </p>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-green-800 font-medium">
-                      ✓ Payment processed successfully
-                    </p>
-                    <p className="text-sm text-green-600 mt-1">
-                      Amount: ${parseFloat(qrData?.amount || 0).toFixed(2)}
-                    </p>
-                  </div>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Redirecting to order details...
-                  </p>
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
-                </div>
-              ) : paymentStatus === "failed" ? (
-                // Failed State
-                <div className="text-center py-8">
-                  <div className="mb-6">
-                    <XCircleIcon className="w-24 h-24 text-red-500 mx-auto" />
-                  </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-3">Payment Failed</h3>
-                  <p className="text-lg text-gray-600 mb-2">
-                    {paymentError || "We couldn't process your payment."}
-                  </p>
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-red-800 font-medium">
-                      ✗ Payment was not completed
-                    </p>
-                    <p className="text-sm text-red-600 mt-1">
-                      Please try again or use a different payment method
-                    </p>
-                  </div>
-                  <div className="space-y-3">
-                    <button
-                      onClick={async () => {
-                        console.log("Retrying payment...");
-                        setIsGeneratingQR(true);
-                        setPaymentStatus("pending");
-                        setPaymentError(null);
-                        setPaymentCheckCount(0);
-                        setQrData(null);
-                        setTimeLeft(0);
-                        
-                        try {
-                          const { request: retryRequest } = await import("../../utils/request");
-                          const { useAuthStore } = await import("../../store/authStore");
-                          const retryToken = useAuthStore.getState().token;
+            const retryResponse = await retryRequest(
+              "/api/bakong/generate-qr",
+              "POST",
+              { 
+                order_id: currentOrder.id, 
+                currency: "USD" 
+              },
+              { headers: { Authorization: `Bearer ${retryToken}` } }
+            );
 
-                          const retryResponse = await retryRequest(
-                            "/api/bakong/generate-qr",
-                            "POST",
-                            { 
-                              order_id: currentOrder.id, 
-                              currency: "USD" 
-                            },
-                            { headers: { Authorization: `Bearer ${retryToken}` } }
-                          );
+            setIsGeneratingQR(false);
 
-                          setIsGeneratingQR(false);
+            if (retryResponse.success) {
+              setQrData(retryResponse.data);
 
-                          if (retryResponse.success) {
-                            setQrData(retryResponse.data);
+              const expiresAt = new Date(retryResponse.data.expires_at).getTime();
+              const now = Date.now();
+              const diffSeconds = Math.max(Math.floor((expiresAt - now) / 1000), 0);
 
-                            const expiresAt = new Date(retryResponse.data.expires_at).getTime();
-                            const now = Date.now();
-                            const diffSeconds = Math.max(Math.floor((expiresAt - now) / 1000), 0);
-
-                            setTimeLeft(diffSeconds);
-                            setPaymentStatus("pending");
-                            setPaymentError(null);
-                            setPaymentCheckCount(0);
-                            
-                            console.log("Starting payment status check...");
-                            startPaymentStatusCheck(currentOrder.id);
-                          } else {
-                            setPaymentStatus("failed");
-                            setPaymentError(retryResponse.message || "Failed to generate QR code");
-                          }
-                        } catch (error) {
-                          console.error("Retry error:", error);
-                          setIsGeneratingQR(false);
-                          setPaymentStatus("failed");
-                          setPaymentError("Failed to generate QR code. Please try again.");
-                        }
-                      }}
-                      disabled={isGeneratingQR}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isGeneratingQR ? "Generating QR..." : "Try Again"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        console.log("Choosing different payment method");
-                        stopPaymentStatusCheck();
-                        setShowQRModal(false);
-                        setQrData(null);
-                        setPaymentStatus("pending");
-                        setPaymentError(null);
-                        setPaymentCheckCount(0);
-                      }}
-                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-6 rounded-lg transition-colors"
-                    >
-                      Choose Different Payment Method
-                    </button>
-                    <button
-                      onClick={() => {
-                        console.log("Viewing orders");
-                        stopPaymentStatusCheck();
-                        window.location.href = `/profile/${user.id}/orders`;
-                      }}
-                      className="w-full text-blue-600 hover:text-blue-700 font-medium py-2 transition-colors"
-                    >
-                      View My Orders
-                    </button>
-                  </div>
-                </div>
-              ) : qrData ? (
-                // QR Code Display (Pending State)
-                <div className="text-center">
-                  {/* QR Code */}
-                  <div className="bg-white p-6 rounded-xl inline-block shadow-inner border-4 border-gray-100 mb-6">
-                    <QRCodeSVG 
-                      value={qrData.qr_string} 
-                      size={240}
-                      level="H"
-                      marginSize={4}
-                    />
-                  </div>
-
-                  {/* Amount */}
-                  <div className="mb-6">
-                    <p className="text-sm text-gray-600 mb-1">Amount to Pay</p>
-                    <p className="text-4xl font-bold text-blue-600">
-                      ${parseFloat(qrData.amount).toFixed(2)}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Order #{qrData.bill_number}
-                    </p>
-                  </div>
-
-                  {/* Countdown Timer */}
-                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800 font-medium text-center">
-                    ⏳ QR expires in:{" "}
-                    <span className="font-bold text-yellow-900">
-                      {formatTime(timeLeft)}
-                    </span>
-                  </p>
-                </div>
-
-
-                  {/* Account Payment Info */}
-                  {qrData.merchant_name && qrData.author_account && (
-                    <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                      <div className="flex items-center justify-center space-x-2 mb-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <p className="text-sm font-medium text-green-800">
-                          {qrData.account_type === 'admin' 
-                            ? 'Payment goes to Admin Account' 
-                            : 'Payment goes to Author Account'}
-                        </p>
-                      </div>
-                      <p className="text-sm text-green-700">
-                        <span className="font-medium">{qrData.merchant_name}</span>
-                      </p>
-                      <p className="text-xs text-green-600 mt-1">
-                        Account: {qrData.author_account}
-                      </p>
-                      {qrData.reason && (
-                        <p className="text-xs text-green-600 mt-1">
-                          {qrData.reason === 'discount_code_applied' && '(Discount code applied)'}
-                          {qrData.reason === 'book_created_by_admin' && '(Book created by admin)'}
-                          {qrData.reason === 'single_author_payment' && '(Author payment)'}
-                          {qrData.reason === 'multi_vendor_order' && '(Multi-vendor order - Admin will distribute to authors)'}
-                          {qrData.reason === 'author_account_not_configured' && '(Author account not configured - using admin account)'}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-
-                  {/* Instructions */}
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-4 text-left">
-                    <h4 className="font-semibold text-gray-900 mb-3 text-center">How to Pay</h4>
-                    <ol className="space-y-2 text-sm text-gray-700">
-                      <li className="flex items-start">
-                        <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 mt-0.5">
-                          1
-                        </span>
-                        <span>Open your Bakong app</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 mt-0.5">
-                          2
-                        </span>
-                        <span>Tap "Scan QR" or camera icon</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 mt-0.5">
-                          3
-                        </span>
-                        <span>Scan the QR code above</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 mt-0.5">
-                          4
-                        </span>
-                        <span>Confirm payment in your app</span>
-                      </li>
-                    </ol>
-                  </div>
-
-                  {/* Manual Check Button */}
-                  <button
-                    onClick={() => checkPaymentStatus(currentOrder.id)}
-                    disabled={checkingPayment}
-                    className="mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
-                  >
-                    {checkingPayment ? "Checking..." : "Check Payment Status"}
-                  </button>
-                </div>
-              ) : isGeneratingQR ? (
-                // QR Generation Loading State
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600 mb-2">Generating QR code...</p>
-                  <p className="text-sm text-gray-500">Please wait while we prepare your payment</p>
-                </div>
-              ) : (
-                // Generic Loading State
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading...</p>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            {paymentStatus !== "completed" && qrData && (
-              <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-2xl">
-                <p className="text-xs text-gray-500 text-center">
-                  This page will automatically update when payment is received
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              setTimeLeft(diffSeconds);
+              setPaymentStatus("pending");
+              setPaymentError(null);
+              setPaymentCheckCount(0);
+              
+              console.log("Starting payment status check...");
+              startPaymentStatusCheck(currentOrder.id);
+            } else {
+              setPaymentStatus("failed");
+              setPaymentError(retryResponse.message || "Failed to generate QR code");
+            }
+          } catch (error) {
+            console.error("Retry error:", error);
+            setIsGeneratingQR(false);
+            setPaymentStatus("failed");
+            setPaymentError("Failed to generate QR code. Please try again.");
+          }
+        }}
+        isGeneratingQR={isGeneratingQR}
+      />
     </div>
   );
 };

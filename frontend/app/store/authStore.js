@@ -10,37 +10,33 @@ export const useAuthStore = create((set, get) => ({
   isInitialized: false, // Track if store has loaded from sessionStorage
 
   // Load token + user from sessionStorage
-  initializeStore: () => {
-    if (typeof window !== "undefined" && !get().isInitialized) {
-      const storedToken = sessionStorage.getItem("token");
-      const storedUser = sessionStorage.getItem("user");
+initializeStore: () => {
+  if (typeof window !== "undefined" && !get().isInitialized) {
+    const storedToken = sessionStorage.getItem("token");
+    const storedUser = sessionStorage.getItem("user");
 
-      if (storedToken) {
-        let user = null;
-
-        // Safe JSON parsing
-        if (storedUser && storedUser !== "undefined" && storedUser !== "null") {
-          try {
-            user = JSON.parse(storedUser);
-          } catch (error) {
-            console.error("Failed to parse user data:", error);
-            sessionStorage.removeItem("user"); // Clean up invalid data
-          }
-        }
-
-        set({
-          token: storedToken,
-          user: user,
-          isInitialized: true,
-        });
-
-        // Re-fetch profile to keep it fresh (optional)
-        get().fetchProfile();
-      } else {
-        set({ isInitialized: true });
+    let user = null;
+    if (storedUser && storedUser !== "undefined") {
+      try {
+        user = JSON.parse(storedUser);
+      } catch {
+        sessionStorage.removeItem("user");
       }
     }
-  },
+
+    set({
+      token: storedToken,
+      user,
+      isInitialized: true,
+    });
+
+    // ✅ ONLY fetch profile if token exists AND user is missing
+    if (storedToken && !user) {
+      get().fetchProfile();
+    }
+  }
+},
+
 
   login: async (email, password) => {
     set({ loading: true, error: null });
@@ -141,33 +137,26 @@ export const useAuthStore = create((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // Store token
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("token", token);
-      }
-
-      // Set token in state
+      sessionStorage.setItem("token", token);
       set({ token });
 
-      // Fetch user profile
       const response = await request("/api/profile", "GET", null, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      set({ user: response.data, isInitialized: true });
+      set({
+        user: response.data,
+        isInitialized: true,
+      });
 
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("user", JSON.stringify(response.data));
-      }
+      sessionStorage.setItem("user", JSON.stringify(response.data));
 
       return response.data;
-    } catch (err) {
-      set({ error: "Failed to fetch user profile" });
-      throw err;
     } finally {
       set({ loading: false });
     }
   },
+
 
   // Update user profile
   updateProfile: async (profileData) => {
