@@ -21,6 +21,7 @@ use App\Http\Controllers\UploadController;
 use App\Http\Controllers\BakongPaymentController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ForgotPasswordController;
+use App\Http\Controllers\TelegramController;
 
 // Upload file and image
 Route::post('/upload', [UploadController::class, 'upload']);
@@ -202,6 +203,15 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::post('/test-qr', [AuthorPaymentController::class, 'testQRGeneration']);            // Test QR generation
         Route::get('/banks', [AuthorPaymentController::class, 'getBanks']);                       // Get bank list
         Route::get('/bakong-banks', [AuthorPaymentController::class, 'getBakongBanks']);          // Get Bakong bank list
+    });
+
+    // Telegram Notification routes (Admin only)
+    Route::prefix('telegram')->group(function () {
+        Route::get('/bot-info', [TelegramController::class, 'getBotInfo']);                       // Get bot information
+        Route::get('/updates', [TelegramController::class, 'getUpdates']);                        // Get updates (find chat ID)
+        Route::post('/test-connection', [TelegramController::class, 'testConnection']);           // Test connection
+        Route::post('/test-payment', [TelegramController::class, 'testPaymentNotification']);     // Test payment notification
+        Route::post('/send-message', [TelegramController::class, 'sendMessage']);                 // Send custom message
     });
 
 });

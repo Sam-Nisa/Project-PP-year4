@@ -322,6 +322,15 @@ class OrderController extends Controller
 
             DB::commit();
 
+            // Send Telegram notification
+            try {
+                $telegramService = new \App\Services\TelegramService();
+                $telegramService->sendPaymentConfirmation($order);
+            } catch (\Exception $e) {
+                // Log error but don't fail the order creation
+                Log::error('Failed to send Telegram notification: ' . $e->getMessage());
+            }
+
             return $order->load('items.book');
 
         } catch (\Exception $e) {
