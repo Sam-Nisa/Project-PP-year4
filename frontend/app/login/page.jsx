@@ -113,7 +113,7 @@ export default function Login() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center justify-between mb-4">
                 <label className="flex items-center text-gray-600">
                   <input
                     type="checkbox"
@@ -122,14 +122,21 @@ export default function Login() {
                   />
                   Remember me
                 </label>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-blue-600 hover:bg-blue-800 text-white font-semibold py-3 px-8 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                <Link
+                  href="/forgot-password"
+                  className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
                 >
-                  {loading ? "Logging in..." : "Log In"}
-                </button>
+                  Forgot Password?
+                </Link>
               </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-800 text-white font-semibold py-3 px-8 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-8"
+              >
+                {loading ? "Logging in..." : "Log In"}
+              </button>
             </form>
 
             <div className="flex justify-center space-x-4 mb-8">

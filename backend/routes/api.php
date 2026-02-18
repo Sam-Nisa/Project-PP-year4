@@ -20,6 +20,7 @@ use App\Http\Controllers\AuthorPaymentController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\BakongPaymentController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\ForgotPasswordController;
 
 // Upload file and image
 Route::post('/upload', [UploadController::class, 'upload']);
@@ -27,6 +28,12 @@ Route::post('/upload', [UploadController::class, 'upload']);
 // Public API routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+
+// Forgot Password routes (public)
+Route::post('/forgot-password/send-otp', [ForgotPasswordController::class, 'sendOtp']);
+Route::post('/forgot-password/verify-otp', [ForgotPasswordController::class, 'verifyOtp']);
+Route::post('/forgot-password/reset-password', [ForgotPasswordController::class, 'resetPassword']);
+Route::post('/forgot-password/resend-otp', [ForgotPasswordController::class, 'resendOtp']);
 
 // Contact routes (public)
 Route::post('/contact', [ContactController::class, 'submitContactForm']);
