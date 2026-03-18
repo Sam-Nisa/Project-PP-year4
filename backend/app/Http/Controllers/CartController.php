@@ -127,14 +127,16 @@ class CartController extends Controller
                 ]);
             }
 
-            // Load the book relationship
-            $item->load('book');
-
             DB::commit();
 
+            // Return minimal response for faster performance
             return response()->json([
                 'message' => 'Book added to cart successfully',
-                'item' => $item
+                'item' => [
+                    'id' => $item->id,
+                    'book_id' => $item->book_id,
+                    'quantity' => $item->quantity
+                ]
             ], 201);
 
         } catch (\Illuminate\Validation\ValidationException $e) {

@@ -269,14 +269,27 @@ const CheckoutPage = () => {
 
       console.log("Payment status response:", response);
 
-      if (response.success && response.data?.payment_status === "completed") {
+      // Check if payment is completed - handle both response structures
+      const isCompleted = response.success && (
+        response.data?.payment_status === "completed" ||
+        response.data?.order_status === "paid" ||
+        response.message === "Payment completed successfully"
+      );
+
+      if (isCompleted) {
         console.log("✅ Payment confirmed!");
+        const actualOrderId = response.data?.order_id || orderId.replace('pending_', '');
+        
         setPaymentStatus("completed");
         setPaymentError(null);
         stopPaymentStatusCheck();
+        
+        // Show success message
+        alert(`Payment successful! Order #${actualOrderId} has been created.`);
+        
         // Redirect to success page after 2 seconds
         setTimeout(() => {
-          window.location.href = `/order-success?orderId=${orderId}`;
+          window.location.href = `/order-success?orderId=${actualOrderId}`;
         }, 2000);
       } else if (paymentCheckCount >= 60) {
         // After 60 checks (5 minutes), consider it failed

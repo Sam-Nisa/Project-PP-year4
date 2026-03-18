@@ -122,315 +122,168 @@ const Breadcrumb = ({ genre, title }) => (
 );
 
 
-const BookHeader = ({ title, author, description }) => (
+const BookHeader = ({ title, author, description, rating, totalReviews }) => (
   <div className="space-y-4">
-    <div>
-      <h2 className="font-serif text-3xl sm:text-2xl md:text-2xl font-bold text-black ">
-        {title}
-      </h2>
-      <p className="mt-3 text-lg text-gray-600 dark:text-gray-400">
-        by{" "}
-        <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors cursor-pointer">
-          {author}
-        </span>
-      </p>
-    </div>
-    <p className="font-serif text-gray-700  text-base sm:text-lg leading-relaxed line-clamp-3">
-      {description}
-    </p>
-  </div>
-);
-
-
-const PriceSection = ({
-  originalPrice,
-  finalPrice,
-  totalPrice,
-  stock,
-  hasDiscount,
-}) => (
-  <div className="space-y-3 p-4 rounded-md shadow-sm">
-    <div className="flex items-baseline gap-3">
-      <span className="text-gray-600 text-lg dark:text-gray-400">Price:</span>
-      <div className="flex items-baseline gap-2">
-        <span className="text-3xl md:text-2xl font-bold text-gray-900">
-          ${finalPrice}
-        </span>
-        {hasDiscount && (
-          <span className="text-lg text-gray-500 line-through">${originalPrice}</span>
-        )}
-      </div>
-    </div>
-
-    {hasDiscount && (
-      <div className="inline-block text-green-700 px-4 py-1.5 rounded-full text-sm font-semibold border border-green-700">
-        🎉 Save ${(parseFloat(originalPrice) - parseFloat(finalPrice)).toFixed(2)}
-      </div>
-    )}
-
-    <div className="flex items-center gap-3">
-      <div className={`flex items-center gap-2 ${stock > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-        <div className={`w-2 h-2 rounded-full ${stock > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
-        <span className="font-semibold">
-          {stock > 0 ? `In Stock (${stock} available)` : 'Out of Stock'}
-        </span>
-      </div>
-      {stock > 0 && stock < 10 && (
-        <span className="text-xs  dark:text-orange-300 px-2 py-1 rounded border border-orange-300 dark:border-orange-600">
-          Low stock
-        </span>
-      )}
-    </div>
-
-    <div className="pt-4 border-t border-gray-300 dark:border-gray-700">
-      <div className="flex items-center justify-between">
-        <span className="text-gray-600 dark:text-gray-400">Total:</span>
-        <span className="text-2xl font-bold text-green-600 dark:text-green-400">
-          ${totalPrice}
-        </span>
-      </div>
-    </div>
-  </div>
-);
-
-
-
-const QuantitySelector = ({ quantity, onChange }) => {
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-
-    // Allow empty while typing
-    if (value === "") {
-      onChange(1);
-      return;
-    }
-
-    const number = parseInt(value, 10);
-
-    if (!isNaN(number) && number >= 1) {
-      onChange(number);
-    }
-  };
-
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl">
-      <span className="text-sm font-medium text-gray-700">Quantity:</span>
-
-      <div className="flex items-center gap-3">
-        {/* Minus */}
-        <button
-          onClick={() => onChange(Math.max(1, quantity - 1))}
-          disabled={quantity <= 1}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 border border-gray-300 disabled:opacity-50"
-        >
-          <MinusIcon className="w-5 h-5" />
-        </button>
-
-        {/* Input */}
-        <input
-          type="number"
-          min="1"
-          value={quantity}
-          onChange={handleInputChange}
-          className="w-20 h-12 text-center border-2 border-blue-500 rounded-lg font-bold text-lg focus:outline-none"
-        />
-
-        {/* Plus */}
-        <button
-          onClick={() => onChange(quantity + 1)}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-100 border border-blue-300"
-        >
-          <PlusIcon className="w-5 h-5" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-
-const ActionButtons = ({
-  onAddToCart,
-  onBuyNow,
-  onWishlistToggle,
-  onReadSample,
-  isWishlisted,
-  isOutOfStock,
-  hasPDF,
-}) => (
-  <div className="grid grid-cols-2 gap-4">
-    {/* First row - Add to Cart and Buy Now */}
-    <button
-      disabled={isOutOfStock}
-      onClick={onAddToCart}
-      className={`flex items-center justify-center gap-3 px-2 py-2 rounded-xl font-bold transition-all duration-300 ${isOutOfStock
-          ? "bg-gray-400 text-gray-700 cursor-not-allowed"
-          : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-xl hover:-translate-y-1"
-        }`}
-    >
-      <ShoppingCartIcon className="w-6 h-6" />
-      <span className="text-lg">Add to Cart</span>
-    </button>
-
-    <button 
-      disabled={isOutOfStock}
-      onClick={onBuyNow}
-      className={`flex items-center justify-center gap-2 px-2 py-2 rounded-xl font-bold hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${isOutOfStock
-          ? "bg-gray-400 text-gray-700 cursor-not-allowed"
-          : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-        }`}
-    >
-      <CheckIcon className="w-5 h-5" />
-      <span className="text-lg">Buy Now</span>
-    </button>
-
-    {/* Second row - Read Sample and Wishlist */}
-    {hasPDF ? (
-      <button
-        onClick={onReadSample}
-        className="flex items-center justify-center gap-2 px-2 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-      >
-        <DocumentTextIcon className="w-6 h-6" />
-        <span className="text-lg">Read Sample</span>
-      </button>
-    ) : (
-      <button
-        disabled
-        className="flex items-center justify-center gap-2 px-2 py-2 rounded-xl bg-gray-300 text-gray-500 cursor-not-allowed"
-      >
-        <DocumentTextIcon className="w-6 h-6" />
-        <span className="text-lg">No Sample</span>
-      </button>
-    )}
-
-    <button
-      onClick={onWishlistToggle}
-      className="flex items-center justify-center gap-2 px-2 py-2 rounded-xl bg-gray-200 border-2  text-black  hover:border-red-300 dark:hover:border-red-700 transition-all duration-300"
-    >
-      {isWishlisted ? (
-        <>
-          <HeartSolidIcon className="w-7 h-7 text-red-500 animate-pulse" />
-          <span className="ml-2 font-semibold text-black">
-            In Wishlist
-          </span>
-        </>
-      ) : (
-        <>
-          <HeartOutlineIcon className="w-7 h-7 text-red-500" />
-          <span className="ml-2 font-semibold text-gray-700">
-            Add to Wishlist
-          </span>
-        </>
-      )}
-    </button>
-  </div>
-);
-
-
-const BookDetailsTable = ({ genre, publisher, publicationDate, pageCount, hasPDF, author }) => (
-  <div className=" dark:to-gray-800/50 rounded-2xl p-6 border border-gray-200">
-    <h3 className="text-xl font-bold mb-6  text-black bg-clip-text ">
-      📚 Book Details
-    </h3>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <div className="space-y-4">
-        <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Genre</p>
-          <p className="font-medium">{genre}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Publisher</p>
-          <p className="font-medium">{publisher}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Author</p>
-          <p className="font-medium">{author}</p>
-        </div>
-      </div>
-      <div className="space-y-4">
-        <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Publication Date</p>
-          <p className="font-medium">{publicationDate}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Pages Count</p>
-          <p className="font-medium">{pageCount}</p>
-        </div>
-      </div>
-    </div>
-
-    {/* PDF Availability */}
-    <div className="mt-4 pt-4 border-t border-gray-200">
-      <div className="flex items-center gap-2">
-        <DocumentTextIcon className="w-5 h-5 text-gray-500" />
-        <span className="text-sm text-gray-500">Sample Preview:</span>
-        <span className={`text-sm font-medium ${hasPDF ? 'text-green-600' : 'text-gray-400'}`}>
-          {hasPDF ? '✓ Available' : '✗ Not Available'}
-        </span>
-      </div>
-    </div>
-  </div>
-);
-
-const TabNavigation = ({ activeTab, onTabChange }) => {
-  const tabs = [
-    { key: TABS.DESCRIPTION, label: "📖 Description" },
-    { key: TABS.REVIEWS, label: "⭐ Reviews & Ratings" },
-    { key: TABS.AUTHOR, label: "✍️ About Author" },
-  ];
-
-  return (
-    <div className="relative">
-      <div className="flex flex-wrap gap-2 md:gap-6 border-b border-gray-300 dark:border-gray-700 pb-2">
-        {tabs.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => onTabChange(key)}
-            className={`relative px-4 py-3 rounded-lg font-medium transition-all duration-300 ${activeTab === key
-                ? "text-blue-800 bg-blue-50 dark:bg-blue-900/30"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-black hover:bg-gray-100 dark:hover:bg-gray-200"
-              }`}
-          >
-            {label}
-            {activeTab === key && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transform -translate-y-2" />
-            )}
-          </button>
+    {/* Rating First */}
+    <div className="flex items-center gap-2">
+      <div className="flex text-teal-600 gap-0.5">
+        {[...Array(5)].map((_, i) => (
+          <svg key={i} className={`w-3.5 h-3.5 ${i < Math.round(rating) ? 'fill-current' : 'text-gray-300'}`} viewBox="0 0 20 20">
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+          </svg>
         ))}
       </div>
+      <span className="text-xs font-bold text-gray-900">{rating} ({totalReviews} reviews)</span>
+    </div>
+
+    <div>
+      <h1 className="font-serif text-5xl font-bold text-gray-900 leading-tight">
+        {title}
+      </h1>
+      <p className="mt-2 text-xl text-teal-700 font-serif italic">
+        by <span className="font-semibold cursor-pointer hover:underline">{author}</span>
+      </p>
+    </div>
+
+    <div className="prose prose-lg text-gray-500 leading-relaxed text-base pt-2">
+      {description}
+    </div>
+  </div>
+);
+
+
+const PurchaseCard = ({
+  originalPrice,
+  finalPrice,
+  stock,
+  hasDiscount,
+  quantity,
+  onQuantityChange,
+  onAddToCart,
+  onWishlistToggle,
+  isWishlisted,
+  loading
+}) => (
+  <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/50 mt-8">
+    <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+      <div>
+        <p className="text-sm text-gray-500 mb-1">Total Price</p>
+        <div className="flex items-baseline gap-3">
+          <span className="text-4xl font-bold text-gray-900">${finalPrice}</span>
+          {hasDiscount && (
+            <span className="text-lg text-gray-400 line-through decoration-1">${originalPrice}</span>
+          )}
+        </div>
+      </div>
+
+      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+        }`}>
+        <div className={`w-2 h-2 rounded-full ${stock > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
+        {stock > 0 ? 'In Stock' : 'Out of Stock'}
+      </div>
+    </div>
+
+    <div className="flex flex-col sm:flex-row gap-4">
+      {/* Minimized Quantity Selector */}
+      <div className="flex items-center border border-gray-300 rounded-lg h-12 w-32 shrink-0">
+        <button
+          onClick={() => onQuantityChange(-1)}
+          disabled={quantity <= 1}
+          className="w-10 h-full flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-50 rounded-l-lg"
+        >
+          <MinusIcon className="w-4 h-4" />
+        </button>
+        <div className="flex-1 text-center font-bold text-gray-900">{quantity}</div>
+        <button
+          onClick={() => onQuantityChange(1)}
+          className="w-10 h-full flex items-center justify-center text-gray-500 hover:bg-gray-50 rounded-r-lg"
+        >
+          <PlusIcon className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Add To Cart */}
+      <button
+        onClick={onAddToCart}
+        disabled={stock <= 0}
+        className="flex-1 bg-[#2C5F6D] hover:bg-[#234b56] text-white font-bold rounded-lg h-12 flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
+      >
+        <ShoppingCartIcon className="w-5 h-5" />
+        Add to Cart
+      </button>
+
+      {/* Wishlist */}
+      <button
+        onClick={onWishlistToggle}
+        className={`h-12 w-12 flex items-center justify-center rounded-lg border-2 transition-all ${isWishlisted
+          ? 'border-red-200 bg-red-50 text-red-500'
+          : 'border-gray-200 hover:border-gray-300 text-gray-400 hover:text-gray-600'
+          }`}
+      >
+        {isWishlisted ? (
+          <HeartSolidIcon className="w-6 h-6" />
+        ) : (
+          <HeartOutlineIcon className="w-6 h-6" />
+        )}
+      </button>
+    </div>
+  </div>
+);
+
+
+
+
+
+
+
+
+const BookDetailsTable = ({ genre, publisher, publicationDate, pageCount }) => (
+  <div className="bg-gray-50 rounded-xl p-4 md:p-6 grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-8">
+    <div className="flex flex-col">
+      <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Genre</span>
+      <span className="text-sm sm:text-base font-bold text-gray-900">{genre}</span>
+    </div>
+
+    <div className="flex flex-col">
+      <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Publisher</span>
+      <span className="text-sm sm:text-base font-bold text-gray-900">{publisher}</span>
+    </div>
+
+    <div className="flex flex-col">
+      <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Publication Date</span>
+      <span className="text-sm sm:text-base font-bold text-gray-900">{publicationDate}</span>
+    </div>
+
+    <div className="flex flex-col">
+      <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Pages Count</span>
+      <span className="text-sm sm:text-base font-bold text-gray-900">{pageCount}</span>
+    </div>
+  </div>
+);
+
+const TabNavigation = ({ onScrollToAuthor, onScrollToReviews }) => {
+  return (
+    <div className="flex gap-4 mb-8">
+      <button
+        onClick={onScrollToAuthor}
+        className="flex items-center gap-2 px-6 py-3 rounded-full bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold text-sm transition-all"
+      >
+        <span>✍️</span>
+        About Author
+      </button>
+
+      <button
+        onClick={onScrollToReviews}
+        className="flex items-center gap-2 px-6 py-3 rounded-full bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold text-sm transition-all"
+      >
+        <span>⭐</span>
+        Reviews & Ratings
+      </button>
     </div>
   );
 };
 
-const TabContent = ({
-  activeTab,
-  description,
-  aboutAuthor,
-  title,
-  bookId,
-}) => (
-  <div className="py-8 animate-fadeIn">
-    {activeTab === TABS.DESCRIPTION && (
-      <div className="prose prose-lg dark:prose-invert max-w-none">
-        <p className="text-gray-700 leading-relaxed whitespace-pre-line shadow-lg py-14 px-5 rounded-lg">
-          {description}
-        </p>
-      </div>
-    )}
 
-    {activeTab === TABS.REVIEWS && (
-      <ReviewsSection bookId={bookId} />
-    )}
-
-    {activeTab === TABS.AUTHOR && (
-      <div className=" text-black rounded-2xl shadow-lg p-8">
-        <h4 className="text-xl font-bold mb-6">About the Author</h4>
-        <p className=" leading-relaxed">
-          {aboutAuthor || $title}
-        </p>
-      </div>
-    )}
-  </div>
-);
 
 // ==================== MAIN COMPONENT ====================
 const BookDetailsPage = ({ bookId = 1 }) => {
@@ -444,7 +297,6 @@ const BookDetailsPage = ({ bookId = 1 }) => {
 
   const [book, setBook] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState(TABS.DESCRIPTION);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
 
@@ -535,7 +387,7 @@ const BookDetailsPage = ({ bookId = 1 }) => {
     setQuantity((prev) => Math.max(1, prev + delta));
   }, []);
 
-  const handleWishlistToggle = useCallback(() => {
+  const handleWishlistToggle = useCallback(async () => {
     if (!book) return;
 
     if (!user) {
@@ -543,29 +395,20 @@ const BookDetailsPage = ({ bookId = 1 }) => {
       return;
     }
 
-    const alreadyWishlisted = isWishlisted(book.id);
-
-    // ✅ instant UI feedback
-    if (alreadyWishlisted) {
-      toast.info(`Removed "${book.title}" from wishlist.`);
-    } else {
-      toast.success(`Added "${book.title}" to wishlist!`);
+    try {
+      if (isWishlisted(book.id)) {
+        await removeWishlist(book.id);
+        toast.info(`Removed "${book.title}" from wishlist.`);
+      } else {
+        await addWishlist(book.id);
+        toast.success(`Added "${book.title}" to wishlist!`);
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist");
     }
-
-    // ✅ background sync
-    const action = alreadyWishlisted
-      ? removeWishlist(book.id)
-      : addWishlist(book.id);
-
-    action.catch((err) => {
-      toast.error("Wishlist update failed");
-      console.error(err);
-    });
-
   }, [book, user, isWishlisted, removeWishlist, addWishlist]);
 
-
-  const handleAddToCart = useCallback(() => {
+  const handleAddToCart = useCallback(async () => {
     if (!book) return;
 
     if (!user) {
@@ -573,17 +416,14 @@ const BookDetailsPage = ({ bookId = 1 }) => {
       return;
     }
 
-    // ✅ instant feedback
-    toast.success(`Added ${quantity} x "${book.title}" to cart!`);
-
-    // ✅ background sync
-    addToCart(book.id, quantity).catch((err) => {
-      toast.error("Failed to add to cart");
-      console.error(err);
-    });
-
+    try {
+      // Optimized: Don't wait for full cart refresh, just add the item
+      await addToCart(book.id, quantity);
+      toast.success(`Added ${quantity} x "${book.title}" to cart!`);
+    } catch (err) {
+      toast.error(`Failed to add to cart: ${err.message}`);
+    }
   }, [book, user, addToCart, quantity]);
-
 
   const handleBuyNow = useCallback(async () => {
     if (!book) return;
@@ -594,32 +434,21 @@ const BookDetailsPage = ({ bookId = 1 }) => {
     }
 
     try {
-      // For Buy Now, we'll pass the product data directly to checkout
-      // without adding to the persistent cart
-      const productData = {
-        id: book.id,
-        title: book.title,
-        price: book.price,
-        author_name: book.author_name,
-        images_url: book.images_url,
-        discount_type: book.discount_type,
-        discount_value: book.discount_value,
-        quantity: quantity
-      };
+      // Optimized: Add to cart and redirect immediately without waiting for full refresh
+      const addPromise = addToCart(book.id, quantity);
 
-      // Store the buy now product in sessionStorage for checkout
-      sessionStorage.setItem('buyNowProduct', JSON.stringify(productData));
-      
-      // Show success message
-      toast.success(`Proceeding to checkout with "${book.title}"`);
-      
-      // Redirect to checkout with buy now flag
-      router.push('/checkout?buyNow=true');
+      // Show success message immediately
+      toast.success(`Added ${quantity} x "${book.title}" to cart!`);
+
+      // Redirect immediately while add to cart completes in background
+      router.push('/checkout');
+
+      // Ensure the add to cart completes
+      await addPromise;
     } catch (err) {
       toast.error(`Failed to proceed to checkout: ${err.message}`);
-      console.error('Buy Now error:', err);
     }
-  }, [book, user, quantity, router]);
+  }, [book, user, addToCart, quantity, router]);
 
   const handleReadSample = useCallback(() => {
     if (book?.pdf_file_url) {
@@ -662,92 +491,70 @@ const BookDetailsPage = ({ bookId = 1 }) => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
           <Breadcrumb genre={genreName} title={book.title} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 max-w-7xl mx-auto">
-            <ImageGallery images={book.images_url} title={book.title} hasPDF={!!(book.pdf_file_url)} />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 max-w-7xl mx-auto">
+            {/* Left Column: Image */}
+            <div className="lg:col-span-5 lg:start-1">
+              <ImageGallery images={book.images_url} title={book.title} hasPDF={!!(book.pdf_file_url)} />
+            </div>
 
-            <div className="flex flex-col gap-8 px-4 sm:px-6 lg:px-0">
-             <BookHeader
+            {/* Right Column: Details */}
+            <div className="lg:col-span-6 lg:col-start-7 flex flex-col">
+              <BookHeader
                 title={book.title}
-                author={book.author_name || "Unknown Author"}
-                description={book.description}
+                author={book.author_name}
+                description={book.description ? book.description.substring(0, 180) + "..." : ""}
+                rating={book.average_rating}
+                totalReviews={book.total_reviews}
               />
 
-
-              {/* ⭐ Rating summary under description */}
-              <RatingSummary
-                rating={book.average_rating || 0}
-                totalReviews={book.total_reviews || 0}
+              <PurchaseCard
+                originalPrice={prices.original}
+                finalPrice={prices.final}
+                stock={currentStock}
+                hasDiscount={hasDiscount}
+                quantity={quantity}
+                onQuantityChange={handleQuantityChange}
+                onAddToCart={handleAddToCart}
+                onWishlistToggle={handleWishlistToggle}
+                isWishlisted={isWishlisted(book.id)}
               />
 
-              <div className="space-y-6 bg-white  rounded-2xl p-6 shadow-lg border border-gray-300 ">
-                <PriceSection
-                  originalPrice={prices.original}
-                  finalPrice={prices.final}
-                  totalPrice={prices.total}
-                  stock={currentStock}
-                  hasDiscount={hasDiscount}
-                />
-
-                {/* Quick Rating Section */}
-                <QuickRating
-                  bookId={book.id}
-                  currentRating={book.average_rating || 0}
-                  totalReviews={book.total_reviews || 0}
-                  onRatingUpdate={() => {
-                    // Refresh book data when rating is updated
-                    fetchBook(bookId).then(updatedBook => {
-                      if (updatedBook) {
-                        setBook(prev => ({
-                          ...prev,
-                          average_rating: updatedBook.average_rating,
-                          total_reviews: updatedBook.total_reviews,
-                          rating_distribution: updatedBook.rating_distribution
-                        }));
-                      }
-                    });
-                  }}
-                />
-
-              <QuantitySelector
-              quantity={quantity}
-              onChange={setQuantity}
-            />
-
-
-
-                <ActionButtons
-                  onAddToCart={handleAddToCart}
-                  onBuyNow={handleBuyNow}
-                  onWishlistToggle={handleWishlistToggle}
-                  onReadSample={handleReadSample}
-                  isWishlisted={isWishlisted(book.id)}
-                  isOutOfStock={isOutOfStock}
-                  hasPDF={!!(book.pdf_file_url)}
-                />
-              </div>
-
-               <BookDetailsTable
+              <div className="border-t border-gray-100 pt-8 mb-8">
+                <BookDetailsTable
                   genre={genreName}
                   publisher={book.publisher || "N/A"}
-                  author={book.author_name}
                   publicationDate={book.created_at ? book.created_at.split("T")[0] : "N/A"}
                   pageCount={book.page_count || "N/A"}
                   hasPDF={!!(book.pdf_file_url)}
                 />
 
+                <TabNavigation
+                  onScrollToAuthor={() => document.getElementById('author-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  onScrollToReviews={() => document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' })}
+                />
+
+                {/* Description (Always Visible) */}
+                <div className="prose prose-lg text-gray-500 mb-12">
+                  <h3 className="text-gray-900 font-bold text-lg mb-2 font-serif">Description</h3>
+                  <p className="leading-relaxed">{book.description}</p>
+                </div>
+
+                {/* Author Section */}
+                <div id="author-section" className="bg-gray-50 p-6 rounded-xl mb-12 scroll-mt-24">
+                  <h4 className="font-bold text-gray-900 mb-2">About {book.author_name}</h4>
+                  <p className="text-gray-600 text-sm leading-relaxed">{book.about_author || "Author biography not available."}</p>
+                </div>
+              </div>
+
             </div>
           </div>
 
-          <div className="mt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-0">
-            <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-            <TabContent
-              activeTab={activeTab}
-              description={book.description}
-              aboutAuthor={book.about_author}
-              title={book.title}
-              bookId={book.id}
-            />
+          {/* Reviews Section at bottom */}
+          <div id="reviews-section" className="max-w-7xl mx-auto mt-16 pt-16 border-t border-gray-100 scroll-mt-24">
+            <ReviewsSection bookId={book.id} />
           </div>
+
+
 
         </div>
       </main>

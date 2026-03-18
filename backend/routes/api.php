@@ -22,6 +22,8 @@ use App\Http\Controllers\BakongPaymentController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\TelegramController;
+use App\Http\Controllers\PayoutController;
+use App\Http\Controllers\AdminPayoutController;
 
 // Upload file and image
 Route::post('/upload', [UploadController::class, 'upload']);
@@ -212,6 +214,30 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::post('/test-connection', [TelegramController::class, 'testConnection']);           // Test connection
         Route::post('/test-payment', [TelegramController::class, 'testPaymentNotification']);     // Test payment notification
         Route::post('/send-message', [TelegramController::class, 'sendMessage']);                 // Send custom message
+    });
+
+    // Payout routes
+    Route::prefix('payouts')->group(function () {
+        // Owner/Author routes
+        Route::get('/balance', [PayoutController::class, 'getBalance']);                          // Get balance
+        Route::post('/request', [PayoutController::class, 'requestPayout']);                      // Request payout
+        Route::get('/my-payouts', [PayoutController::class, 'getMyPayouts']);                     // Get payout history
+        
+        // Admin routes - OLD (keep for backward compatibility)
+        Route::get('/pending', [PayoutController::class, 'getPendingPayouts']);                   // Get pending payouts (Admin)
+        Route::get('/all', [PayoutController::class, 'getAllPayouts']);                           // Get all payouts (Admin)
+        Route::post('/{payoutId}/process', [PayoutController::class, 'processPayout']);           // Process payout (Admin)
+        Route::get('/statistics', [PayoutController::class, 'getStatistics']);                    // Get statistics (Admin)
+    });
+
+    // Admin Payout Management (NEW - Real-world payout system)
+    Route::prefix('admin/payouts')->group(function () {
+        Route::get('/authors', [AdminPayoutController::class, 'getAuthorsWithEarnings']);         // Get all authors with earnings
+        Route::post('/initiate', [AdminPayoutController::class, 'initiatePayout']);               // Initiate payout to author
+        Route::post('/{payoutId}/confirm', [AdminPayoutController::class, 'confirmPayout']);      // Confirm payout completed
+        Route::post('/{payoutId}/cancel', [AdminPayoutController::class, 'cancelPayout']);        // Cancel payout
+        Route::delete('/{payoutId}', [AdminPayoutController::class, 'deletePayout']);             // Delete payout record
+        Route::get('/history', [AdminPayoutController::class, 'getPayoutHistory']);               // Get payout history
     });
 
 });

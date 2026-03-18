@@ -8,6 +8,7 @@ use App\Models\Cart;
 use App\Models\Book;
 use App\Models\DiscountCode;
 use App\Models\DiscountCodeUsage;
+use App\Services\CommissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -215,6 +216,11 @@ class OrderController extends Controller
                 $book->decrement('stock', $itemData['quantity']);
             }
 
+            // Process commission and distribute earnings
+            $commissionService = new CommissionService();
+            $commissionService->processOrderCommission($order);
+            $commissionService->distributeEarnings($order);
+
             // Clear the cart
             $cart->items()->delete();
 
@@ -295,6 +301,18 @@ class OrderController extends Controller
                 $book = Book::find($itemData['book_id']);
                 $book->decrement('stock', $itemData['quantity']);
             }
+
+            // Process commission and distribute earnings
+            $commissionService = new CommissionService();
+            $commissionService->processOrderCommission($order);
+            $commissionService->distributeEarnings($order);
+            
+            Log::info('Commission processed and earnings distributed for pending order', [
+                'order_id' => $order->id,
+                'pending_order_id' => $pendingOrderId,
+                'total_commission' => $order->items->sum('commission_amount'),
+                'total_owner_earnings' => $order->items->sum('owner_earnings')
+            ]);
 
             // Clear the cart
             $cart = Cart::find($orderData['cart_id']);

@@ -459,11 +459,21 @@ class BakongPaymentController extends Controller
                     $transaction = $result['transaction'];
                     
                     if (isset($transaction['status']) && $transaction['status'] === 'COMPLETED') {
-                        Log::info('Payment COMPLETED! Creating order from pending data', ['pending_order_id' => $orderId]);
+                        Log::info('Payment COMPLETED! Creating order from pending data', [
+                            'pending_order_id' => $orderId,
+                            'transaction_id' => $transaction['transactionId'] ?? null,
+                            'transaction' => $transaction
+                        ]);
                         
                         // Create the actual order
                         $orderController = new OrderController();
                         $order = $orderController->createFromPendingOrder($orderId, $transaction['transactionId'] ?? null);
+                        
+                        Log::info('Order created successfully', [
+                            'order_id' => $order->id,
+                            'order_status' => $order->status,
+                            'payment_status' => $order->payment_status
+                        ]);
                         
                         return response()->json([
                             'success' => true,

@@ -85,4 +85,64 @@ class Order extends Model
     {
         return $this->isQRExpired() && $this->payment_status === 'failed' && !$this->payment_transaction_id;
     }
+
+    /**
+     * Get total commission from this order
+     */
+    public function getTotalCommissionAttribute()
+    {
+        return $this->items->sum('commission_amount');
+    }
+
+    /**
+     * Get total owner earnings from this order
+     */
+    public function getTotalOwnerEarningsAttribute()
+    {
+        return $this->items->sum('owner_earnings');
+    }
+
+    /**
+     * Process commission for all items in this order
+     */
+    public function processCommissions($commissionRate = 10)
+    {
+        foreach ($this->items as $item) {
+            $item->calculateCommission($commissionRate);
+        }
+    }
+
+    /**
+     * Distribute earnings to owners when order is completed
+     */
+    public function distributeEarnings()
+    {
+        if ($this->payment_status !== 'completed') {
+            return;
+        }
+
+        foreach ($this->items as $item) {
+            $owner = $item->book->author;
+            
+            // Skip if admin's own product
+            if ($owner->role === 'admin') {
+                continue;
+            }
+
+            // Get or create owner balance
+            $balance = OwnerBalance::firstOrCreate(
+                ['owner_id' => $owner->id],
+                [
+                    'available_balance' => 0,
+                    'pending_balance' => 0,
+                    'total_earned' => 0,
+                    'total_withdrawn' => 0,
+                ]
+            );
+
+            // Add to available balance (since payment is completed)
+            $balance->increment('available_balance', $item->owner_earnings);
+            $balance->increment('total_earned', $item->owner_earnings);
+        }
+    }
 }

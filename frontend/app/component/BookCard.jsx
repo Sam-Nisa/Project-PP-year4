@@ -66,9 +66,10 @@ const BookCardComponent = ({ book }) => {
 
   const { addWishlist, removeWishlist, isWishlisted } = useWishlistStore();
   const { user } = useAuthStore();
-  const { addToCart } = useAddToCartStore();
+  const { addToCart, loading: cartLoading } = useAddToCartStore();
 
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   const isCurrentlyWishlisted = isWishlisted(book.id);
 
@@ -103,12 +104,37 @@ const handleAddToCart = async (e) => {
     return;
   }
 
-  try {
-    await addToCart(book.id, 1); // quantity = 1 on card
-    toast.success(`"${book.title}" added to cart`);
-  } catch (err) {
-    toast.error("Failed to add to cart");
+  // Prevent multiple clicks for this specific book
+  if (isAddingToCart) {
+    return;
   }
+
+  setIsAddingToCart(true);
+  try {
+    await addToCart(book.id, 1);
+    toast.success("Added to cart!");
+  } catch (error) {
+    toast.error(error.message || "Failed to add to cart");
+  } finally {
+    setIsAddingToCart(false);
+  }
+
+  // ✅ Show toast IMMEDIATELY for instant feedback
+  toast.success(`"${book.title}" added to cart`, {
+    position: "top-right",
+    autoClose: 2000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+  });
+
+  // ✅ Handle API call in background (don't await)
+  addToCart(book.id, 1).catch((err) => {
+    // Only show error if the API call fails
+    toast.error("Failed to add to cart. Please try again.");
+    console.error("Add to cart error:", err);
+  });
 };
 
 
@@ -153,10 +179,15 @@ const handleAddToCart = async (e) => {
     {/* Add to Cart */}
     <button
       onClick={handleAddToCart}
-      className="flex items-center gap-2 px-10 py-2 rounded-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-600 text-white hover:shadow-xl"
+      disabled={isAddingToCart}
+      className={`flex items-center gap-2 px-10 py-2 rounded-xl font-bold transition-all ${
+        isAddingToCart 
+          ? 'bg-gray-400 cursor-not-allowed' 
+          : 'bg-gradient-to-r from-blue-400 to-indigo-600 hover:shadow-xl'
+      } text-white`}
     >
       <ShoppingCartIcon className="w-5 h-5" />
-      <span className="text-sm">Add to Cart</span>
+      <span className="text-sm">{isAddingToCart ? 'Adding...' : 'Add to Cart'}</span>
     </button>
   </div>
 </div>

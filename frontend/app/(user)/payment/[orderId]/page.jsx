@@ -113,14 +113,28 @@ export default function BakongPaymentPage() {
         token
       );
 
-      if (response.success) {
-        if (response.data.order_status === "paid") {
-          setPaymentStatus("completed");
-          // Redirect to success page after 2 seconds
-          setTimeout(() => {
-            router.push(`/order-success?orderId=${orderId}`);
-          }, 2000);
-        }
+      console.log("Payment status response:", response);
+
+      // Check if payment is completed - handle both response structures
+      const isCompleted = response.success && (
+        response.data?.payment_status === "completed" ||
+        response.data?.order_status === "paid" ||
+        response.message === "Payment completed successfully"
+      );
+
+      if (isCompleted) {
+        console.log("✅ Payment confirmed!");
+        const actualOrderId = response.data?.order_id || orderId.replace('pending_', '');
+        
+        setPaymentStatus("completed");
+        
+        // Show success message
+        alert(`Payment successful! Order #${actualOrderId} has been created.`);
+        
+        // Redirect to success page after 2 seconds
+        setTimeout(() => {
+          router.push(`/order-success?orderId=${actualOrderId}`);
+        }, 2000);
       }
     } catch (err) {
       console.error("Error checking payment:", err);

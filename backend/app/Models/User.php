@@ -56,4 +56,28 @@ class User extends Authenticatable implements JWTSubject
     {
         return [];
     }
+
+    /**
+     * Get owner balance for this user
+     */
+    public function ownerBalance()
+    {
+        return $this->hasOne(OwnerBalance::class, 'owner_id');
+    }
+
+    /**
+     * Get payouts for this user
+     */
+    public function payouts()
+    {
+        return $this->hasMany(Payout::class, 'owner_id');
+    }
+
+    /**
+     * Get books authored by this user
+     */
+    public function books()
+    {
+        return $this->hasMany(Book::class, 'author_id');
+    }
 }
