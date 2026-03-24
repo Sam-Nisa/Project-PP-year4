@@ -15,6 +15,7 @@ class Payout extends Model
         'status',
         'payment_method',
         'transaction_reference',
+        'payment_proof',
         'notes',
         'processed_by',
         'requested_at',

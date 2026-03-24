@@ -6,17 +6,21 @@ use App\Models\User;
 use App\Models\OwnerBalance;
 use App\Models\Payout;
 use App\Services\PayoutService;
+use App\Services\BakongPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class AdminPayoutController extends Controller
 {
     protected $payoutService;
+    protected $bakongService;
 
-    public function __construct(PayoutService $payoutService)
+    public function __construct(PayoutService $payoutService, BakongPaymentService $bakongService)
     {
         $this->payoutService = $payoutService;
+        $this->bakongService = $bakongService;
     }
 
     /**
@@ -160,6 +164,7 @@ class AdminPayoutController extends Controller
         $request->validate([
             'transaction_reference' => 'required|string|max:255',
             'notes' => 'nullable|string',
+            'payment_proof' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
         ]);
 
         try {
@@ -172,13 +177,22 @@ class AdminPayoutController extends Controller
                 ], 400);
             }
 
-            $payout->update([
+            $updateData = [
                 'status' => 'completed',
                 'transaction_reference' => $request->transaction_reference,
                 'notes' => $request->notes ? $payout->notes . "\n" . $request->notes : $payout->notes,
                 'processed_by' => $user->id,
                 'processed_at' => now(),
-            ]);
+            ];
+
+            // Handle payment proof image upload
+            if ($request->hasFile('payment_proof')) {
+                $file = $request->file('payment_proof');
+                $path = $file->store('payment_proofs', 'public');
+                $updateData['payment_proof'] = $path;
+            }
+
+            $payout->update($updateData);
 
             // Update total withdrawn
             $balance = OwnerBalance::where('owner_id', $payout->owner_id)->first();
@@ -191,6 +205,7 @@ class AdminPayoutController extends Controller
                 'author_id' => $payout->owner_id,
                 'amount' => $payout->amount,
                 'transaction_reference' => $request->transaction_reference,
+                'has_proof' => $request->hasFile('payment_proof'),
                 'admin_id' => $user->id,
             ]);
 
@@ -348,6 +363,73 @@ class AdminPayoutController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to delete payout: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate Bakong QR code for author payout
+     */
+    public function generatePayoutQR(Request $request, $authorId)
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized - Admin only'], 403);
+        }
+
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+        ]);
+
+        try {
+            $author = User::findOrFail($authorId);
+
+            if ($author->role !== 'author') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Selected user is not an author',
+                ], 400);
+            }
+
+            if (empty($author->bakong_account_id)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Author has not set up Bakong account',
+                ], 400);
+            }
+
+            // Generate QR code using author's Bakong account
+            $qrResult = $this->bakongService->generateQRCode(
+                amount: $request->amount,
+                currency: 'USD',
+                billNumber: 'PAYOUT-' . $authorId . '-' . time(),
+                storeLabel: 'Payout to ' . $author->name
+            );
+
+            if (!$qrResult['success']) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $qrResult['message'] ?? 'Failed to generate QR code',
+                ], 400);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'qr_string' => $qrResult['qr_string'],
+                    'md5' => $qrResult['md5'],
+                    'amount' => $qrResult['amount'],
+                    'currency' => $qrResult['currency'],
+                    'author_bakong_id' => $author->bakong_account_id,
+                    'author_name' => $author->name,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to generate payout QR: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage(),

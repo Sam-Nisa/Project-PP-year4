@@ -238,6 +238,7 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::post('/{payoutId}/cancel', [AdminPayoutController::class, 'cancelPayout']);        // Cancel payout
         Route::delete('/{payoutId}', [AdminPayoutController::class, 'deletePayout']);             // Delete payout record
         Route::get('/history', [AdminPayoutController::class, 'getPayoutHistory']);               // Get payout history
+        Route::post('/generate-qr/{authorId}', [AdminPayoutController::class, 'generatePayoutQR']); // Generate QR for author payout
     });
 
 });
