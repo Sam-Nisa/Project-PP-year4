@@ -14,7 +14,7 @@ export default function AdminSidebar() {
     { name: "Books", href: "/admin/books", icon: <FaBook color="#EF4444" /> },
     { name: "Discount Codes", href: "/admin/discount-codes", icon: <FaTicketAlt color="#10B981" /> },
     { name: "Sales", href: "/admin/sales", icon: <FaChartLine color="#EC4899" /> },
-    { name: "Payouts", href: "/admin/payouts", icon: <FaDollarSign color="#10B981" /> },
+    { name: "Payout Management", href: "/admin/payouts-new", icon: <FaDollarSign color="#10B981" /> },
     { name: "Settings", href: "/admin/settings", icon: <FaCogs color="#8B5CF6" /> },
   ];
 

@@ -112,29 +112,19 @@ const handleAddToCart = async (e) => {
   setIsAddingToCart(true);
   try {
     await addToCart(book.id, 1);
-    toast.success("Added to cart!");
+    toast.success(`"${book.title}" added to cart`, {
+      position: "top-right",
+      autoClose: 2000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
   } catch (error) {
     toast.error(error.message || "Failed to add to cart");
   } finally {
     setIsAddingToCart(false);
   }
-
-  // ✅ Show toast IMMEDIATELY for instant feedback
-  toast.success(`"${book.title}" added to cart`, {
-    position: "top-right",
-    autoClose: 2000,
-    hideProgressBar: false,
-    closeOnClick: true,
-    pauseOnHover: true,
-    draggable: true,
-  });
-
-  // ✅ Handle API call in background (don't await)
-  addToCart(book.id, 1).catch((err) => {
-    // Only show error if the API call fails
-    toast.error("Failed to add to cart. Please try again.");
-    console.error("Add to cart error:", err);
-  });
 };
 
 
