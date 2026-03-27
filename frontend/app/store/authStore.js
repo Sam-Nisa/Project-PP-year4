@@ -140,18 +140,23 @@ initializeStore: () => {
       sessionStorage.setItem("token", token);
       set({ token });
 
-      const response = await request("/api/profile", "GET", null, {
+      const response = await request("/api/profile", "GET", {}, {
         headers: { Authorization: `Bearer ${token}` },
-      });
+      }, token);
+
+      const userData = response.data || response;
 
       set({
-        user: response.data,
+        user: userData,
         isInitialized: true,
       });
 
-      sessionStorage.setItem("user", JSON.stringify(response.data));
+      sessionStorage.setItem("user", JSON.stringify(userData));
 
-      return response.data;
+      return userData;
+    } catch (err) {
+      set({ error: err.response?.data?.message || "Google login failed" });
+      throw err;
     } finally {
       set({ loading: false });
     }

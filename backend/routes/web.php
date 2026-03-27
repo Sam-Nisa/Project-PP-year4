@@ -57,17 +57,17 @@ Route::get('/auth/google/callback', function () {
         // Generate JWT token
         $token = JWTAuth::fromUser($user);
 
-        return redirect(
-            env('FRONTEND_URL') . "/google-success?token=" . $token
-        );
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+        $redirectUrl = $frontendUrl . "/google-success?token=" . $token;
+
+        return response()->redirectTo($redirectUrl);
 
     } catch (\Laravel\Socialite\Two\InvalidStateException $e) {
-        return redirect(env('FRONTEND_URL') . "/login?error=invalid_state");
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+        return response()->redirectTo($frontendUrl . "/login?error=invalid_state");
         
     } catch (\Exception $e) {
-      
-        return redirect(
-            env('FRONTEND_URL') . "/login?error=" . urlencode($e->getMessage())
-        );
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+        return response()->redirectTo($frontendUrl . "/login?error=" . urlencode($e->getMessage()));
     }
 });
