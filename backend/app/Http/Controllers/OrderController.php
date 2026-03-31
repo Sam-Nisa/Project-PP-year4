@@ -9,6 +9,7 @@ use App\Models\Book;
 use App\Models\DiscountCode;
 use App\Models\DiscountCodeUsage;
 use App\Services\CommissionService;
+use App\Services\TelegramService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -299,8 +300,13 @@ class OrderController extends Controller
 
                 // Update book stock
                 $book = Book::find($itemData['book_id']);
-                $book->decrement('stock', $itemData['quantity']);
+                if ($book) {
+                    $book->decrement('stock', $itemData['quantity']);
+                }
             }
+
+            // REFRESH order to load items for commission and telegram
+            $order->load('items.book');
 
             // Process commission and distribute earnings
             $commissionService = new CommissionService();
@@ -342,11 +348,37 @@ class OrderController extends Controller
 
             // Send Telegram notification
             try {
-                $telegramService = new \App\Services\TelegramService();
-                $telegramService->sendPaymentConfirmation($order);
+                Log::info('Sending Telegram from OrderController', ['order_id' => $order->id]);
+                $telegramService = new TelegramService();
+                $result = $telegramService->sendPaymentConfirmation($order);
+                Log::info('Telegram sent from OrderController', [
+                    'order_id' => $order->id,
+                    'success' => $result['success'] ?? false,
+                    'message' => $result['message'] ?? 'N/A'
+                ]);
             } catch (\Exception $e) {
                 // Log error but don't fail the order creation
-                Log::error('Failed to send Telegram notification: ' . $e->getMessage());
+                Log::error('Failed to send Telegram notification from OrderController: ' . $e->getMessage(), [
+                    'order_id' => $order->id,
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
+
+            // Also send a simple quick alert as backup
+            try {
+                Log::info('Sending quick Telegram alert as backup', ['order_id' => $order->id]);
+                $telegramService = new TelegramService();
+                $telegramService->sendSimplePaymentNotification(
+                    $order->id,
+                    (float) $order->total_amount,
+                    'USD',
+                    ($order->user ? $order->user->name : 'Customer')
+                );
+                Log::info('Quick Telegram alert sent', ['order_id' => $order->id]);
+            } catch (\Exception $e) {
+                Log::error('Failed to send quick Telegram alert: ' . $e->getMessage(), [
+                    'order_id' => $order->id
+                ]);
             }
 
             return $order->load('items.book');

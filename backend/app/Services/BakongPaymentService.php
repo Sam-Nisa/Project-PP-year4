@@ -31,7 +31,7 @@ class BakongPaymentService
     }
 
     /**
-     * Generate KHQR code for an order
+     * Generate KHQR code for an order using manual TLV generation (proven working method)
      * 
      * @param float $amount
      * @param string $currency (USD or KHR)
@@ -93,87 +93,37 @@ class BakongPaymentService
                 ];
             }
 
-            // Convert currency code to KHQR format
-            $currencyCode = $currency === 'USD' ? KHQRData::CURRENCY_USD : KHQRData::CURRENCY_KHR;
-
-            // Get merchant ID (use account ID as fallback if not set)
-            $merchantId = config('services.bakong.merchant_id');
-            if (empty($merchantId)) {
-                // Use the username part of the Bakong account ID as merchant ID
-                $merchantId = explode('@', $this->bakongAccountId)[0];
-            }
-
-            // Get acquiring bank (required)
-            $acquiringBank = config('services.bakong.acquiring_bank');
-            if (empty($acquiringBank)) {
-                $acquiringBank = 'ABA Bank'; // Default
-            }
-
-            // Log configuration
-            Log::info('Bakong Configuration', [
-                'account_id' => $this->bakongAccountId,
-                'merchant_name' => $this->merchantName,
-                'merchant_city' => $this->merchantCity,
-                'merchant_id' => $merchantId,
-                'acquiring_bank' => $acquiringBank,
-                'mobile_number' => $this->mobileNumber
-            ]);
-
-            // Create merchant info
-            $merchantInfo = new MerchantInfo(
-                bakongAccountID: $this->bakongAccountId,
-                merchantName: $this->merchantName,
-                merchantCity: $this->merchantCity,
-                merchantID: $merchantId,
-                acquiringBank: $acquiringBank,
-                currency: $currencyCode,
-                amount: $amount,
-                mobileNumber: $this->mobileNumber,
-                billNumber: $billNumber,
-                storeLabel: $storeLabel
+            // Generate KHQR string using manual TLV (proven working method)
+            $khqrString = $this->generateKhqrString(
+                $this->bakongAccountId,
+                $this->merchantName,
+                $this->merchantCity,
+                $amount,
+                $currency,
+                $billNumber
             );
 
-            Log::info('Calling BakongKHQR::generateMerchant');
-            $response = BakongKHQR::generateMerchant($merchantInfo);
+            // Calculate MD5 from KHQR string WITHOUT the CRC (last 4 characters)
+            $khqrWithoutCrc = substr($khqrString, 0, -4);
+            $md5 = md5($khqrWithoutCrc);
 
-            Log::info('Bakong Response', [
-                'response_type' => \gettype($response),
-                'response' => $response
-            ]);
-
-            if ($response && isset($response->status) && $response->status['code'] === 0) {
-                Log::info('QR Generation Successful');
-                return [
-                    'success' => true,
-                    'qr_string' => $response->data['qr'],
-                    'md5' => $response->data['md5'],
-                    'amount' => $amount,
-                    'currency' => $currency
-                ];
-            }
-
-            Log::error('QR Generation Failed', [
-                'status' => $response->status ?? 'No status',
-                'message' => $response->status['message'] ?? 'Unknown'
+            Log::info('QR Generation Successful', [
+                'qr_length' => strlen($khqrString),
+                'md5' => $md5,
+                'amount' => $amount,
+                'currency' => $currency
             ]);
 
             return [
-                'success' => false,
-                'message' => 'Failed to generate QR code',
-                'error' => $response->status['message'] ?? 'Unknown error'
+                'success' => true,
+                'qr_string' => $khqrString,
+                'md5' => $md5,
+                'amount' => $amount,
+                'currency' => $currency
             ];
 
-        } catch (KHQRException $e) {
-            Log::error('Bakong QR Generation Error (KHQR Exception): ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-            return [
-                'success' => false,
-                'message' => 'Failed to generate QR code',
-                'error' => $e->getMessage()
-            ];
         } catch (\Exception $e) {
-            Log::error('Bakong QR Generation Error (General Exception): ' . $e->getMessage(), [
+            Log::error('Bakong QR Generation Error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
             return [
@@ -182,6 +132,103 @@ class BakongPaymentService
                 'error' => $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Helper to compute TLV (Tag-Length-Value)
+     */
+    private function generateTlv($tag, $value)
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+        $valueStr = (string) $value;
+        $length = str_pad((string) strlen($valueStr), 2, '0', STR_PAD_LEFT);
+        return $tag . $length . $valueStr;
+    }
+
+    /**
+     * Helper to compute CRC16 CCITT
+     */
+    private function calculateCrc16($data)
+    {
+        $crc = 0xFFFF;
+        $jf = 0x1021;
+        $length = strlen($data);
+        
+        for ($i = 0; $i < $length; $i++) {
+            $b = ord($data[$i]);
+            for ($j = 0; $j < 8; $j++) {
+                $bit = (($b >> (7 - $j)) & 1) == 1;
+                $c15 = (($crc >> 15) & 1) == 1;
+                $crc <<= 1;
+                if ($c15 ^ $bit) {
+                    $crc ^= $jf;
+                }
+            }
+        }
+        
+        $crc &= 0xFFFF;
+        return strtoupper(str_pad(dechex($crc), 4, '0', STR_PAD_LEFT));
+    }
+
+    /**
+     * Generate KHQR string using manual TLV generation (matching proven working standard)
+     */
+    private function generateKhqrString($bankAccount, $merchantName, $merchantCity, $amount, $currency, $billNumber)
+    {
+        $qr = "";
+        
+        // Tag 00: Payload Format Indicator
+        $qr .= $this->generateTlv("00", "01");
+        
+        // Tag 01: Point of Initiation (12 = Dynamic QR)
+        $qr .= $this->generateTlv("01", "12");
+        
+        // Tag 29: Individual Bakong Account
+        $qr .= $this->generateTlv("29", $this->generateTlv("00", $bankAccount));
+        
+        // Tag 52: Merchant Category Code
+        $qr .= $this->generateTlv("52", "5999");
+        
+        // Tag 53: Transaction Currency
+        $qr .= $this->generateTlv("53", $currency === 'KHR' ? "116" : "840");
+        
+        // Tag 54: Transaction Amount
+        if ($amount !== null && $amount !== '') {
+            if ($currency === 'KHR') {
+                $amountStr = (string) round((float)$amount);
+            } else {
+                $amountStr = number_format((float)$amount, 2, '.', '');
+            }
+            $qr .= $this->generateTlv("54", $amountStr);
+        }
+        
+        // Tag 58: Country Code
+        $qr .= $this->generateTlv("58", "KH");
+        
+        // Tag 59: Merchant Name
+        $qr .= $this->generateTlv("59", $merchantName);
+        
+        // Tag 60: Merchant City
+        $qr .= $this->generateTlv("60", $merchantCity ?: "Phnom Penh");
+        
+        // Tag 99: Timestamp
+        $now = (int) round(microtime(true) * 1000);
+        $expiry = $now + (86400000 * 1); // 1 day expiry
+        $tag99inner = $this->generateTlv("00", (string)$now) . $this->generateTlv("01", (string)$expiry);
+        $qr .= $this->generateTlv("99", $tag99inner);
+        
+        // Tag 62: Additional Data (Bill Number)
+        if ($billNumber) {
+            $qr .= $this->generateTlv("62", $this->generateTlv("01", $billNumber));
+        }
+        
+        // Tag 63: CRC Checksum
+        $qr .= "6304";
+        $qr .= $this->calculateCrc16($qr);
+        
+        return $qr;
     }
 
     /**
@@ -291,9 +338,19 @@ class BakongPaymentService
     {
         try {
             $result = BakongKHQR::verify($qrString);
+            
+            Log::info('QR Code Verification Result', [
+                'qr_length' => strlen($qrString),
+                'is_valid' => $result->isValid,
+                'result_type' => \gettype($result)
+            ]);
+            
             return $result->isValid;
         } catch (KHQRException $e) {
             Log::error('Bakong QR Verification Error: ' . $e->getMessage());
+            return false;
+        } catch (\Exception $e) {
+            Log::error('Bakong QR Verification Error (General): ' . $e->getMessage());
             return false;
         }
     }

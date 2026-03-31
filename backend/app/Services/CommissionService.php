@@ -61,6 +61,11 @@ class CommissionService
         try {
             foreach ($order->items as $item) {
                 $owner = $item->book->author;
+                
+                if (!$owner) {
+                    Log::warning("Skipping commission distribution - author not found", ['book_id' => $item->book_id]);
+                    continue;
+                }
 
                 // Skip if admin's own product (admin keeps 100%)
                 if ($owner->role === 'admin') {

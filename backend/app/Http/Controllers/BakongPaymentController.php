@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Services\BakongPaymentService;
+use App\Services\TelegramService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -12,10 +13,12 @@ use Illuminate\Support\Facades\Cache;
 class BakongPaymentController extends Controller
 {
     protected $bakongService;
+    protected $telegramService;
 
-    public function __construct(BakongPaymentService $bakongService)
+    public function __construct(BakongPaymentService $bakongService, TelegramService $telegramService)
     {
         $this->bakongService = $bakongService;
+        $this->telegramService = $telegramService;
     }
 
     /**
@@ -475,6 +478,8 @@ class BakongPaymentController extends Controller
                             'payment_status' => $order->payment_status
                         ]);
                         
+                        // Note: Telegram notification is sent from OrderController::createFromPendingOrder()
+                        
                         return response()->json([
                             'success' => true,
                             'message' => 'Payment completed successfully',
@@ -651,4 +656,89 @@ class BakongPaymentController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Test QR code generation (Debug endpoint)
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function testQRGeneration(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            if ($user->role !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+
+            $validated = $request->validate([
+                'amount' => 'required|numeric|min:0.01',
+                'currency' => 'sometimes|in:USD,KHR',
+                'bill_number' => 'sometimes|string'
+            ]);
+
+            $amount = $validated['amount'];
+            $currency = $validated['currency'] ?? 'USD';
+            $billNumber = $validated['bill_number'] ?? 'TEST-' . time();
+
+            Log::info('Testing QR Generation', [
+                'amount' => $amount,
+                'currency' => $currency,
+                'bill_number' => $billNumber
+            ]);
+
+            $result = $this->bakongService->generateQRCode(
+                $amount,
+                $currency,
+                $billNumber,
+                'Test Store'
+            );
+
+            if ($result['success']) {
+                // Verify the generated QR code
+                $isValid = $this->bakongService->verifyQRCode($result['qr_string']);
+                
+                // Decode the QR code
+                $decoded = $this->bakongService->decodeQRCode($result['qr_string']);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'QR code generated successfully',
+                    'data' => [
+                        'qr_string' => $result['qr_string'],
+                        'md5' => $result['md5'],
+                        'amount' => $result['amount'],
+                        'currency' => $result['currency'],
+                        'is_valid' => $isValid,
+                        'decoded' => $decoded['success'] ? $decoded['data'] : null,
+                        'qr_length' => strlen($result['qr_string'])
+                    ]
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Failed to generate QR code',
+                'error' => $result['error'] ?? 'Unknown error'
+            ], 500);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Test QR Generation Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }
