@@ -15,6 +15,19 @@ class TelegramService
     {
         $this->botToken = env('TELEGRAM_BOT_TOKEN');
         $this->chatId = env('TELEGRAM_CHAT_ID');
+        
+        // Fallback to reading directly from .env if running from artisan serve and config is not cached
+        if (empty($this->botToken) && file_exists(base_path('.env'))) {
+            $envPath = base_path('.env');
+            $envContent = file_get_contents($envPath);
+            if (preg_match('/^TELEGRAM_BOT_TOKEN=(.*?)$/m', $envContent, $matches)) {
+                $this->botToken = trim(trim($matches[1]), '"\'');
+            }
+            if (preg_match('/^TELEGRAM_CHAT_ID=(.*?)$/m', $envContent, $matches)) {
+                $this->chatId = trim(trim($matches[1]), '"\'');
+            }
+        }
+        
         $this->apiUrl = "https://api.telegram.org/bot{$this->botToken}";
     }
 
@@ -47,7 +60,7 @@ class TelegramService
                 ];
             }
 
-            $response = Http::withOptions([
+            $response = Http::timeout(10)->withOptions([
                 'verify' => config('app.env') === 'production' // Skip SSL verify on dev (XAMPP issue)
             ])->post("{$this->apiUrl}/sendMessage", [
                 'chat_id' => $chatId,
@@ -165,7 +178,7 @@ class TelegramService
             if ($order->discount_amount && $order->discount_amount > 0) {
                 $message .= "Discount: -\${$order->discount_amount}";
                 if ($order->discount_code) {
-                    $message .= " ({$order->discount_code})";
+                    $message .= " (" . htmlspecialchars($order->discount_code) . ")";
                 }
                 $message .= "\n";
             }
@@ -253,7 +266,7 @@ class TelegramService
                 ];
             }
 
-            $response = Http::get("{$this->apiUrl}/getMe");
+            $response = Http::timeout(10)->get("{$this->apiUrl}/getMe");
 
             if ($response->successful()) {
                 return [
@@ -292,7 +305,7 @@ class TelegramService
                 ];
             }
 
-            $response = Http::get("{$this->apiUrl}/getUpdates");
+            $response = Http::timeout(10)->get("{$this->apiUrl}/getUpdates");
 
             if ($response->successful()) {
                 return [

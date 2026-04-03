@@ -402,13 +402,39 @@ class AdminPayoutController extends Controller
                 ], 400);
             }
 
+            // Create a temporary service instance with author's configuration
+            $originalConfig = [
+                'services.bakong.account_id' => config('services.bakong.account_id'),
+                'services.bakong.merchant_name' => config('services.bakong.merchant_name'),
+                'services.bakong.merchant_city' => config('services.bakong.merchant_city'),
+                'services.bakong.merchant_id' => config('services.bakong.merchant_id'),
+                'services.bakong.acquiring_bank' => config('services.bakong.acquiring_bank'),
+                'services.bakong.mobile_number' => config('services.bakong.mobile_number'),
+            ];
+
+            // Temporarily set account configuration to Author's
+            config([
+                'services.bakong.account_id' => $author->bakong_account_id,
+                'services.bakong.merchant_name' => $author->bakong_merchant_name ?? ($author->name . ' Store'),
+                'services.bakong.merchant_city' => $author->bakong_merchant_city ?? 'Phnom Penh',
+                'services.bakong.merchant_id' => $author->bakong_merchant_id ?? '',
+                'services.bakong.acquiring_bank' => $author->bakong_acquiring_bank ?? 'Bakong',
+                'services.bakong.mobile_number' => $author->bakong_mobile_number ?? '',
+            ]);
+
+            // Create new service instance with author's config
+            $authorBakongService = new BakongPaymentService();
+
             // Generate QR code using author's Bakong account
-            $qrResult = $this->bakongService->generateQRCode(
-                amount: $request->amount,
-                currency: 'USD',
-                billNumber: 'PAYOUT-' . $authorId . '-' . time(),
-                storeLabel: 'Payout to ' . $author->name
+            $qrResult = $authorBakongService->generateQRCode(
+                $request->amount,
+                'USD',
+                'PAYOUT-' . $authorId . '-' . time(),
+                'Payout to ' . $author->name
             );
+
+            // Restore original config
+            config($originalConfig);
 
             if (!$qrResult['success']) {
                 return response()->json([
@@ -429,6 +455,11 @@ class AdminPayoutController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
+            // Ensure config is restored even on exception
+            if (isset($originalConfig)) {
+                config($originalConfig);
+            }
+            
             Log::error('Failed to generate payout QR: ' . $e->getMessage());
             return response()->json([
                 'success' => false,

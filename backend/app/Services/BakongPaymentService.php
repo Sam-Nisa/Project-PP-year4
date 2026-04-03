@@ -103,9 +103,9 @@ class BakongPaymentService
                 $billNumber
             );
 
-            // Calculate MD5 from KHQR string WITHOUT the CRC (last 4 characters)
-            $khqrWithoutCrc = substr($khqrString, 0, -4);
-            $md5 = md5($khqrWithoutCrc);
+            // Calculate MD5 from the FULL KHQR string (including CRC)
+            // This matches the official Bakong SDK: md5($khqr) on line 121 of BakongKHQR.php
+            $md5 = md5($khqrString);
 
             Log::info('QR Generation Successful', [
                 'qr_length' => strlen($khqrString),
@@ -241,8 +241,7 @@ class BakongPaymentService
     {
         try {
             $response = BakongKHQR::checkBakongAccount($accountId);
-            
-            if ($response->status['code'] === 0) {
+            if ($response->status['code'] == 0) {
                 return $response->data['bakongAccountExists'];
             }
             
@@ -282,9 +281,9 @@ class BakongPaymentService
 
             // Check for responseCode (new format) or status.code (old format)
             $isSuccess = false;
-            if (isset($response['responseCode']) && $response['responseCode'] === 0) {
+            if (isset($response['responseCode']) && $response['responseCode'] == 0) {
                 $isSuccess = true;
-            } elseif (isset($response['status']) && $response['status']['code'] === 0) {
+            } elseif (isset($response['status']) && $response['status']['code'] == 0) {
                 $isSuccess = true;
             }
 
@@ -366,7 +365,7 @@ class BakongPaymentService
         try {
             $response = BakongKHQR::decode($qrString);
             
-            if ($response->status['code'] === 0) {
+            if ($response->status['code'] == 0) {
                 return [
                     'success' => true,
                     'data' => $response->data
@@ -398,7 +397,7 @@ class BakongPaymentService
         try {
             $result = BakongKHQR::renewToken($email);
             
-            if ($result['responseCode'] === 0) {
+            if ($result['responseCode'] == 0) {
                 return [
                     'success' => true,
                     'token' => $result['data']['token'],
