@@ -143,12 +143,12 @@ export default function ReviewsSection({ bookId }) {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-blue-900">Share Your Experience</h3>
-              <p className="text-blue-700 text-sm">Help other readers by writing a review</p>
+              <h3 className="font-semibold text-[#8d705b]">Share Your Experience</h3>
+              <p className="text-[#7b583d] text-sm">Help other readers by writing a review</p>
             </div>
             <button
               onClick={() => setShowReviewForm(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className="bg-[#8d705b] text-white px-4 py-2 rounded-lg hover:bg-[#7b583d] transition-colors"
             >
               Write Review
             </button>

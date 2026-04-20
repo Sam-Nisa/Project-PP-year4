@@ -17,7 +17,7 @@ const CheckoutPage = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const buyNowFlag = urlParams.get('buyNow');
-    
+
     if (buyNowFlag === 'true') {
       const storedProduct = sessionStorage.getItem('buyNowProduct');
       if (storedProduct) {
@@ -44,7 +44,7 @@ const CheckoutPage = () => {
   // Check if cart has multiple vendors (authors)
   const isMultiVendor = useMemo(() => {
     if (!checkoutItems || checkoutItems.length === 0) return false;
-    
+
     const authorIds = new Set();
     checkoutItems.forEach(item => {
       const book = item.book || item;
@@ -52,14 +52,14 @@ const CheckoutPage = () => {
         authorIds.add(book.author_id);
       }
     });
-    
+
     return authorIds.size > 1;
   }, [checkoutItems]);
 
   // Get unique authors for display
   const uniqueAuthors = useMemo(() => {
     if (!checkoutItems || checkoutItems.length === 0) return [];
-    
+
     const authorsMap = new Map();
     checkoutItems.forEach(item => {
       const book = item.book || item;
@@ -67,7 +67,7 @@ const CheckoutPage = () => {
         authorsMap.set(book.author_id, book.author_name);
       }
     });
-    
+
     return Array.from(authorsMap.values());
   }, [checkoutItems]);
 
@@ -98,12 +98,7 @@ const CheckoutPage = () => {
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
-    lastName: "",
     address: "",
-    city: "",
-    state: "",
-    country: "",
-    zipCode: "", // Add zip code field
     paymentMethod: "bakong", // Default to Bakong
   });
 
@@ -113,7 +108,7 @@ const CheckoutPage = () => {
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [discountCode, setDiscountCode] = useState("");
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
-  
+
   // QR Code Modal States
   const [showQRModal, setShowQRModal] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0); // seconds
@@ -159,13 +154,13 @@ const CheckoutPage = () => {
     }
 
     setIsApplyingDiscount(true);
-    
+
     try {
       const { request } = await import("../../utils/request");
       const { useAuthStore } = await import("../../store/authStore");
-      
+
       const token = useAuthStore.getState().token;
-      
+
       const response = await request(
         "/api/discount-codes/validate",
         "POST",
@@ -180,7 +175,7 @@ const CheckoutPage = () => {
 
       setAppliedDiscount(response.discount_code);
       alert("Discount code applied successfully!");
-      
+
     } catch (error) {
       console.error("Discount validation error:", error);
       alert(error.response?.data?.error || "Invalid discount code");
@@ -205,9 +200,9 @@ const CheckoutPage = () => {
       const response = await request(
         "/api/bakong/generate-qr",
         "POST",
-        { 
-          order_id: orderId, 
-          currency: "USD" 
+        {
+          order_id: orderId,
+          currency: "USD"
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -247,14 +242,14 @@ const CheckoutPage = () => {
       console.log("Already checking payment, skipping...");
       return;
     }
-    
+
     setCheckingPayment(true);
     setPaymentCheckCount(prev => {
       const newCount = prev + 1;
       console.log(`Checking payment status (attempt ${newCount})...`);
       return newCount;
     });
-    
+
     try {
       const { request } = await import("../../utils/request");
       const { useAuthStore } = await import("../../store/authStore");
@@ -279,14 +274,14 @@ const CheckoutPage = () => {
       if (isCompleted) {
         console.log("✅ Payment confirmed!");
         const actualOrderId = response.data?.order_id || orderId.replace('pending_', '');
-        
+
         setPaymentStatus("completed");
         setPaymentError(null);
         stopPaymentStatusCheck();
-        
+
         // Show success message
         alert(`Payment successful! Order #${actualOrderId} has been created.`);
-        
+
         // Redirect to success page after 2 seconds
         setTimeout(() => {
           window.location.href = `/order-success?orderId=${actualOrderId}`;
@@ -302,7 +297,7 @@ const CheckoutPage = () => {
       }
     } catch (error) {
       console.error("Error checking payment:", error);
-      
+
       // Handle case where order was deleted due to expiration
       if (error.response?.status === 410) {
         console.log("❌ Order expired and was deleted");
@@ -311,7 +306,7 @@ const CheckoutPage = () => {
         stopPaymentStatusCheck();
         return;
       }
-      
+
       // Don't set as failed immediately for other errors, might be network issue
       if (paymentCheckCount >= 60) {
         console.log("❌ Payment check failed after 60 attempts");
@@ -394,6 +389,22 @@ const CheckoutPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate required fields
+    const newErrors = {};
+    if (!formData.firstName?.trim()) {
+      newErrors.firstName = "First name is required";
+    }
+    if (!formData.address?.trim()) {
+      newErrors.address = "Address is required";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return; // Stop submission
+    }
+
+    setErrors({}); // Clear previous errors
     setIsSubmitting(true);
 
     try {
@@ -407,11 +418,11 @@ const CheckoutPage = () => {
         discount_code: appliedDiscount?.code || null,
         shipping_address: {
           first_name: formData.firstName,
-          last_name: formData.lastName,
+          last_name: formData.lastName || 'N/A',
           email: formData.email,
           address: formData.address,
-          city: formData.city,
-          zip_code: formData.zipCode, // Add zip code
+          city: formData.city || 'N/A',
+          zip_code: formData.zipCode || '00000', // Fallback for removed field
         }
       };
 
@@ -426,7 +437,7 @@ const CheckoutPage = () => {
 
       // Always show QR modal for Bakong payment
       setCurrentOrder(response.order);
-      
+
       // Generate QR code first, then show modal only if successful
       setIsGeneratingQR(true);
       console.log("Generating QR code for order:", response.order.id);
@@ -436,9 +447,9 @@ const CheckoutPage = () => {
       const qrResponse = await qrRequest(
         "/api/bakong/generate-qr",
         "POST",
-        { 
-          order_id: response.order.id, 
-          currency: "USD" 
+        {
+          order_id: response.order.id,
+          currency: "USD"
         },
         { headers: { Authorization: `Bearer ${qrToken}` } }
       );
@@ -461,7 +472,7 @@ const CheckoutPage = () => {
 
         // Now show the modal with QR data ready
         setShowQRModal(true);
-        
+
         console.log("Starting payment status check...");
         startPaymentStatusCheck(response.order.id);
       } else {
@@ -527,7 +538,7 @@ const CheckoutPage = () => {
         <div className="mb-8">
           <Link
             href={isBuyNow ? `/book/${buyNowProduct?.id}` : "/add-to-cart"}
-            className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-4"
+            className="inline-flex items-center space-x-2 text-[#A47251]  hover:text-[#ae734b]  mb-4"
           >
             <ArrowLeftIcon className="w-5 h-5" />
             <span>{isBuyNow ? "Back to Product" : "Back to Cart"}</span>
@@ -563,106 +574,55 @@ const CheckoutPage = () => {
               </div>
 
               {/* Shipping Address */}
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Shipping Address
-                </h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      First Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 rounded-lg border 
-                      ${errors.firstName ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"}
-                      focus:ring-2 focus:border-transparent`}
-                  />
-                  {errors.firstName && (
-                    <p className="text-sm text-red-600 mt-1">{errors.firstName}</p>
-                  )}
+               <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                    Shipping Address
+                  </h2>
 
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Last Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                  {/* ONE grid only */}
+                  <div className="grid grid-cols-2 gap-4">
+                    
+                    {/* First Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        First Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 rounded-lg border 
+                        ${errors.firstName ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"}
+                        focus:ring-2 focus:border-transparent`}
+                      />
+                      {errors.firstName && (
+                        <p className="text-sm text-red-600 mt-1">{errors.firstName}</p>
+                      )}
+                    </div>
+
+                    {/* Address */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Address <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+                          errors.address ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+                        }`}
+                      />
+                      {errors.address && (
+                        <p className="text-sm text-red-600 mt-1">{errors.address}</p>
+                      )}
+                    </div>
+
                   </div>
                 </div>
 
-
-                <div className="grid grid-cols-2 gap-4">
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Address <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div className="mt-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      City <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      State/Province
-                    </label>
-                    <input
-                      type="text"
-                      name="state"
-                      value={formData.state}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Zip Code <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="zipCode"
-                      value={formData.zipCode}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                
-              </div>
 
               {/* Payment Method */}
               <div>
@@ -670,7 +630,7 @@ const CheckoutPage = () => {
                   Payment Method
                 </h2>
                 <div className="space-y-3">
-                  <div className="p-4 border-2 border-blue-500 bg-blue-50 rounded-lg">
+                  <div className="p-4 border-2 border-[#A47251] bg-blue-50 rounded-lg">
                     <div className="flex items-center">
                       <input
                         type="radio"
@@ -681,11 +641,11 @@ const CheckoutPage = () => {
                         className="mr-3"
                       />
                       <div className="flex items-center">
-                        <span className="font-medium text-blue-800">Bakong QR Payment</span>
-                        <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-1 rounded">Only Available</span>
+                        <span className="font-medium text-[#A47251]  hover:text-[#ae734b]">Bakong QR Payment</span>
+                        <span className="ml-2 text-xs bg-[#A47251] text-white px-2 py-1 rounded">Only Available</span>
                       </div>
                     </div>
-                    <p className="text-sm text-blue-700 mt-2 ml-6">
+                    <p className="text-sm text-[#A47251]  hover:text-[#ae734b] mt-2 ml-6">
                       Secure instant payment via Cambodia's national payment system
                     </p>
                   </div>
@@ -725,14 +685,14 @@ const CheckoutPage = () => {
                       value={discountCode}
                       onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
                       placeholder="Enter discount code"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:text-[#A47251] focus:border-transparent"
                       onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleApplyDiscount())}
                     />
                     <button
                       type="button"
                       onClick={handleApplyDiscount}
                       disabled={!discountCode.trim() || isApplyingDiscount}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-4 py-2 bg-[#A47251] text-white rounded-lg hover:bg-[#A47251] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {isApplyingDiscount ? "Applying..." : "Apply"}
                     </button>
@@ -744,8 +704,8 @@ const CheckoutPage = () => {
                 type="submit"
                 disabled={isSubmitting || isGeneratingQR}
                 className={`w-full font-medium py-3 px-4 rounded-lg transition-colors ${isSubmitting || isGeneratingQR
-                    ? "bg-gray-400 text-gray-700 cursor-not-allowed"
-                    : "bg-teal-600 hover:bg-teal-700 text-white"
+                  ? "bg-gray-400 text-gray-700 cursor-not-allowed"
+                  : "bg-[#A47251] hover:bg-[#A47251] text-white"
                   }`}
               >
                 {isSubmitting ? "Processing..." : isGeneratingQR ? "Generating QR..." : "Complete Order"}
@@ -765,7 +725,7 @@ const CheckoutPage = () => {
                 // Handle both cart items and buy now products
                 const book = item.book || item; // For buy now, item IS the book
                 const quantity = item.quantity || 1;
-                
+
                 return (
                   <div key={item.id || index} className="flex items-center space-x-4">
                     <img
@@ -821,59 +781,6 @@ const CheckoutPage = () => {
               })}
             </div>
 
-            {/* Payment Method Info */}
-            {checkoutItems.length > 0 && (
-              <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center space-x-2 mb-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <p className="text-sm font-medium text-blue-800">Bakong Payment</p>
-                </div>
-                {appliedDiscount ? (
-                  <div>
-                    <p className="text-sm text-blue-700">
-                      Payment will go to <strong>Admin Account</strong> (discount applied)
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      Merchant: NISA SAM • Account: nisa_sam@bkrt
-                    </p>
-                  </div>
-                ) : isMultiVendor ? (
-                  <div>
-                    <p className="text-sm text-blue-700">
-                      <strong>Multi-Vendor Order</strong> - Payment will go to Admin Account
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      Merchant: NISA SAM • Account: nisa_sam@bkrt
-                    </p>
-                    <div className="mt-2 p-2 bg-blue-100 rounded">
-                      <p className="text-xs text-blue-800 font-medium">📚 Authors in this order:</p>
-                      <p className="text-xs text-blue-700">
-                        {uniqueAuthors.join(', ')}
-                      </p>
-                      <p className="text-xs text-blue-600 mt-1">
-                        Admin will distribute payments to each author
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-sm text-blue-700">
-                      Payment destination will be determined based on book author
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      • Author books → Author's account<br/>
-                      • Admin books → Admin account (nisa_sam@bkrt)
-                    </p>
-                    {isBuyNow && buyNowProduct && (
-                      <p className="text-xs text-blue-600 mt-2 font-medium">
-                        📦 Buy Now: {buyNowProduct.title}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Totals */}
             <div className="space-y-3 border-t border-gray-200 pt-4">
               <div className="flex justify-between text-sm">
@@ -882,24 +789,24 @@ const CheckoutPage = () => {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Shipping</span>
-                <span className="font-medium text-green-600">Free</span>
+                <span className="font-medium text-[#7b583d]">Free</span>
               </div>
               {appliedDiscount && discountAmount > 0 && (
-                <div className="flex justify-between text-sm text-green-600">
+                <div className="flex justify-between text-sm text-[#7b583d]">
                   <span >Discount ({appliedDiscount.code})</span>
                   <span>-${discountAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-3">
                 <span>Total</span>
-                <span className="text-teal-600">${totalAmount.toFixed(2)}</span>
+                <span className="text-[#7b583d]">${totalAmount.toFixed(2)}</span>
               </div>
             </div>
 
-            <div className="flex items-center justify-center space-x-2 text-sm text-gray-500 mt-6">
+            {/* <div className="flex items-center justify-center space-x-2 text-sm text-gray-500 mt-6">
               <LockClosedIcon className="w-4 h-4" />
               <span>Secure Checkout</span>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -932,7 +839,7 @@ const CheckoutPage = () => {
           setPaymentCheckCount(0);
           setQrData(null);
           setTimeLeft(0);
-          
+
           try {
             const { request: retryRequest } = await import("../../utils/request");
             const { useAuthStore } = await import("../../store/authStore");
@@ -941,9 +848,9 @@ const CheckoutPage = () => {
             const retryResponse = await retryRequest(
               "/api/bakong/generate-qr",
               "POST",
-              { 
-                order_id: currentOrder.id, 
-                currency: "USD" 
+              {
+                order_id: currentOrder.id,
+                currency: "USD"
               },
               { headers: { Authorization: `Bearer ${retryToken}` } }
             );
@@ -961,7 +868,7 @@ const CheckoutPage = () => {
               setPaymentStatus("pending");
               setPaymentError(null);
               setPaymentCheckCount(0);
-              
+
               console.log("Starting payment status check...");
               startPaymentStatusCheck(currentOrder.id);
             } else {

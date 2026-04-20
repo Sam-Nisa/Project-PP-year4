@@ -19,7 +19,7 @@ export default function UsersPage() {
   }, [fetchUsers]);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="p-8 max-w-7xl mx-auto bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">Users List</h1>
 
       {loading && <p>Loading users...</p>}

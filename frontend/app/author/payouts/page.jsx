@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { request } from '../../utils/request';
 import { useAuthStore } from '../../store/authStore';
+import { TrashIcon } from '@heroicons/react/24/outline';
 
 export default function AuthorPayoutsPage() {
   const [balance, setBalance] = useState(null);
@@ -54,9 +55,25 @@ export default function AuthorPayoutsPage() {
     }
   };
 
+  const handleDeletePayout = async (payoutId) => {
+    if (!confirm('Are you sure you want to delete this payout record? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await request(`/api/payouts/${payoutId}`, 'DELETE', {}, {}, token);
+      
+      alert('Payout record deleted successfully!');
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting payout:', error);
+      alert('Failed to delete payout: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6">My Earnings & Payouts</h1>
+    <div className="p-6 max-w-7xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6">My Earnings</h1>
 
       {!token ? (
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
@@ -128,6 +145,7 @@ export default function AuthorPayoutsPage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Completed</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -160,6 +178,17 @@ export default function AuthorPayoutsPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                           {payout.notes || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {(payout.status === 'completed' || payout.status === 'cancelled') && (
+                            <button
+                              onClick={() => handleDeletePayout(payout.id)}
+                              className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
+                              title="Delete payout record"
+                            >
+                              <TrashIcon className="w-5 h-5" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

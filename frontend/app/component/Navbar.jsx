@@ -108,7 +108,7 @@ export default function Header() {
   }));
 
   return (
-    <header className="bg-gradient-to-r from-purple-600 to-pink-500 shadow-lg sticky top-0 z-50">
+    <header className="bg-[#A47251] shadow-lg sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
@@ -309,7 +309,7 @@ const DropdownNavLink = ({
     </button>
 
     {isOpen && (
-      <div className="absolute left-0 mt-2 w-64 bg-gradient-to-br from-purple-700 to-pink-600 rounded-xl shadow-2xl overflow-hidden z-50">
+      <div className="absolute left-0 mt-2 w-64 bg-[#A47251] rounded-xl shadow-2xl overflow-hidden z-50">
         <div className="px-4 py-3 bg-white/10 backdrop-blur-sm border-b border-white/20">
           <p className="text-xs font-bold text-pink-100 uppercase tracking-wider">
             Explore by
@@ -395,7 +395,7 @@ const MobileMenu = ({
 
     {/* Sidebar */}
     <div
-      className={`fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-gradient-to-b from-purple-600 to-pink-500 shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden z-50 ${
+      className={`fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-[#A47251] shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden z-50 ${
         isOpen ? "translate-x-0" : "translate-x-full"
       }`}
     >

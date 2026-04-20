@@ -36,8 +36,8 @@ export default function ReviewForm({ bookId, onSuccess, onCancel }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (rating === 0) {
-      toast.error("Please select a rating");
+    if (rating === 0 && !comment.trim()) {
+      toast.error("Please select a rating or write a comment");
       return;
     }
 
@@ -101,7 +101,7 @@ export default function ReviewForm({ bookId, onSuccess, onCancel }) {
         {/* Rating */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Your Rating *
+            Your Rating (Optional if commenting)
           </label>
           <StarRating 
             rating={rating}
@@ -114,7 +114,7 @@ export default function ReviewForm({ bookId, onSuccess, onCancel }) {
         {/* Comment */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Your Review (Optional)
+            Your Review (Optional if rating)
           </label>
           <textarea
             value={comment}
@@ -140,8 +140,8 @@ export default function ReviewForm({ bookId, onSuccess, onCancel }) {
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
-            disabled={loading || rating === 0}
-            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            disabled={loading || (rating === 0 && !comment.trim())}
+            className="flex-1 bg-[#8d705b] text-white py-2 px-4 rounded-lg font-medium hover:bg-[#7b583d] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? (
               <div className="flex items-center justify-center gap-2">

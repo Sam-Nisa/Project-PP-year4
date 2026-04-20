@@ -108,7 +108,7 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl flex flex-col gap-8 p-6 rounded-lg ">
+    <div className="p-8 max-w-7xl mx-auto bg-gray-50 min-h-screen">
       <section>
         <h3 className="text-xl font-bold text-black mb-4 flex items-center">
           Admin Profile

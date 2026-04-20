@@ -28,7 +28,7 @@ export const useAddToCartStore = create((set, get) => ({
 
       set({ 
         cartItems: data.items || [],
-        cartCount: data.total_items || 0,
+        cartCount: Number(data.total_items || 0),
         subtotal: data.subtotal || 0
       });
     } catch (err) {
@@ -54,7 +54,7 @@ export const useAddToCartStore = create((set, get) => ({
         }
       );
 
-      set({ cartCount: data.count || 0 });
+      set({ cartCount: Number(data.count || 0) });
     } catch (err) {
       console.error("Failed to fetch cart count:", err);
     }
@@ -79,7 +79,7 @@ export const useAddToCartStore = create((set, get) => ({
 
       // Optimized: Update cart count immediately without full refresh
       set((state) => ({
-        cartCount: state.cartCount + quantity,
+        cartCount: Number(state.cartCount) + Number(quantity),
         loading: false
       }));
 
@@ -110,14 +110,17 @@ export const useAddToCartStore = create((set, get) => ({
       );
 
       // Update the specific item in the state
-      set((state) => ({
-        cartItems: state.cartItems.map((item) =>
-          item.book_id === bookId ? data.item : item
-        ),
-      }));
-
-      // Refresh cart totals
-      await get().fetchCart();
+      set((state) => {
+        const oldItem = state.cartItems.find(item => item.book_id === bookId);
+        const qtyDiff = oldItem ? (quantity - oldItem.quantity) : 0;
+        
+        return {
+          cartItems: state.cartItems.map((item) =>
+            item.book_id === bookId ? data.item : item
+          ),
+          cartCount: Math.max(0, Number(state.cartCount) + Number(qtyDiff)),
+        };
+      });
 
       return data.item;
     } catch (err) {
@@ -148,12 +151,15 @@ export const useAddToCartStore = create((set, get) => ({
       );
 
       // Remove item from state immediately
-      set((state) => ({
-        cartItems: state.cartItems.filter((item) => item.id !== cartItemId),
-      }));
+      set((state) => {
+        const removedItem = state.cartItems.find((item) => item.id === cartItemId);
+        const qtyDiff = removedItem ? removedItem.quantity : 0;
 
-      // Refresh cart totals
-      await get().fetchCart();
+        return {
+          cartItems: state.cartItems.filter((item) => item.id !== cartItemId),
+          cartCount: Math.max(0, Number(state.cartCount) - Number(qtyDiff)),
+        };
+      });
     } catch (err) {
       console.error("Failed to remove item:", err);
       const errorMessage = err.response?.data?.error || "Failed to remove item";

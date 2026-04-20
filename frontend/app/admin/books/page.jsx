@@ -44,8 +44,6 @@ export default function AdminBooksPage() {
     search: '',
     genre_id: '',
     status: '',
-    min_price: '',
-    max_price: '',
   });
 
   const reloadBooks = () => {
@@ -59,8 +57,6 @@ export default function AdminBooksPage() {
       if (filters.search) params.append('search', filters.search);
       if (filters.genre_id) params.append('genre_id', filters.genre_id);
       if (filters.status) params.append('status', filters.status);
-      if (filters.min_price) params.append('min_price', filters.min_price);
-      if (filters.max_price) params.append('max_price', filters.max_price);
 
       // Admin fetches only admin-created books using the admin endpoint
       const data = await fetchAllBooks(params.toString());
@@ -197,7 +193,7 @@ export default function AdminBooksPage() {
   };
 
   return (
-    <div className=" flex flex-col max-w-6xl mx-auto">
+    <div className=" flex flex-col max-w-7xl mx-auto">
       {/* Fixed Header */}
       <div className="flex-shrink-0 p-4 lg:p-6 bg-white border-b border-gray-200">
         <div className="flex items-center justify-between">
@@ -309,53 +305,18 @@ export default function AdminBooksPage() {
                 <option value="pending">Pending</option>
               </select>
             </div>
-
-            {/* Min Price */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Min Price ($)
-              </label>
-              <input
-                type="number"
-                placeholder="0"
-                min="0"
-                step="0.01"
-                value={filters.min_price}
-                onChange={(e) => setFilters({ ...filters, min_price: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Max Price */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Max Price ($)
-              </label>
-              <input
-                type="number"
-                placeholder="999"
-                min="0"
-                step="0.01"
-                value={filters.max_price}
-                onChange={(e) => setFilters({ ...filters, max_price: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
             {/* Clear Button */}
-            <div className="lg:col-span-3 flex items-end">
+            <div className="flex items-end">
               <button
                 onClick={() => {
                   setFilters({
                     search: '',
                     genre_id: '',
                     status: '',
-                    min_price: '',
-                    max_price: '',
                   });
                   reloadBooks(); // Reload without filters
                 }}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                className="px-6 py-2  bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
               >
                 Clear Filters
               </button>

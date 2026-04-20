@@ -106,7 +106,7 @@ export default function AdminSalesPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center max-w-7xl">
         <div className="text-center">
           <div className="text-red-600 text-xl mb-4">Error Loading Sales Data</div>
           <div className="text-gray-600 mb-4">{error}</div>

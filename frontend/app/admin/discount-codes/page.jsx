@@ -129,7 +129,7 @@ const DiscountCodesPage = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-8 max-w-7xl mx-auto bg-gray-50 min-h-screen">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Discount Codes</h1>
         <p className="text-gray-600">Manage discount codes and promotional offers</p>

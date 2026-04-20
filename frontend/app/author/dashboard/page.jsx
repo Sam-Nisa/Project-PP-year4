@@ -165,8 +165,8 @@ export default function AuthorDashboardPage() {
   ];
 
   return (
-    <div className="flex-1  p-6 bg-background-dark text-black">
-      <div className="mx-auto max-w-7xl flex flex-col gap-6">
+    <div className="flex-1 max-w-7xl p-6 bg-background-dark text-black">
+      <div className="mx-auto flex flex-col gap-6">
         
         {/* Header */}
         <div className="flex justify-between items-center">

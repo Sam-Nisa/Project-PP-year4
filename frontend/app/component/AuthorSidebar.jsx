@@ -11,7 +11,7 @@ export default function AuthorSidebar() {
     { name: "Dashboard", href: "/author/dashboard", icon: <FaTachometerAlt color="#4E8D7C" /> },
     { name: "Books", href: "/author/books", icon: <FaBook color="#EF4444" /> },
     { name: "Sales", href: "/author/sales", icon: <FaChartLine color="#EC4899" /> },
-    { name: "Earnings & Payouts", href: "/author/payouts", icon: <FaDollarSign color="#10B981" /> },
+    { name: "Earnings", href: "/author/payouts", icon: <FaDollarSign color="#10B981" /> },
     { name: "Payment Settings", href: "/author/payment", icon: <FaCreditCard color="#F59E0B" /> },
     { name: "Settings", href: "/author/setting", icon: <FaCogs color="#8B5CF6" /> },
   ];

@@ -4,12 +4,12 @@ import Image from 'next/image';
 
 const HeroBanner = () => {
   return (
-    <section className="relative bg-gradient-to-br from-blue-700 via-purple-800 to-pink-600 shadow-xl mb-12 overflow-hidden border border-transparent">
+    <section className="relative bg-[#FEFDDF] shadow-xl mb-12 overflow-hidden border border-transparent">
       {/* Background Pattern */}
       <div
         className="absolute inset-0 opacity-10"
         style={{
-          backgroundImage: "url('/img_banner.png')",
+          backgroundImage: "url('/banner.png')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
@@ -19,18 +19,18 @@ const HeroBanner = () => {
       <div className="relative z-10 max-w-7xl mx-auto px-9 py-12 md:px-12 md:py-20 lg:py-24 flex flex-col md:flex-row items-center justify-between gap-10">
         
         {/* Content Side */}
-        <div className="w-full md:w-1/2 text-center md:text-left text-white flex flex-col px-7 items-center md:items-start animate-fade-in-up">
+        <div className="w-full md:w-1/2 text-center md:text-left text- flex text-gray-600 flex-col px-7 items-center md:items-start animate-fade-in-up">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight tracking-tight mb-4 drop-shadow-lg">
             Unlock New Worlds, <br className="hidden sm:block" /> One Page at a Time
           </h2>
           
-          <p className="text-base sm:text-lg lg:text-xl text-purple-100 mb-8 max-w-lg drop-shadow-md">
+          <p className="text-base sm:text-lg lg:text-xl text-gray-600 mb-8 max-w-lg drop-shadow-md">
             Discover a curated collection of bestsellers, hidden gems, and timeless classics.
           </p>
 
           <Link
             href="/browse"
-            className="inline-flex items-center bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-8 md:py-4 md:px-10 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out text-base md:text-lg group"
+            className="inline-flex items-center bg-[#A98B76] text-white font-bold py-3 px-8 md:py-4 md:px-10 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out text-base md:text-lg group"
           >
             Explore Our Collection
             <svg

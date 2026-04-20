@@ -222,6 +222,7 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::get('/balance', [PayoutController::class, 'getBalance']);                          // Get balance
         Route::post('/request', [PayoutController::class, 'requestPayout']);                      // Request payout
         Route::get('/my-payouts', [PayoutController::class, 'getMyPayouts']);                     // Get payout history
+        Route::delete('/{payoutId}', [PayoutController::class, 'deleteMyPayout']);                // Delete my payout
         
         // Admin routes - OLD (keep for backward compatibility)
         Route::get('/pending', [PayoutController::class, 'getPendingPayouts']);                   // Get pending payouts (Admin)

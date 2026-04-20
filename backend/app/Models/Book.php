@@ -118,15 +118,21 @@ class Book extends Model
         $reviews = $query->get();
         $totalReviews = $reviews->count();
         
-        if ($totalReviews === 0) {
+        // Filter reviews that actually have a rating
+        $ratingReviews = $reviews->filter(function ($review) {
+            return $review->rating > 0;
+        });
+        $totalRatingReviews = $ratingReviews->count();
+        
+        if ($totalRatingReviews === 0) {
             return [
                 'average_rating' => (float) 0,
-                'total_reviews' => (int) 0,
+                'total_reviews' => (int) $totalReviews,
                 'rating_distribution' => [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0]
             ];
         }
 
-        $averageRating = $reviews->avg('rating');
+        $averageRating = $ratingReviews->avg('rating');
         $distribution = [];
         
         for ($i = 1; $i <= 5; $i++) {
@@ -135,7 +141,7 @@ class Book extends Model
 
         return [
             'average_rating' => (float) round($averageRating, 2),
-            'total_reviews' => (int) $totalReviews,
+            'total_reviews' => (int) $totalReviews, // Keep total reviews including comment-only
             'rating_distribution' => $distribution
         ];
     }

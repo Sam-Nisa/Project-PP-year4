@@ -273,8 +273,8 @@ export default function AuthorPaymentPage() {
   }
 
   return (
-    <div className="flex-1 p-6 bg-background-dark text-black">
-      <div className="mx-auto max-w-4xl flex flex-col gap-6">
+    <div className="flex-1 p-6 bg-background-dark text-black max-w-7xl mx-auto">
+      <div className="mx-auto flex flex-col gap-6">
         
         {/* Header */}
         <div className="flex justify-between items-center">

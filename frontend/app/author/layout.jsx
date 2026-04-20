@@ -16,7 +16,7 @@ export default function AuthorLayout({ children }) {
         <AuthorNavbar />
 
         {/* Content */}
-        <main className="flex-1 p-8 overflow-y-auto bg-gray-50">{children}</main>
+        <main className="flex-1 p-8 overflow-y-auto  bg-gray-50">{children}</main>
       </div>
     </div>
   );

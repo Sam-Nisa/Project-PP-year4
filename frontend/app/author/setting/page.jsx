@@ -114,7 +114,7 @@ export default function AuthorSettings() {
 
   return (
     <div className="">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-4">
           <h2 className="text-3xl font-bold text-gray-800">Author Settings</h2>

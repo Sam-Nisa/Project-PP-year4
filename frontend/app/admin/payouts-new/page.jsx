@@ -413,7 +413,7 @@ export default function AdminPayoutsNewPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-8 max-w-7xl mx-auto bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold mb-6">Author Payout Management</h1>
 
       {!token ? (

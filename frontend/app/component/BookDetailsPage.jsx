@@ -122,169 +122,7 @@ const Breadcrumb = ({ genre, title }) => (
 );
 
 
-const BookHeader = ({ title, author, description, rating, totalReviews }) => (
-  <div className="space-y-4">
-    {/* Rating First */}
-    <div className="flex items-center gap-2">
-      <div className="flex text-teal-600 gap-0.5">
-        {[...Array(5)].map((_, i) => (
-          <svg key={i} className={`w-3.5 h-3.5 ${i < Math.round(rating) ? 'fill-current' : 'text-gray-300'}`} viewBox="0 0 20 20">
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-        ))}
-      </div>
-      <span className="text-xs font-bold text-gray-900">{rating} ({totalReviews} reviews)</span>
-    </div>
-
-    <div>
-      <h1 className="font-serif text-5xl font-bold text-gray-900 leading-tight">
-        {title}
-      </h1>
-      <p className="mt-2 text-xl text-teal-700 font-serif italic">
-        by <span className="font-semibold cursor-pointer hover:underline">{author}</span>
-      </p>
-    </div>
-
-    <div className="prose prose-lg text-gray-500 leading-relaxed text-base pt-2">
-      {description}
-    </div>
-  </div>
-);
-
-
-const PurchaseCard = ({
-  originalPrice,
-  finalPrice,
-  stock,
-  hasDiscount,
-  quantity,
-  onQuantityChange,
-  onAddToCart,
-  onWishlistToggle,
-  isWishlisted,
-  loading
-}) => (
-  <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/50 mt-8">
-    <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
-      <div>
-        <p className="text-sm text-gray-500 mb-1">Total Price</p>
-        <div className="flex items-baseline gap-3">
-          <span className="text-4xl font-bold text-gray-900">${finalPrice}</span>
-          {hasDiscount && (
-            <span className="text-lg text-gray-400 line-through decoration-1">${originalPrice}</span>
-          )}
-        </div>
-      </div>
-
-      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-        }`}>
-        <div className={`w-2 h-2 rounded-full ${stock > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
-        {stock > 0 ? 'In Stock' : 'Out of Stock'}
-      </div>
-    </div>
-
-    <div className="flex flex-col sm:flex-row gap-4">
-      {/* Minimized Quantity Selector */}
-      <div className="flex items-center border border-gray-300 rounded-lg h-12 w-32 shrink-0">
-        <button
-          onClick={() => onQuantityChange(-1)}
-          disabled={quantity <= 1}
-          className="w-10 h-full flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-50 rounded-l-lg"
-        >
-          <MinusIcon className="w-4 h-4" />
-        </button>
-        <div className="flex-1 text-center font-bold text-gray-900">{quantity}</div>
-        <button
-          onClick={() => onQuantityChange(1)}
-          className="w-10 h-full flex items-center justify-center text-gray-500 hover:bg-gray-50 rounded-r-lg"
-        >
-          <PlusIcon className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Add To Cart */}
-      <button
-        onClick={onAddToCart}
-        disabled={stock <= 0}
-        className="flex-1 bg-[#2C5F6D] hover:bg-[#234b56] text-white font-bold rounded-lg h-12 flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
-      >
-        <ShoppingCartIcon className="w-5 h-5" />
-        Add to Cart
-      </button>
-
-      {/* Wishlist */}
-      <button
-        onClick={onWishlistToggle}
-        className={`h-12 w-12 flex items-center justify-center rounded-lg border-2 transition-all ${isWishlisted
-          ? 'border-red-200 bg-red-50 text-red-500'
-          : 'border-gray-200 hover:border-gray-300 text-gray-400 hover:text-gray-600'
-          }`}
-      >
-        {isWishlisted ? (
-          <HeartSolidIcon className="w-6 h-6" />
-        ) : (
-          <HeartOutlineIcon className="w-6 h-6" />
-        )}
-      </button>
-    </div>
-  </div>
-);
-
-
-
-
-
-
-
-
-const BookDetailsTable = ({ genre, publisher, publicationDate, pageCount }) => (
-  <div className="bg-gray-50 rounded-xl p-4 md:p-6 grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-8">
-    <div className="flex flex-col">
-      <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Genre</span>
-      <span className="text-sm sm:text-base font-bold text-gray-900">{genre}</span>
-    </div>
-
-    <div className="flex flex-col">
-      <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Publisher</span>
-      <span className="text-sm sm:text-base font-bold text-gray-900">{publisher}</span>
-    </div>
-
-    <div className="flex flex-col">
-      <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Publication Date</span>
-      <span className="text-sm sm:text-base font-bold text-gray-900">{publicationDate}</span>
-    </div>
-
-    <div className="flex flex-col">
-      <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Pages Count</span>
-      <span className="text-sm sm:text-base font-bold text-gray-900">{pageCount}</span>
-    </div>
-  </div>
-);
-
-const TabNavigation = ({ onScrollToAuthor, onScrollToReviews }) => {
-  return (
-    <div className="flex gap-4 mb-8">
-      <button
-        onClick={onScrollToAuthor}
-        className="flex items-center gap-2 px-6 py-3 rounded-full bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold text-sm transition-all"
-      >
-        <span>✍️</span>
-        About Author
-      </button>
-
-      <button
-        onClick={onScrollToReviews}
-        className="flex items-center gap-2 px-6 py-3 rounded-full bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold text-sm transition-all"
-      >
-        <span>⭐</span>
-        Reviews & Ratings
-      </button>
-    </div>
-  );
-};
-
-
-
+// Inlined UI components for custom layout
 // ==================== MAIN COMPONENT ====================
 const BookDetailsPage = ({ bookId = 1 }) => {
   const router = useRouter();
@@ -362,7 +200,7 @@ const BookDetailsPage = ({ bookId = 1 }) => {
 
   // Calculate prices
   const prices = useMemo(() => {
-    if (!book) return { original: "0.00", final: "0.00", total: "0.00" };
+    if (!book) return { original: "0.00", final: "0.00", total: "0.00", totalOriginal: "0.00" };
 
     const originalPrice = parseFloat(book.price) || 0;
     const discountValue = parseFloat(book.discount_value) || 0;
@@ -374,11 +212,13 @@ const BookDetailsPage = ({ bookId = 1 }) => {
       discountType
     );
     const totalPrice = finalPrice * quantity;
+    const totalOriginal = originalPrice * quantity;
 
     return {
       original: originalPrice.toFixed(2),
       final: finalPrice.toFixed(2),
       total: totalPrice.toFixed(2),
+      totalOriginal: totalOriginal.toFixed(2)
     };
   }, [book, quantity]);
 
@@ -498,54 +338,102 @@ const BookDetailsPage = ({ bookId = 1 }) => {
             </div>
 
             {/* Right Column: Details */}
-            <div className="lg:col-span-6 lg:col-start-7 flex flex-col">
-              <BookHeader
-                title={book.title}
-                author={book.author_name}
-                description={book.description ? book.description.substring(0, 180) + "..." : ""}
-                rating={book.average_rating}
-                totalReviews={book.total_reviews}
-              />
+            <div className="lg:col-span-6 lg:col-start-7 flex flex-col pt-4">
+              <h1 className="font-serif text-4xl lg:text-5xl font-bold text-[#362a1a] leading-tight mb-4 tracking-tight">
+                {book.title.includes(':') ? (
+                  <>
+                    <span className="italic">{book.title.split(':')[0]}:</span>
+                    <span>{book.title.split(':').slice(1).join(':')}</span>
+                  </>
+                ) : (
+                  <span className="italic">{book.title}</span>
+                )}
+              </h1>
 
-              <PurchaseCard
-                originalPrice={prices.original}
-                finalPrice={prices.final}
-                stock={currentStock}
-                hasDiscount={hasDiscount}
-                quantity={quantity}
-                onQuantityChange={handleQuantityChange}
-                onAddToCart={handleAddToCart}
-                onWishlistToggle={handleWishlistToggle}
-                isWishlisted={isWishlisted(book.id)}
-              />
-
-              <div className="border-t border-gray-100 pt-8 mb-8">
-                <BookDetailsTable
-                  genre={genreName}
-                  publisher={book.publisher || "N/A"}
-                  publicationDate={book.created_at ? book.created_at.split("T")[0] : "N/A"}
-                  pageCount={book.page_count || "N/A"}
-                  hasPDF={!!(book.pdf_file_url)}
-                />
-
-                <TabNavigation
-                  onScrollToAuthor={() => document.getElementById('author-section')?.scrollIntoView({ behavior: 'smooth' })}
-                  onScrollToReviews={() => document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' })}
-                />
-
-                {/* Description (Always Visible) */}
-                <div className="prose prose-lg text-gray-500 mb-12">
-                  <h3 className="text-gray-900 font-bold text-lg mb-2 font-serif">Description</h3>
-                  <p className="leading-relaxed">{book.description}</p>
+              <div className="flex items-center gap-3 text-sm text-gray-600 mb-6">
+                <span>By <span className="text-gray-800">{book.author_name}</span></span>
+                <span className="text-gray-400">•</span>
+                <div className="flex text-[#EAB308]">
+                  {[...Array(5)].map((_, i) => (
+                    <svg key={i} className={`w-4 h-4 ${i < Math.round(book.average_rating) ? 'fill-current' : 'text-gray-300'}`} viewBox="0 0 20 20">
+                      <path className="" d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
                 </div>
+                <span className="font-bold text-gray-800">{book.average_rating}</span>
+                <span className="text-gray-400">({book.total_reviews} Reviews)</span>
+              </div>
 
-                {/* Author Section */}
-                <div id="author-section" className="bg-gray-50 p-6 rounded-xl mb-12 scroll-mt-24">
-                  <h4 className="font-bold text-gray-900 mb-2">About {book.author_name}</h4>
-                  <p className="text-gray-600 text-sm leading-relaxed">{book.about_author || "Author biography not available."}</p>
+              <div className="flex items-center gap-4 mb-4">
+                <span className="text-4xl font-bold text-[#1a362d]">${prices.total}</span>
+                {hasDiscount && (
+                  <>
+                    <span className="text-xl text-gray-400 line-through">${prices.totalOriginal}</span>
+                    <span className="bg-[#A98B76] text-white text-xs font-bold px-3 py-1 rounded-full">
+                      Save {Math.round(((prices.original - prices.final) / prices.original) * 100)}%
+                    </span>
+                  </>
+                )}
+              </div>
+
+              <div className="mb-6">
+                <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-md text-xs font-bold ${currentStock > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                  <CheckIcon className="w-4 h-4" />
+                  {currentStock > 0 ? 'IN STOCK' : 'OUT OF STOCK'}
                 </div>
               </div>
 
+              <p className="text-gray-600 leading-relaxed mb-8">
+                {book.description || "No description available."}
+              </p>
+
+              <div className="flex flex-wrap items-center gap-4 mb-8">
+                {/* Quantity */}
+                <div className="flex items-center border border-gray-300 rounded-full h-12 w-32 shrink-0 overflow-hidden">
+                  <button onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1} className="w-10 h-full flex items-center justify-center text-gray-600 hover:bg-gray-50"><MinusIcon className="w-4 h-4" /></button>
+                  <div className="flex-1 text-center font-bold text-gray-900">{quantity}</div>
+                  <button onClick={() => handleQuantityChange(1)} className="w-10 h-full flex items-center justify-center text-gray-600 hover:bg-gray-50"><PlusIcon className="w-4 h-4" /></button>
+                </div>
+
+                {/* Add To Cart */}
+                <button onClick={handleAddToCart} disabled={currentStock <= 0} className="bg-[#8d705b] hover:bg-[#7b583d] text-white font-bold rounded-full px-8 h-12 transition-colors flex items-center justify-center min-w-[140px] shadow-sm hover:shadow">
+                  Add to Cart
+                </button>
+
+                {/* Buy Now */}
+                <button onClick={handleBuyNow} disabled={currentStock <= 0} className="border-2 border-[#E5DFD5] bg-[#FDFBF7] hover:bg-[#E5DFD5] text-[#8d705b] font-bold rounded-full px-8 h-12 transition-colors flex items-center justify-center min-w-[140px]">
+                  Buy Now
+                </button>
+
+                {/* Wishlist */}
+                <button onClick={handleWishlistToggle} className="text-red-500 hover:text-red-600 p-2 ml-2 transition-transform hover:scale-110">
+                  {isWishlisted(book.id) ? <HeartSolidIcon className="w-8 h-8" /> : <HeartSolidIcon className="w-8 h-8 text-red-500 opacity-90" />}
+                </button>
+              </div>
+
+              <button onClick={handleReadSample} className="flex items-center gap-2 text-[#1a362d] font-bold hover:text-gray-600 mb-10 w-fit">
+                <DocumentTextIcon className="w-5 h-5" />
+                Read Preview
+              </button>
+
+              <div className="grid grid-cols-4 gap-4 border-t border-gray-200 pt-8 pb-8">
+                <div className="flex flex-col">
+                  <span className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider mb-1">Published</span>
+                  <span className="text-sm font-bold text-gray-800">{book.created_at ? new Date(book.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "N/A"}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider mb-1">Pages Count</span>
+                  <span className="text-sm font-bold text-gray-800">{book.page_count ? `${book.page_count} Pages` : "N/A"}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider mb-1">Publisher</span>
+                  <span className="text-sm font-bold text-gray-800 break-words">{book.publisher || "N/A"}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider mb-1">Author Name</span>
+                  <span className="text-sm font-bold text-gray-800 break-words">{book.author_name}</span>
+                </div>
+              </div>
             </div>
           </div>
 

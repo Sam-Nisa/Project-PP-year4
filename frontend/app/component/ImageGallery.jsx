@@ -9,7 +9,7 @@ const ImageGallery = ({ images = [], title = "Book Images", hasPDF = false }) =>
 
   // Handle case where images might be a string or empty
   const imageList = Array.isArray(images) ? images.filter(img => img && typeof img === 'string') : [];
-  
+
   // Reset selected index when images change
   useEffect(() => {
     if (selectedImageIndex >= imageList.length) {
@@ -21,7 +21,7 @@ const ImageGallery = ({ images = [], title = "Book Images", hasPDF = false }) =>
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (!isModalOpen) return;
-      
+
       if (e.key === 'ArrowLeft') {
         prevImage();
       } else if (e.key === 'ArrowRight') {
@@ -34,7 +34,7 @@ const ImageGallery = ({ images = [], title = "Book Images", hasPDF = false }) =>
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [isModalOpen, imageList.length]);
-  
+
   if (imageList.length === 0) {
     return (
       <div className="px-4 sm:px-6 lg:px-0">
@@ -81,7 +81,7 @@ const ImageGallery = ({ images = [], title = "Book Images", hasPDF = false }) =>
         <div className="relative group">
           <div
             className="aspect-[3/4] w-full max-w-md mx-auto bg-center bg-cover rounded-2xl shadow-md transition-transform duration-500 cursor-pointer hover:scale-105"
-            style={{ 
+            style={{
               backgroundImage: `url('${currentImage}')`,
               backgroundSize: 'cover',
               backgroundPosition: 'center'
@@ -150,11 +150,10 @@ const ImageGallery = ({ images = [], title = "Book Images", hasPDF = false }) =>
                 <button
                   key={index}
                   onClick={() => setSelectedImageIndex(index)}
-                  className={`flex-shrink-0 w-16 h-20 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
-                    index === selectedImageIndex
+                  className={`flex-shrink-0 w-16 h-20 rounded-lg overflow-hidden border-2 transition-all duration-300 ${index === selectedImageIndex
                       ? 'border-blue-500 shadow-lg scale-110'
                       : 'border-gray-300 hover:border-gray-400 opacity-70 hover:opacity-100'
-                  }`}
+                    }`}
                 >
                   <img
                     src={image}
@@ -229,11 +228,10 @@ const ImageGallery = ({ images = [], title = "Book Images", hasPDF = false }) =>
                     <button
                       key={index}
                       onClick={() => setSelectedImageIndex(index)}
-                      className={`flex-shrink-0 w-12 h-16 rounded overflow-hidden border-2 transition-all duration-300 ${
-                        index === selectedImageIndex
+                      className={`flex-shrink-0 w-12 h-16 rounded overflow-hidden border-2 transition-all duration-300 ${index === selectedImageIndex
                           ? 'border-white shadow-lg'
                           : 'border-gray-400 opacity-60 hover:opacity-100'
-                      }`}
+                        }`}
                     >
                       <img
                         src={image}

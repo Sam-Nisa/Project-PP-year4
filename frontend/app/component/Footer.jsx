@@ -11,7 +11,7 @@ import {
 
 const Footer = () => {
   return (
-    <footer className="bg-blue-800 text-white py-10 px-6 sm:px-12 md:px-20 lg:px-32">
+    <footer className="bg-[#A47251] text-white py-10 px-6 sm:px-12 md:px-20 lg:px-32">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between gap-10 md:gap-20">
           {/* Book Haven Section */}

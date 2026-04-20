@@ -61,7 +61,7 @@ export default function GenresPage() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto bg-gray-50 min-h-screen">
+    <div className="p-8 max-w-7xl mx-auto bg-gray-50 min-h-screen">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Genres</h1>

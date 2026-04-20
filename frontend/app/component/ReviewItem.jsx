@@ -40,8 +40,8 @@ export default function ReviewItem({ review, bookId, onEdit, allowInlineEdit = f
   };
 
   const handleSaveEdit = async () => {
-    if (editRating === 0) {
-      toast.error("Please select a rating");
+    if (editRating === 0 && !editComment.trim()) {
+      toast.error("Please select a rating or write a comment");
       return;
     }
 
@@ -130,7 +130,7 @@ export default function ReviewItem({ review, bookId, onEdit, allowInlineEdit = f
                 </div>
               ) : (
                 <>
-                  <StarRating rating={review.rating} readonly size="sm" />
+                  {review.rating > 0 && <StarRating rating={review.rating} readonly size="sm" />}
                   <span className="text-sm text-gray-500">
                     {getTimeAgo(review.created_at)}
                   </span>
@@ -147,7 +147,7 @@ export default function ReviewItem({ review, bookId, onEdit, allowInlineEdit = f
               <>
                 <button
                   onClick={handleSaveEdit}
-                  disabled={loading || editRating === 0}
+                  disabled={loading || (editRating === 0 && !editComment.trim())}
                   className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
                   title="Save changes"
                 >

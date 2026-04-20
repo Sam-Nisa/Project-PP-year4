@@ -11,6 +11,7 @@ import {
   ArrowLeftIcon,
   LockClosedIcon,
 } from "@heroicons/react/24/outline";
+import Image from "next/image";
 import { useAddToCartStore } from "../../store/useAddToCardStore";
 import { useAuthStore } from "../../store/authStore";
 
@@ -59,11 +60,13 @@ const CartItem = memo(({ item, isUpdating, isRemoving, onQuantityChange, onRemov
     >
       <div className="flex items-start space-x-4">
         {/* Book Image */}
-        <div className="flex-shrink-0">
-          <img
+        <div className="relative flex-shrink-0 w-20 h-28">
+          <Image
             src={imageUrl}
-            alt={item.book?.title}
-            className="w-20 h-28 object-cover rounded-lg"
+            alt={item.book?.title || "Book cover"}
+            fill
+            sizes="(max-width: 768px) 80px, 80px"
+            className="object-cover rounded-lg"
           />
         </div>
 
@@ -268,9 +271,9 @@ const ShoppingCart = () => {
                 Home
               </Link>
               <span>/</span>
-              <span className="text-gray-900 font-medium">Shopping Cart</span>
+              <span className="text-[#68422f] font-medium">Shopping Cart</span>
             </nav>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-[#68422f]">
               Shopping Cart{" "}
               <span className="text-lg font-normal text-gray-500">
                 ({cartItems.length} items)
@@ -279,7 +282,7 @@ const ShoppingCart = () => {
           </div>
           <Link
             href="/"
-            className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700"
+            className="inline-flex items-center space-x-2 text-[#68422f] hover:text-[#8d705b]"
           >
             <ArrowLeftIcon className="w-5 h-5" />
             <span>Continue Shopping</span>
@@ -341,7 +344,7 @@ const ShoppingCart = () => {
                     <span className="text-lg font-semibold text-gray-900">
                       Order Total
                     </span>
-                    <span className="text-2xl font-bold text-teal-600">
+                    <span className="text-2xl font-bold text-[#68422f]">
                       ${orderTotal.toFixed(2)}
                     </span>
                   </div>
@@ -351,7 +354,7 @@ const ShoppingCart = () => {
                 </div>
 
                 <Link href="/checkout">
-                  <button className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-4 rounded-lg transition-colors mb-4">
+                  <button className="w-full bg-[#68422f] hover:bg-[#8d705b] text-white font-medium py-3 px-4 rounded-lg transition-colors mb-4">
                     Proceed to Checkout →
                   </button>
                 </Link>

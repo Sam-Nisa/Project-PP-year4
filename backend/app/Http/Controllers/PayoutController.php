@@ -95,6 +95,51 @@ class PayoutController extends Controller
     }
 
     /**
+     * Delete a payout record (Owner/Author action)
+     */
+    public function deleteMyPayout(Request $request, $payoutId)
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'author' && $user->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        try {
+            $payout = \App\Models\Payout::where('id', $payoutId)
+                ->where('owner_id', $user->id)
+                ->firstOrFail();
+
+            if (!in_array($payout->status, ['completed', 'cancelled'])) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Can only delete completed or cancelled payouts',
+                ], 400);
+            }
+
+            Log::info('Author deleting payout', [
+                'payout_id' => $payout->id,
+                'author_id' => $payout->owner_id,
+                'amount' => $payout->amount,
+                'status' => $payout->status,
+            ]);
+
+            $payout->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payout record deleted successfully',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to delete author payout: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Get all pending payouts (Admin only)
      */
     public function getPendingPayouts(Request $request)

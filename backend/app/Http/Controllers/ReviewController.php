@@ -78,9 +78,15 @@ class ReviewController extends Controller
         }
 
         $request->validate([
-            'rating' => 'required|integer|min:1|max:5',
+            'rating' => 'required|integer|min:0|max:5',
             'comment' => 'nullable|string|max:1000',
         ]);
+
+        if ($request->rating == 0 && empty(trim($request->comment))) {
+            return response()->json([
+                'message' => 'Please provide a rating or write a comment.'
+            ], 422);
+        }
 
         // Check if user has purchased this book (optional verification)
         $isVerifiedPurchase = $this->checkVerifiedPurchase($userId, $bookId);
@@ -143,9 +149,15 @@ class ReviewController extends Controller
         }
 
         $request->validate([
-            'rating' => 'required|integer|min:1|max:5',
+            'rating' => 'required|integer|min:0|max:5',
             'comment' => 'nullable|string|max:1000',
         ]);
+
+        if ($request->rating == 0 && empty(trim($request->comment))) {
+            return response()->json([
+                'message' => 'Please provide a rating or write a comment.'
+            ], 422);
+        }
 
         $review->update([
             'rating' => $request->rating,
