@@ -30,7 +30,7 @@ export default function AdminPayoutsNewPage() {
       setLoading(true);
       const response = await request('/api/admin/payouts/authors', 'GET', {}, {}, token);
       console.log('Authors response:', response);
-      
+
       const authorsData = response?.data || response || [];
       setAuthors(Array.isArray(authorsData) ? authorsData : []);
     } catch (error) {
@@ -47,7 +47,7 @@ export default function AdminPayoutsNewPage() {
       setLoading(true);
       const response = await request('/api/admin/payouts/history', 'GET', {}, {}, token);
       console.log('History response:', response);
-      
+
       const historyData = response?.data?.data || response?.data || response || [];
       setPayoutHistory(Array.isArray(historyData) ? historyData : []);
     } catch (error) {
@@ -67,7 +67,7 @@ export default function AdminPayoutsNewPage() {
         payment_method: paymentMethod,
         notes: notes,
       }, {}, token);
-      
+
       alert('Payout initiated! Please complete the payment in real life, then confirm it.');
       setShowPayoutModal(false);
       setSelectedAuthor(null);
@@ -86,7 +86,7 @@ export default function AdminPayoutsNewPage() {
 
     try {
       await request(`/api/admin/payouts/${payoutId}`, 'DELETE', {}, {}, token);
-      
+
       alert('Payout record deleted successfully!');
       fetchPayoutHistory();
     } catch (error) {
@@ -98,12 +98,130 @@ export default function AdminPayoutsNewPage() {
   const PayoutModal = ({ author, onClose }) => {
     const [amount, setAmount] = useState(author.available_balance);
     const [paymentMethod, setPaymentMethod] = useState(author.payment_method || 'bank_transfer');
+    
+    // Additional fields for confirming
+    const [transactionRef, setTransactionRef] = useState('');
     const [notes, setNotes] = useState('');
+    const [paymentProof, setPaymentProof] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
+    
+    // QR Code states
+    const [showQR, setShowQR] = useState(false);
+    const [qrData, setQrData] = useState(null);
+    const [loadingQR, setLoadingQR] = useState(false);
+
+    const handleFileChange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          alert('File size must be less than 5MB');
+          return;
+        }
+        setPaymentProof(file);
+        setPreviewUrl(URL.createObjectURL(file));
+      }
+    };
+
+    const handleGenerateQR = async () => {
+      if (!author.bakong_account_id) {
+        alert('Author has not set up Bakong account');
+        return;
+      }
+
+      try {
+        setLoadingQR(true);
+        const response = await request(
+          `/api/admin/payouts/generate-qr/${author.author_id}`,
+          'POST',
+          { amount: parseFloat(amount) },
+          {},
+          token
+        );
+
+        if (response.success) {
+          setQrData(response.data);
+          setShowQR(true);
+        } else {
+          alert('Failed to generate QR: ' + response.error);
+        }
+      } catch (error) {
+        console.error('Error generating QR:', error);
+        alert('Failed to generate QR code');
+      } finally {
+        setLoadingQR(false);
+      }
+    };
+
+    const handleConfirmPayoutAction = async () => {
+      if (!transactionRef) {
+        alert('Transaction reference is required');
+        return;
+      }
+
+      if (!paymentProof) {
+        alert('Payment proof is required');
+        return;
+      }
+
+      try {
+        // Step 1: Initiate Payout
+        const initResponse = await request('/api/admin/payouts/initiate', 'POST', {
+          author_id: author.author_id,
+          amount: parseFloat(amount),
+          payment_method: paymentMethod,
+          notes: notes,
+        }, {}, token);
+        
+        let payoutId;
+        if (initResponse && initResponse.data && initResponse.data.id) {
+          payoutId = initResponse.data.id;
+        } else if (initResponse && initResponse.id) {
+          payoutId = initResponse.id;
+        } else {
+          console.error('Unexpected initiate response:', initResponse);
+          throw new Error('Failed to retrieve payout ID from initiate step');
+        }
+
+        // Step 2: Confirm Payout
+        const formData = new FormData();
+        formData.append('transaction_reference', transactionRef);
+        if (notes) formData.append('notes', notes);
+        formData.append('payment_proof', paymentProof);
+
+        const confirmResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/admin/payouts/${payoutId}/confirm`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+          }
+        );
+
+        const data = await confirmResponse.json();
+
+        if (data.success) {
+          alert('Payout completed successfully!');
+          onClose();
+          fetchAuthors();
+          fetchPayoutHistory();
+        } else {
+          alert('Payout initiated but failed to confirm: ' + data.error);
+          onClose();
+          fetchAuthors();
+          fetchPayoutHistory();
+        }
+      } catch (error) {
+        console.error('Error confirming payout:', error);
+        alert('Failed to process payout: ' + (error.response?.data?.error || error.message));
+      }
+    };
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <h3 className="text-xl font-bold mb-4">Initiate Payout to {author.author_name}</h3>
+          <h3 className="text-xl font-bold mb-4">Confirm Payout</h3>
           
           <div className="mb-4 p-4 bg-gray-50 rounded">
             <h4 className="font-semibold mb-2">Author Information</h4>
@@ -113,74 +231,139 @@ export default function AdminPayoutsNewPage() {
             <p className="text-sm"><strong>Books:</strong> {author.books_count}</p>
           </div>
 
-          <div className="mb-4 p-4 bg-blue-50 rounded">
+          <div className="mb-4 p-4 bg-blue-50 rounded border border-blue-200">
             <h4 className="font-semibold mb-2">Payment Information</h4>
             {author.bank_name && (
-              <>
+              <div className="mb-3">
+                <p className="text-sm font-semibold text-blue-900">Bank Account</p>
                 <p className="text-sm"><strong>Bank:</strong> {author.bank_name}</p>
                 <p className="text-sm"><strong>Account Number:</strong> {author.bank_account_number}</p>
                 <p className="text-sm"><strong>Account Name:</strong> {author.bank_account_name}</p>
-              </>
+              </div>
             )}
             {author.bakong_account_id && (
-              <p className="text-sm"><strong>Bakong ID:</strong> {author.bakong_account_id}</p>
+              <div>
+                <p className="text-sm font-semibold text-blue-900">Bakong Account</p>
+                <p className="text-sm"><strong>Bakong ID:</strong> {author.bakong_account_id}</p>
+                <button
+                  onClick={handleGenerateQR}
+                  disabled={loadingQR}
+                  className="mt-2 text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 disabled:bg-gray-400"
+                >
+                  {loadingQR ? 'Generating...' : 'Generate QR Code'}
+                </button>
+              </div>
             )}
             {!author.has_payment_info && (
               <p className="text-sm text-red-600">⚠️ No payment information provided by author</p>
             )}
           </div>
 
+          {showQR && qrData && (
+            <div className="mb-4 p-4 bg-purple-50 rounded border border-purple-200">
+              <h4 className="font-semibold mb-2 text-purple-900">Bakong QR Code</h4>
+              <div className="flex flex-col items-center">
+                <div className="bg-white p-4 rounded">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData.qr_string)}`}
+                    alt="Bakong QR Code"
+                    className="w-48 h-48"
+                  />
+                </div>
+                <p className="text-xs text-gray-600 mt-2">Scan with Bakong app to pay</p>
+                <p className="text-xs text-gray-500 mt-1">Amount: ${qrData.amount} {qrData.currency}</p>
+                <button
+                  onClick={() => setShowQR(false)}
+                  className="mt-2 text-sm text-purple-600 hover:text-purple-800"
+                >
+                  Hide QR Code
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Amount ($)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                max={author.available_balance}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Payment Method</label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              >
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="aba">ABA Bank</option>
+                <option value="wing">Wing</option>
+                <option value="bakong">Bakong</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Amount ($)</label>
+            <label className="block text-sm font-medium mb-2">Transaction Reference *</label>
             <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              max={author.available_balance}
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              type="text"
+              value={transactionRef}
+              onChange={(e) => setTransactionRef(e.target.value)}
               className="w-full border rounded px-3 py-2"
+              placeholder="e.g., TXN123456789"
+              required
             />
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Payment Method</label>
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
+            <label className="block text-sm font-medium mb-2">Payment Proof *</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
               className="w-full border rounded px-3 py-2"
-            >
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="aba">ABA Bank</option>
-              <option value="wing">Wing</option>
-              <option value="bakong">Bakong</option>
-              <option value="other">Other</option>
-            </select>
+              required
+            />
+            {previewUrl && (
+              <div className="mt-2">
+                <img src={previewUrl} alt="Preview" className="max-w-xs rounded border" />
+              </div>
+            )}
+            <p className="text-xs text-gray-500 mt-1">Upload screenshot or photo of payment confirmation (Max 5MB)</p>
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Notes (Optional)</label>
+            <label className="block text-sm font-medium mb-2">Additional Notes (Optional)</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full border rounded px-3 py-2"
-              rows="3"
-              placeholder="Add any notes about this payout..."
+              rows="2"
+              placeholder="Payment completed via..."
             />
           </div>
 
           <div className="bg-yellow-50 border border-yellow-200 p-3 rounded mb-4">
             <p className="text-sm text-yellow-800">
-              <strong>Important:</strong> After clicking "Initiate", you must complete the actual payment to the author's account. Then come back and confirm the payout with the transaction reference.
+              <strong>Important:</strong> Please ensure you have completed the actual payment to the author's account before confirming.
             </p>
           </div>
 
           <div className="flex gap-2">
             <button
-              onClick={() => handleInitiatePayout(author.author_id, amount, paymentMethod, notes)}
-              className="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              onClick={handleConfirmPayoutAction}
+              disabled={!transactionRef}
+              className="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
             >
-              Initiate Payout
+              Confirm Payment
             </button>
             <button
               onClick={onClose}
@@ -251,11 +434,16 @@ export default function AdminPayoutsNewPage() {
         return;
       }
 
+      if (!paymentProof) {
+        alert('Payment proof is required');
+        return;
+      }
+
       try {
         const formData = new FormData();
         formData.append('transaction_reference', transactionRef);
         if (notes) formData.append('notes', notes);
-        if (paymentProof) formData.append('payment_proof', paymentProof);
+        formData.append('payment_proof', paymentProof);
 
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/api/admin/payouts/${payout.id}/confirm`,
@@ -287,12 +475,12 @@ export default function AdminPayoutsNewPage() {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <h3 className="text-xl font-bold mb-4">Confirm Payout</h3>
-          
+
           <div className="mb-4 p-4 bg-gray-50 rounded">
             <p className="text-sm"><strong>Author:</strong> {payout.owner?.name}</p>
             <p className="text-sm"><strong>Amount:</strong> ${Number(payout.amount).toFixed(2)}</p>
             <p className="text-sm"><strong>Method:</strong> {payout.payment_method}</p>
-            
+
             {payout.owner?.bakong_account_id && (
               <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
                 <p className="text-sm font-semibold text-blue-900 mb-1">Bakong Account</p>
@@ -366,12 +554,13 @@ export default function AdminPayoutsNewPage() {
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Payment Proof (Optional)</label>
+            <label className="block text-sm font-medium mb-2">Payment Proof *</label>
             <input
               type="file"
               accept="image/*"
               onChange={handleFileChange}
               className="w-full border rounded px-3 py-2"
+              required
             />
             {previewUrl && (
               <div className="mt-2">
@@ -425,21 +614,19 @@ export default function AdminPayoutsNewPage() {
           <div className="flex gap-2 mb-6">
             <button
               onClick={() => setActiveTab('authors')}
-              className={`px-6 py-3 rounded-lg font-medium ${
-                activeTab === 'authors'
+              className={`px-6 py-3 rounded-lg font-medium ${activeTab === 'authors'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+                }`}
             >
               Authors to Pay
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`px-6 py-3 rounded-lg font-medium ${
-                activeTab === 'history'
+              className={`px-6 py-3 rounded-lg font-medium ${activeTab === 'history'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+                }`}
             >
               Payout History
             </button>
@@ -451,7 +638,7 @@ export default function AdminPayoutsNewPage() {
                 <h2 className="text-xl font-bold">Authors with Earnings</h2>
                 <p className="text-sm text-gray-600">Authors who have available balance to be paid</p>
               </div>
-              
+
               {loading ? (
                 <div className="p-8 text-center">Loading...</div>
               ) : !Array.isArray(authors) || authors.length === 0 ? (
@@ -530,7 +717,7 @@ export default function AdminPayoutsNewPage() {
                 <h2 className="text-xl font-bold">Payout History</h2>
                 <p className="text-sm text-gray-600">All payout transactions</p>
               </div>
-              
+
               {loading ? (
                 <div className="p-8 text-center">Loading...</div>
               ) : !Array.isArray(payoutHistory) || payoutHistory.length === 0 ? (
@@ -568,12 +755,11 @@ export default function AdminPayoutsNewPage() {
                             {payout.payment_method || 'N/A'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              payout.status === 'completed' ? 'bg-green-100 text-green-800' :
-                              payout.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
-                              payout.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
+                            <span className={`px-2 py-1 text-xs rounded-full ${payout.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                payout.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
+                                  payout.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
+                              }`}>
                               {payout.status}
                             </span>
                           </td>

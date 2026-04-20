@@ -9,6 +9,7 @@ export default function AuthorPayoutsPage() {
   const [balance, setBalance] = useState(null);
   const [payouts, setPayouts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [proofModal, setProofModal] = useState(null);
   const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
@@ -142,6 +143,7 @@ export default function AuthorPayoutsPage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment Method</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Transaction Ref</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proof</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Completed</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
@@ -169,6 +171,18 @@ export default function AuthorPayoutsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           {payout.transaction_reference || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {payout.payment_proof ? (
+                            <button
+                              onClick={() => setProofModal(payout)}
+                              className="text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              View
+                            </button>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {payout.requested_at ? new Date(payout.requested_at).toLocaleDateString() : '-'}
@@ -207,6 +221,57 @@ export default function AuthorPayoutsPage() {
               <a href="/author/payment" className="underline font-medium">Payment Settings</a> page.
             </p>
           </div>
+
+          {/* Proof Modal */}
+          {proofModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <h3 className="text-xl font-bold mb-4">Payment Proof</h3>
+                
+                <div className="mb-4 p-4 bg-gray-50 rounded">
+                  <p className="text-sm"><strong>Payout ID:</strong> #{proofModal.id}</p>
+                  <p className="text-sm"><strong>Amount:</strong> ${Number(proofModal.amount).toFixed(2)}</p>
+                  <p className="text-sm"><strong>Transaction Reference:</strong> {proofModal.transaction_reference}</p>
+                  <p className="text-sm"><strong>Date:</strong> {new Date(proofModal.processed_at).toLocaleDateString()}</p>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-sm font-semibold mb-2">Payment Proof Image:</p>
+                  <div className="bg-gray-100 rounded p-4 flex justify-center">
+                    <img
+                      src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${proofModal.payment_proof}`}
+                      alt="Payment Proof"
+                      className="max-w-full max-h-96 rounded"
+                    />
+                  </div>
+                </div>
+
+                {proofModal.notes && (
+                  <div className="mb-4 p-4 bg-blue-50 rounded">
+                    <p className="text-sm font-semibold mb-1">Notes:</p>
+                    <p className="text-sm text-gray-700">{proofModal.notes}</p>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <a
+                    href={`${process.env.NEXT_PUBLIC_API_URL}/storage/${proofModal.payment_proof}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-center"
+                  >
+                    Download
+                  </a>
+                  <button
+                    onClick={() => setProofModal(null)}
+                    className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

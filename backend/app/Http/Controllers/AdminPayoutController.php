@@ -164,7 +164,7 @@ class AdminPayoutController extends Controller
         $request->validate([
             'transaction_reference' => 'required|string|max:255',
             'notes' => 'nullable|string',
-            'payment_proof' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
+            'payment_proof' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
         ]);
 
         try {
