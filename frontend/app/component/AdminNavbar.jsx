@@ -5,12 +5,18 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAuthStore } from "../store/authStore";
 import { useRouter } from "next/navigation";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useLanguageStore } from "../store/useLanguageStore";
+import { translations } from "../utils/translations";
 
 export default function AdminNavbar() {
   const { user, logout } = useAuthStore();
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const { language } = useLanguageStore();
+  const t = translations[language];
+
   const handleLogout = async () => {
     await logout();
     router.push("/login");
@@ -31,10 +37,13 @@ export default function AdminNavbar() {
     <header className="h-16 bg-white shadow-md flex items-center justify-between px-6 border-b border-gray-200">
       <h1 className="text-2xl font-bold text-gray-800"></h1>
 
-      {user && (
-        <div className="relative flex items-center gap-3" ref={dropdownRef}>
-          {/* User Name */}
-          <span className="font-medium text-gray-700">{user.name}</span>
+      <div className="flex items-center gap-4">
+        <LanguageSwitcher variant="light" />
+        
+        {user && (
+          <div className="relative flex items-center gap-3" ref={dropdownRef}>
+            {/* User Name */}
+            <span className="font-medium text-gray-700">{user.name}</span>
 
           {/* Profile Image */}
           <div
@@ -59,19 +68,20 @@ export default function AdminNavbar() {
                   className="px-4 py-2 hover:bg-gray-100 transition-colors"
                   onClick={() => setDropdownOpen(false)}
                 >
-                  Profile
+                  {t.profile}
                 </Link>
                 <button
                   onClick={handleLogout}
                   className="px-4 py-2 text-left hover:bg-gray-100 transition-colors w-full"
                 >
-                  Logout
+                  {t.logout}
                 </button>
               </div>
             </div>
           )}
         </div>
-      )}
+        )}
+      </div>
     </header>
   );
 }

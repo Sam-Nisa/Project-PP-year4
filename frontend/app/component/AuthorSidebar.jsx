@@ -3,17 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FaTachometerAlt, FaBook, FaCogs, FaChartLine, FaCreditCard, FaDollarSign } from "react-icons/fa";
+import { useLanguageStore } from "../store/useLanguageStore";
+import { translations } from "../utils/translations";
 
 export default function AuthorSidebar() {
   const pathname = usePathname();
+  const { language } = useLanguageStore();
+  const t = translations[language];
 
   const links = [
-    { name: "Dashboard", href: "/author/dashboard", icon: <FaTachometerAlt color="#4E8D7C" /> },
-    { name: "Books", href: "/author/books", icon: <FaBook color="#EF4444" /> },
-    { name: "Sales", href: "/author/sales", icon: <FaChartLine color="#EC4899" /> },
-    { name: "Earnings", href: "/author/payouts", icon: <FaDollarSign color="#10B981" /> },
-    { name: "Payment Settings", href: "/author/payment", icon: <FaCreditCard color="#F59E0B" /> },
-    { name: "Settings", href: "/author/setting", icon: <FaCogs color="#8B5CF6" /> },
+    { name: t.dashboard, href: "/author/dashboard", icon: <FaTachometerAlt color="#4E8D7C" /> },
+    { name: t.books, href: "/author/books", icon: <FaBook color="#EF4444" /> },
+    { name: t.sales, href: "/author/sales", icon: <FaChartLine color="#EC4899" /> },
+    { name: t.earnings, href: "/author/payouts", icon: <FaDollarSign color="#10B981" /> },
+    { name: t.paymentSettings, href: "/author/payment", icon: <FaCreditCard color="#F59E0B" /> },
+    { name: t.settings, href: "/author/setting", icon: <FaCogs color="#8B5CF6" /> },
   ];
 
   const isActive = (href) => pathname === href;
@@ -22,7 +26,7 @@ export default function AuthorSidebar() {
     <aside className="min-w-72 h-screen text-black flex flex-col shadow-2xl backdrop-blur-lg border-r border-blue-700/40 sticky">
       {/* Header */}
       <div className="p-6 text-3xl font-extrabold tracking-wide bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-        Author Panel
+        {t.authorPanel}
       </div>
 
       {/* Navigation */}

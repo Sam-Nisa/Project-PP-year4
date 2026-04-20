@@ -113,7 +113,7 @@ export default function AuthorPayoutsPage() {
 
           {/* Information Box */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold text-blue-900 mb-2">How Payouts Work</h3>
+            <h3 className="font-semibold text-blue-900 mb-2">How Earnings Work</h3>
             <ul className="text-sm text-blue-800 space-y-1">
               <li>• You earn 90% from each book sale (10% platform commission)</li>
               <li>• Earnings are automatically added to your available balance when orders are completed</li>
@@ -125,13 +125,13 @@ export default function AuthorPayoutsPage() {
           {/* Payout History */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b bg-gray-50">
-              <h2 className="text-xl font-bold">Payout History</h2>
-              <p className="text-sm text-gray-600">All your payout transactions</p>
+              <h2 className="text-xl font-bold">Earnings History</h2>
+              <p className="text-sm text-gray-600">All your earnings transactions</p>
             </div>
 
             {!Array.isArray(payouts) || payouts.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
-                No payout history yet. Your earnings will appear here once admin processes payments.
+                No earnings history yet. Your earnings will appear here once admin processes payments.
               </div>
             ) : (
               <div className="overflow-x-auto">

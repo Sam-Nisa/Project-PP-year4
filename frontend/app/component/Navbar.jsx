@@ -15,6 +15,9 @@ import { useGenreStore } from "../store/useGenreStore";
 import { useAddToCartStore } from "../store/useAddToCardStore";
 import { useWishlistStore } from "../store/useWishlistStore";
 import { useSearchStore } from "../store/useSearchStore";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useLanguageStore } from "../store/useLanguageStore";
+import { translations } from "../utils/translations";
 
 const slugify = (text) =>
   text
@@ -43,6 +46,8 @@ export default function Header() {
   const [isGenresDropdownOpen, setIsGenresDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef(null);
+  const { language } = useLanguageStore();
+  const t = translations[language];
 
   // Fetch genres and cart count once on mount
   useEffect(() => {
@@ -109,7 +114,7 @@ export default function Header() {
 
   return (
     <header className="bg-[#A47251] shadow-lg sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-28">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <Link
@@ -122,17 +127,21 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-1 xl:space-x-6 flex-1 justify-center">
             <DropdownNavLink
-              title="Genres"
+              title={t.genres}
               items={genresWithHref}
               isOpen={isGenresDropdownOpen}
               setIsOpen={setIsGenresDropdownOpen}
               dropdownRef={dropdownRef}
               isLoading={genresLoading}
               error={genresError}
+              exploreBy={t.exploreBy}
+              bookGenres={t.bookGenres}
+              loadingText={t.loadingGenres}
+              noGenresText={t.noGenres}
             />
-            <NavLink href="/best-seller">Bestsellers</NavLink>
-            <NavLink href="/about-us">About Us</NavLink>
-            <NavLink href="/contact-us">Contact Us</NavLink>
+            <NavLink href="/best-seller">{t.bestsellers}</NavLink>
+            <NavLink href="/about-us">{t.aboutUs}</NavLink>
+            <NavLink href="/contact-us">{t.contactUs}</NavLink>
           </nav>
 
           {/* Desktop Search */}
@@ -140,7 +149,7 @@ export default function Header() {
             <form onSubmit={handleSearch} className="relative w-full">
               <input
                 type="text"
-                placeholder="Search books by name..."
+                placeholder={t.searchPlaceholder}
                 value={searchQuery}
                 onChange={handleSearchInputChange}
                 onKeyDown={handleSearchKeyDown}
@@ -157,6 +166,7 @@ export default function Header() {
 
           {/* Actions */}
           <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
+            <LanguageSwitcher variant="dark" />
             {/* Mobile Search Toggle */}
             <button
               onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
@@ -194,7 +204,7 @@ export default function Header() {
                 href="/login"
                 className="hidden sm:inline-block px-4 py-2 text-sm font-semibold text-purple-600 bg-white rounded-full hover:bg-pink-50 transition-all shadow-md"
               >
-                Login
+                {t.login}
               </Link>
             )}
 
@@ -231,7 +241,7 @@ export default function Header() {
             <form onSubmit={handleSearch} className="relative">
               <input
                 type="text"
-                placeholder="Search books by name..."
+                placeholder={t.searchPlaceholder}
                 value={searchQuery}
                 onChange={handleSearchInputChange}
                 onKeyDown={handleSearchKeyDown}
@@ -268,6 +278,7 @@ export default function Header() {
         cartCount={cartCount}
         wishlistCount={wishlists.length}
         onLogout={handleLogout}
+        t={t}
       />
     </header>
   );
@@ -292,6 +303,10 @@ const DropdownNavLink = ({
   dropdownRef,
   isLoading,
   error,
+  exploreBy,
+  bookGenres,
+  loadingText,
+  noGenresText,
 }) => (
   <div className="relative" ref={dropdownRef}>
     <button
@@ -312,15 +327,15 @@ const DropdownNavLink = ({
       <div className="absolute left-0 mt-2 w-64 bg-[#A47251] rounded-xl shadow-2xl overflow-hidden z-50">
         <div className="px-4 py-3 bg-white/10 backdrop-blur-sm border-b border-white/20">
           <p className="text-xs font-bold text-pink-100 uppercase tracking-wider">
-            Explore by
+            {exploreBy || "Explore by"}
           </p>
-          <p className="text-lg font-bold text-white">Book Genres</p>
+          <p className="text-lg font-bold text-white">{bookGenres || "Book Genres"}</p>
         </div>
 
         <div className="max-h-96 overflow-y-auto py-2">
           {isLoading ? (
             <div className="px-4 py-8 text-center text-white text-sm">
-              Loading genres...
+              {loadingText || "Loading genres..."}
             </div>
           ) : error ? (
             <div className="px-4 py-4 text-center text-pink-100 text-sm">
@@ -328,7 +343,7 @@ const DropdownNavLink = ({
             </div>
           ) : items.length === 0 ? (
             <div className="px-4 py-8 text-center text-white text-sm">
-              No genres available.
+              {noGenresText || "No genres available."}
             </div>
           ) : (
             items.map((item) => (
@@ -383,6 +398,7 @@ const MobileMenu = ({
   cartCount,
   wishlistCount,
   onLogout,
+  t = {},
 }) => (
   <>
     {/* Backdrop */}
@@ -402,7 +418,7 @@ const MobileMenu = ({
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/20">
-          <h2 className="text-xl font-bold text-white">Menu</h2>
+          <h2 className="text-xl font-bold text-white">{t.menu || "Menu"}</h2>
           <button
             onClick={onClose}
             className="p-2 rounded-full hover:bg-white/10 transition-all"
@@ -418,7 +434,7 @@ const MobileMenu = ({
             {/* Genres Accordion */}
             <details className="group">
               <summary className="flex items-center justify-between px-4 py-3 text-base font-semibold text-white hover:bg-purple-700 hover:text-pink-100 transition-all rounded-lg cursor-pointer list-none">
-                <span>Explore Books</span>
+                <span>{t.exploreBooks || "Explore Books"}</span>
                 <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
               </summary>
               <div className="mt-2 ml-4 space-y-1">
@@ -436,16 +452,16 @@ const MobileMenu = ({
             </details>
 
             <MobileNavLink href="/best-seller" onClick={onClose}>
-              Bestsellers
+              {t.bestsellers || "Bestsellers"}
             </MobileNavLink>
             <MobileNavLink href="/authors" onClick={onClose}>
-              Authors
+              {t.authors || "Authors"}
             </MobileNavLink>
             <MobileNavLink href="/about-us" onClick={onClose}>
-              About Us
+              {t.aboutUs || "About Us"}
             </MobileNavLink>
             <MobileNavLink href="/contact-us" onClick={onClose}>
-              Contact Us
+              {t.contactUs || "Contact Us"}
             </MobileNavLink>
           </nav>
 
@@ -475,7 +491,7 @@ const MobileMenu = ({
                   )}
                   <div>
                     <p className="text-white font-semibold">{user.name}</p>
-                    <p className="text-purple-100 text-sm">My Profile</p>
+                    <p className="text-purple-100 text-sm">{t.myProfile || "My Profile"}</p>
                   </div>
                 </Link>
 
@@ -484,7 +500,7 @@ const MobileMenu = ({
                   onClick={onClose}
                   className="flex items-center justify-between px-4 py-3 text-white hover:bg-purple-700 rounded-lg transition-all mb-2"
                 >
-                  <span className="font-semibold">My Wishlists</span>
+                  <span className="font-semibold">{t.myWishlists || "My Wishlists"}</span>
                   {wishlistCount > 0 && (
                     <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2.5 py-0.5">
                       {wishlistCount}
@@ -497,7 +513,7 @@ const MobileMenu = ({
                   onClick={onClose}
                   className="flex items-center justify-between px-4 py-3 text-white hover:bg-purple-700 rounded-lg transition-all mb-4"
                 >
-                  <span className="font-semibold">My Cart</span>
+                  <span className="font-semibold">{t.myCart || "My Cart"}</span>
                   {cartCount > 0 && (
                     <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2.5 py-0.5">
                       {cartCount}
@@ -509,7 +525,7 @@ const MobileMenu = ({
                   onClick={onLogout}
                   className="w-full px-4 py-3 text-purple-600 bg-white hover:bg-pink-50 font-semibold rounded-lg transition-all"
                 >
-                  Logout
+                  {t.logout || "Logout"}
                 </button>
               </>
             ) : (
@@ -518,7 +534,7 @@ const MobileMenu = ({
                 onClick={onClose}
                 className="block w-full px-4 py-3 text-center text-purple-600 bg-white hover:bg-pink-50 font-semibold rounded-lg transition-all"
               >
-                Login / Register
+                {t.loginRegister || "Login / Register"}
               </Link>
             )}
           </div>

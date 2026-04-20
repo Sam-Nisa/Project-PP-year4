@@ -8,6 +8,10 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        roboto: ['Roboto', 'sans-serif'],
+        khmer: ['"Khmer"', 'sans-serif'],
+      },
       animation: {
         'fade-in-down': 'fadeInDown 0.3s ease-out',
       },

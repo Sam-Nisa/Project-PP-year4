@@ -3,19 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FaTachometerAlt, FaUsers, FaBook, FaCogs, FaTags, FaTicketAlt, FaChartLine, FaDollarSign } from "react-icons/fa";
+import { useLanguageStore } from "../store/useLanguageStore";
+import { translations } from "../utils/translations";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const { language } = useLanguageStore();
+  const t = translations[language];
 
   const links = [
-    { name: "Dashboard", href: "/admin/dashboard", icon: <FaTachometerAlt color="#4E8D7C" /> },
-    { name: "Users", href: "/admin/users", icon: <FaUsers color="#F59E0B" /> },
-    { name: "Genres", href: "/admin/genres", icon: <FaTags color="#3B82F6" /> },
-    { name: "Books", href: "/admin/books", icon: <FaBook color="#EF4444" /> },
-    { name: "Discount Codes", href: "/admin/discount-codes", icon: <FaTicketAlt color="#10B981" /> },
-    { name: "Sales", href: "/admin/sales", icon: <FaChartLine color="#EC4899" /> },
-    { name: "Payout Management", href: "/admin/payouts-new", icon: <FaDollarSign color="#10B981" /> },
-    { name: "Settings", href: "/admin/settings", icon: <FaCogs color="#8B5CF6" /> },
+    { name: t.dashboard, href: "/admin/dashboard", icon: <FaTachometerAlt color="#4E8D7C" /> },
+    { name: t.users, href: "/admin/users", icon: <FaUsers color="#F59E0B" /> },
+    { name: t.genres, href: "/admin/genres", icon: <FaTags color="#3B82F6" /> },
+    { name: t.books, href: "/admin/books", icon: <FaBook color="#EF4444" /> },
+    { name: t.discountCodes, href: "/admin/discount-codes", icon: <FaTicketAlt color="#10B981" /> },
+    { name: t.sales, href: "/admin/sales", icon: <FaChartLine color="#EC4899" /> },
+    { name: t.payoutManagement, href: "/admin/payouts-new", icon: <FaDollarSign color="#10B981" /> },
+    { name: t.settings, href: "/admin/settings", icon: <FaCogs color="#8B5CF6" /> },
   ];
 
   const isActive = (href) => pathname === href;
@@ -24,7 +28,7 @@ export default function AdminSidebar() {
     <aside className="max-w-72 h-screen text-black flex flex-col shadow-2xl backdrop-blur-lg border-r border-blue-700/40 sticky">
       {/* Header */}
       <div className="p-6 text-3xl font-extrabold tracking-wide bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-        Admin Panel
+        {t.adminPanel}
       </div>
 
       {/* Navigation */}
