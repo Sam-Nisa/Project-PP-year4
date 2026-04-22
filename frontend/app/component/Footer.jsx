@@ -7,7 +7,7 @@ import {
   Mail,
   Facebook,
   Twitter,
-  Instagram,
+  Instagram,  
 } from "lucide-react";
 import { useLanguageStore } from "../store/useLanguageStore";
 import { translations } from "../utils/translations";
