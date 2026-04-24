@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FaTachometerAlt, FaUsers, FaBook, FaCogs, FaTags, FaTicketAlt, FaChartLine, FaDollarSign } from "react-icons/fa";
+import { FaTachometerAlt, FaUsers, FaBook, FaCogs, FaTags, FaTicketAlt, FaChartLine, FaDollarSign, FaEnvelope } from "react-icons/fa";
 import { useLanguageStore } from "../store/useLanguageStore";
 import { translations } from "../utils/translations";
 
@@ -19,6 +19,7 @@ export default function AdminSidebar() {
     { name: t.discountCodes, href: "/admin/discount-codes", icon: <FaTicketAlt color="#10B981" /> },
     { name: t.sales, href: "/admin/sales", icon: <FaChartLine color="#EC4899" /> },
     { name: t.payoutManagement, href: "/admin/payouts-new", icon: <FaDollarSign color="#10B981" /> },
+    { name: "Messages", href: "/admin/messages", icon: <FaEnvelope color="#8B5CF6" /> },
     { name: t.settings, href: "/admin/settings", icon: <FaCogs color="#8B5CF6" /> },
   ];
 

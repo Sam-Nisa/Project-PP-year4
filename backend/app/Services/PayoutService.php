@@ -100,6 +100,7 @@ class PayoutService
     {
         return Payout::with(['owner'])
             ->where('status', 'pending')
+            ->where('is_deleted_by_admin', false)
             ->orderBy('requested_at', 'asc')
             ->get();
     }
@@ -109,7 +110,8 @@ class PayoutService
      */
     public function getPayouts($filters = [])
     {
-        $query = Payout::with(['owner', 'processedBy']);
+        $query = Payout::with(['owner', 'processedBy'])
+            ->where('is_deleted_by_admin', false);
 
         if (isset($filters['owner_id'])) {
             $query->where('owner_id', $filters['owner_id']);
@@ -135,19 +137,21 @@ class PayoutService
      */
     public function getPayoutStatistics()
     {
+        $query = Payout::where('is_deleted_by_admin', false);
+        
         return [
-            'pending_count' => Payout::where('status', 'pending')->count(),
-            'pending_amount' => Payout::where('status', 'pending')->sum('amount'),
-            'processing_count' => Payout::where('status', 'processing')->count(),
-            'processing_amount' => Payout::where('status', 'processing')->sum('amount'),
-            'completed_today' => Payout::where('status', 'completed')
+            'pending_count' => (clone $query)->where('status', 'pending')->count(),
+            'pending_amount' => (clone $query)->where('status', 'pending')->sum('amount'),
+            'processing_count' => (clone $query)->where('status', 'processing')->count(),
+            'processing_amount' => (clone $query)->where('status', 'processing')->sum('amount'),
+            'completed_today' => (clone $query)->where('status', 'completed')
                 ->whereDate('processed_at', today())
                 ->count(),
-            'completed_today_amount' => Payout::where('status', 'completed')
+            'completed_today_amount' => (clone $query)->where('status', 'completed')
                 ->whereDate('processed_at', today())
                 ->sum('amount'),
-            'total_completed' => Payout::where('status', 'completed')->count(),
-            'total_completed_amount' => Payout::where('status', 'completed')->sum('amount'),
+            'total_completed' => (clone $query)->where('status', 'completed')->count(),
+            'total_completed_amount' => (clone $query)->where('status', 'completed')->sum('amount'),
         ];
     }
 
@@ -157,6 +161,7 @@ class PayoutService
     public function getOwnerPayoutHistory($ownerId)
     {
         return Payout::where('owner_id', $ownerId)
+            ->where('is_deleted_by_author', false)
             ->orderBy('requested_at', 'desc')
             ->get();
     }

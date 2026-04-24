@@ -24,6 +24,7 @@ use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\TelegramController;
 use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\AdminPayoutController;
+use App\Http\Controllers\MessageController;
 
 // Upload file and image
 Route::post('/upload', [UploadController::class, 'upload']);
@@ -79,6 +80,14 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::post('refresh', [AuthController::class, 'refresh']);
     Route::get('dashboard-stats', [DashboardController::class, 'index']);
     Route::get('author-dashboard-stats', [AuthorDashboardController::class, 'index']);
+
+    // Messages
+    Route::get('messages/contacts', [MessageController::class, 'getContacts']);
+    Route::get('messages/{contactId}', [MessageController::class, 'getMessages']);
+    Route::post('messages', [MessageController::class, 'sendMessage']);
+    Route::put('messages/{message}', [MessageController::class, 'updateMessage']);
+    Route::delete('messages/conversation/{contactId}', [MessageController::class, 'deleteConversation']);
+    Route::delete('messages/{message}', [MessageController::class, 'deleteMessage']);
 
     // Users
     Route::get('users', [UserController::class, 'index']);

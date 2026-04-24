@@ -52,41 +52,41 @@ class AuthController extends Controller
     /**
      * Login user and return a JWT token.
      */
-  public function login(Request $request)
-{
-    $credentials = $request->validate([
-        'email'    => 'required|email',
-        'password' => 'required|string',
-    ]);
+    public function login(Request $request)
+    {
+        $credentials = $request->validate([
+            'email'    => 'required|email',
+            'password' => 'required|string',
+        ]);
 
-    $user = User::where('email', $credentials['email'])->first();
+        // Select only needed columns to reduce data transfer
+        $user = User::select('id', 'name', 'email', 'password_hash', 'role', 'avatar', 'avatar_url', 'created_at')
+            ->where('email', $credentials['email'])
+            ->first();
 
-    if (!$user || !Hash::check($credentials['password'], $user->password_hash)) {
-        return response()->json(['success' => false, 'message' => 'Invalid credentials'], 401);
-    }
+        if (!$user || !Hash::check($credentials['password'], $user->password_hash)) {
+            return response()->json(['success' => false, 'message' => 'Invalid credentials'], 401);
+        }
 
-    $token = JWTAuth::fromUser($user);  
+        $token = JWTAuth::fromUser($user);
 
-     $avatarUrl = $user->avatar
-        ? (filter_var($user->avatar, FILTER_VALIDATE_URL)
-            ? $user->avatar
-            : asset('storage/' . $user->avatar))
-        : null;
+        // Use avatar_url accessor which handles URL logic efficiently
+        $avatarUrl = $user->avatar_url;
 
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Login successful',
-        'user'    => [ 'id' => $user->id,
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful',
+            'user' => [
+                'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
-                'avatar' => $user->avatar,      // original value
-                'avatar_url' => $avatarUrl,     // full URL for frontend
-                'created_at' => $user->created_at,], // avatar_url is automatically included
-        'token'   => $token,
-    ]);
-}
+                'avatar_url' => $avatarUrl,
+                'created_at' => $user->created_at,
+            ],
+            'token' => $token,
+        ]);
+    }
     /**
      * Get the authenticated user's profile.
      */
@@ -94,17 +94,7 @@ class AuthController extends Controller
     {
         try {
             $user = Auth::user();
-    
-            // Prepare full avatar URL
-            $avatarUrl = $user->avatar
-                ? (filter_var($user->avatar, FILTER_VALIDATE_URL)
-                    ? $user->avatar
-                    : asset('storage/' . $user->avatar))
-                : null;
-    
-            // Add avatar_url to user object
-            $user->avatar_url = $avatarUrl;
-    
+
             return response()->json([
                 'success' => true,
                 'data' => $user,
@@ -179,18 +169,6 @@ class AuthController extends Controller
 
             // Update user with validated data
             $user->update($validated);
-
-            // Refresh user from database to get updated values
-            $user->refresh();
-
-            // Prepare response with avatar URL
-            $avatarUrl = $user->avatar
-                ? (filter_var($user->avatar, FILTER_VALIDATE_URL)
-                    ? $user->avatar
-                    : asset('storage/' . $user->avatar))
-                : null;
-
-            $user->avatar_url = $avatarUrl;
 
             return response()->json([
                 'success' => true,

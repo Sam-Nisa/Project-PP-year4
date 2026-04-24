@@ -235,7 +235,8 @@ class AdminPayoutController extends Controller
         }
 
         try {
-            $query = Payout::with(['owner', 'processedBy']);
+            $query = Payout::with(['owner', 'processedBy'])
+                ->where('is_deleted_by_admin', false);
 
             // Filter by status
             if ($request->status) {
@@ -355,7 +356,14 @@ class AdminPayoutController extends Controller
                 'admin_id' => $user->id,
             ]);
 
-            $payout->delete();
+            // Set the admin deleted flag
+            $payout->is_deleted_by_admin = true;
+            $payout->save();
+
+            // If both admin and author deleted, we can hard delete
+            if ($payout->is_deleted_by_admin && $payout->is_deleted_by_author) {
+                $payout->delete();
+            }
 
             return response()->json([
                 'success' => true,

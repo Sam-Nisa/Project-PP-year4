@@ -16,7 +16,11 @@ export default function Login() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (user) router.push("/");
+    if (user) {
+      if (user.role === "admin") router.push("/admin/dashboard");
+      else if (user.role === "author") router.push("/author/dashboard");
+      else router.push("/");
+    }
   }, [user, router]);
 
   const handleSubmit = async (e) => {

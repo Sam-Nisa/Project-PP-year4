@@ -124,7 +124,14 @@ class PayoutController extends Controller
                 'status' => $payout->status,
             ]);
 
-            $payout->delete();
+            // Set the author deleted flag
+            $payout->is_deleted_by_author = true;
+            $payout->save();
+
+            // If both admin and author deleted, we can hard delete
+            if ($payout->is_deleted_by_admin && $payout->is_deleted_by_author) {
+                $payout->delete();
+            }
 
             return response()->json([
                 'success' => true,

@@ -20,12 +20,16 @@ class Payout extends Model
         'processed_by',
         'requested_at',
         'processed_at',
+        'is_deleted_by_admin',
+        'is_deleted_by_author',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'requested_at' => 'datetime',
         'processed_at' => 'datetime',
+        'is_deleted_by_admin' => 'boolean',
+        'is_deleted_by_author' => 'boolean',
     ];
 
     /**
