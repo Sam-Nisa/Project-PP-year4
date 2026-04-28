@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\ImageKitService;
+use App\Notifications\AuthorRequestSubmittedNotification;
+use App\Notifications\AuthorRequestStatusNotification;
+use App\Models\User;
 
 class AuthorRequestController extends Controller
 {
@@ -81,6 +84,11 @@ class AuthorRequestController extends Controller
             'status' => 'pending',
         ]);
 
+        $admins = User::where('role', 'admin')->get();
+        foreach ($admins as $admin) {
+            $admin->notify(new AuthorRequestSubmittedNotification($authorRequest, $user));
+        }
+
         return response()->json(['message' => 'Request submitted successfully.', 'data' => $authorRequest], 201);
     }
 
@@ -98,12 +106,17 @@ class AuthorRequestController extends Controller
 
         $authorRequest->update(['status' => $validated['status']]);
 
+        $user = User::find($authorRequest->user_id);
+
         // If approved, update user role
         if ($validated['status'] === 'approved') {
-            $user = \App\Models\User::find($authorRequest->user_id);
             if ($user && $user->role !== 'admin') {
                 $user->update(['role' => 'author']);
             }
+        }
+
+        if ($user) {
+            $user->notify(new AuthorRequestStatusNotification($authorRequest, $validated['status']));
         }
 
         return response()->json(['message' => 'Request status updated successfully.', 'data' => $authorRequest]);

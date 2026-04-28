@@ -18,6 +18,7 @@ import { useSearchStore } from "../store/useSearchStore";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useLanguageStore } from "../store/useLanguageStore";
 import { translations } from "../utils/translations";
+import NotificationIcon from "./NotificationIcon";
 
 const slugify = (text) =>
   text
@@ -215,6 +216,9 @@ export default function Header() {
               count={isInitialized && user ? wishlists.length : 0}
               label="Wishlist"
             />
+
+            {/* Notifications */}
+            {isInitialized && user && <NotificationIcon />}
 
             {/* Cart */}
             <IconWithBadge

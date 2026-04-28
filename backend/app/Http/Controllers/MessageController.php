@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Message;
 use App\Models\User;
+use App\Notifications\NewMessageNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -75,6 +76,11 @@ class MessageController extends Controller
             'message' => $request->message,
             'is_read' => false,
         ]);
+        
+        $receiver = User::find($request->receiver_id);
+        if ($receiver) {
+            $receiver->notify(new NewMessageNotification($message, Auth::user()));
+        }
         
         return response()->json($message, 201);
     }

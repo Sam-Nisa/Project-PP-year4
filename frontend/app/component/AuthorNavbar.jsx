@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useLanguageStore } from "../store/useLanguageStore";
 import { translations } from "../utils/translations";
+import NotificationIcon from "./NotificationIcon";
 
 export default function AuthorNavbar() {
   const { user, logout } = useAuthStore();
@@ -40,6 +41,7 @@ export default function AuthorNavbar() {
 
       <div className="flex items-center gap-4">
         <LanguageSwitcher variant="light" />
+        <NotificationIcon iconColor="text-gray-600" />
         
         {user && (
           <div className="relative flex items-center gap-3" ref={dropdownRef}>

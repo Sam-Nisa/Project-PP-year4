@@ -7,7 +7,7 @@ import { useAuthStore } from '../store/authStore';
 const HeroBanner = () => {
   const { user } = useAuthStore();
   const [mounted, setMounted] = useState(false);
-  
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -28,25 +28,25 @@ const HeroBanner = () => {
 
       {/* Main Container */}
       <div className="relative z-10 max-w-7xl mx-auto px-9 py-12 md:px-12 md:py-20 lg:py-24 flex flex-col md:flex-row items-center justify-between gap-10">
-        
+
         {/* Content Side */}
         <div className="w-full md:w-1/2 text-center md:text-left text- flex text-gray-600 flex-col px-7 items-center md:items-start animate-fade-in-up">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight tracking-tight mb-4 drop-shadow-lg">
             Unlock New Worlds, <br className="hidden sm:block" /> One Page at a Time
           </h2>
-          
-          <p className="text-base sm:text-lg lg:text-xl text-gray-600 mb-8 max-w-lg drop-shadow-md">
+
+          <p className="text-base sm:text-lg  lg:text-xl text-gray-600 mb-8 max-w-lg drop-shadow-md">
             Discover a curated collection of bestsellers, hidden gems, and timeless classics.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mt-8">
             <Link
               href="/browse"
-              className="inline-flex items-center justify-center bg-[#A98B76] text-white font-bold py-3 px-8 md:py-4 md:px-10 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out text-base md:text-lg group"
+              className="inline-flex  items-center justify-center bg-[#A98B76] text-white font-semibold py-4 px-6 md:py-4 md:px-8 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out text-sm md:text-base group"
             >
               Explore Our Collection
               <svg
-                className="ml-3 h-5 w-5 md:h-6 md:w-6 transform group-hover:translate-x-2 transition-transform duration-300 ease-in-out"
+                className="ml-2 h-4 w-4 md:h-5 md:w-5 transform group-hover:translate-x-2 transition-transform duration-300 ease-in-out"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -63,20 +63,27 @@ const HeroBanner = () => {
             {mounted && (!user || user.role === 'user') && (
               <Link
                 href={becomeAuthorLink}
-                className="inline-flex items-center justify-center bg-indigo-600 text-white font-bold py-3 px-8 md:py-4 md:px-10 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out text-base md:text-lg group"
+                className="inline-flex items-center justify-center bg-indigo-600 text-white font-semibold py-2 px-6 md:py-2 md:px-8 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out text-sm md:text-base group"
               >
                 Become an Author
                 <svg
-                  className="ml-3 h-5 w-5 md:h-6 md:w-6 transform group-hover:translate-x-2 transition-transform duration-300 ease-in-out"
+                  className="ml-2 h-4 w-4 md:h-5 md:w-5 transform group-hover:translate-x-2 transition-transform duration-300 ease-in-out"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
                 </svg>
               </Link>
             )}
           </div>
+
+
         </div>
 
         {/* Image Side */}

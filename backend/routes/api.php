@@ -26,6 +26,7 @@ use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\AdminPayoutController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\AuthorRequestController;
+use App\Http\Controllers\NotificationController;
 
 // Upload file and image
 Route::post('/upload', [UploadController::class, 'upload']);
@@ -138,6 +139,11 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('wishlists', [WishlistController::class, 'index']);
     Route::post('wishlists', [WishlistController::class, 'add']);
     Route::delete('wishlists/{book_id}', [WishlistController::class, 'remove']);
+
+    // Notifications
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
     // Orders
     Route::get('orders', [OrderController::class, 'index']);
