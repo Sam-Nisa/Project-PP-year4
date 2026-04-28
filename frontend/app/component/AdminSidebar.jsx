@@ -20,6 +20,7 @@ export default function AdminSidebar() {
     { name: t.sales, href: "/admin/sales", icon: <FaChartLine color="#EC4899" /> },
     { name: t.payoutManagement, href: "/admin/payouts-new", icon: <FaDollarSign color="#10B981" /> },
     { name: "Messages", href: "/admin/messages", icon: <FaEnvelope color="#8B5CF6" /> },
+    { name: "Author Requests", href: "/admin/author-requests", icon: <FaUsers color="#8B5CF6" /> },
     { name: t.settings, href: "/admin/settings", icon: <FaCogs color="#8B5CF6" /> },
   ];
 

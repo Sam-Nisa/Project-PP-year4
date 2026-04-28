@@ -35,10 +35,9 @@ export const useGenreStore = create((set, get) => ({
 
       console.log("Creating genre with payload:", payload);
 
-      const data = await request("/api/genres", "POST", payload, {
+      const data = await request("/api/genres", "POST", formData, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
         },
       });
 
@@ -46,7 +45,7 @@ export const useGenreStore = create((set, get) => ({
       return data.genre;
     } catch (err) {
       console.error("Failed to create genre:", err);
-      set({ error: err.response?.data?.error || "Failed to create genre" });
+      set({ error: err.response?.data?.message || err.response?.data?.error || "Failed to create genre" });
     } finally {
       set({ loading: false });
     }
@@ -64,11 +63,12 @@ export const useGenreStore = create((set, get) => ({
       if (payload.parent_id) formData.append("parent_id", payload.parent_id);
       if (payload.image) formData.append("image", payload.image);
 
+      // Append _method for Laravel PUT spoofing
+      formData.append("_method", "PUT");
+
       const data = await request(`/api/genres/${id}`, "POST", formData, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-          "X-HTTP-Method-Override": "PUT", // important for Laravel to handle PUT
         },
       });
 
@@ -78,7 +78,7 @@ export const useGenreStore = create((set, get) => ({
       return data.genre;
     } catch (err) {
       console.error("Failed to update genre:", err);
-      set({ error: err.response?.data?.error || "Failed to update genre" });
+      set({ error: err.response?.data?.message || err.response?.data?.error || "Failed to update genre" });
     } finally {
       set({ loading: false });
     }

@@ -121,7 +121,10 @@ export const useUserStore = create((set, get) => ({
         }
       });
 
-      const updatedUser = await request(`/api/users/${id}`, "PUT", formData, {}, token);
+      // Append _method for Laravel PUT spoofing
+      formData.append("_method", "PUT");
+
+      const updatedUser = await request(`/api/users/${id}`, "POST", formData, {}, token);
 
       set((state) => {
         console.log("state.users", state);
@@ -134,7 +137,7 @@ export const useUserStore = create((set, get) => ({
     } catch (err) {
       console.error("Failed to update user:", err);
       set({
-        error: err?.response?.data?.error || "Failed to update user",
+        error: err?.response?.data?.message || err?.response?.data?.error || "Failed to update user",
       });
       return null;
     } finally {

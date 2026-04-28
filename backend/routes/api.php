@@ -25,6 +25,7 @@ use App\Http\Controllers\TelegramController;
 use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\AdminPayoutController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\AuthorRequestController;
 
 // Upload file and image
 Route::post('/upload', [UploadController::class, 'upload']);
@@ -95,6 +96,12 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::put('users/{id}', [UserController::class, 'update']);
     Route::delete('users/{id}', [UserController::class, 'destroy']);
     Route::put('users/{id}/approve', [UserController::class, 'approveToAuthor']);
+
+    // Author Requests
+    Route::post('author-requests', [AuthorRequestController::class, 'store']);
+    Route::get('author-requests/my', [AuthorRequestController::class, 'myRequest']);
+    Route::get('admin/author-requests', [AuthorRequestController::class, 'index']);
+    Route::put('admin/author-requests/{id}/status', [AuthorRequestController::class, 'updateStatus']);
 
      // Genres CRUD
 

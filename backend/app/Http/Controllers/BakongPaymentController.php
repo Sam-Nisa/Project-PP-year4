@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Services\BakongPaymentService;
-use App\Services\TelegramService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -13,12 +12,10 @@ use Illuminate\Support\Facades\Cache;
 class BakongPaymentController extends Controller
 {
     protected $bakongService;
-    protected $telegramService;
 
-    public function __construct(BakongPaymentService $bakongService, TelegramService $telegramService)
+    public function __construct(BakongPaymentService $bakongService)
     {
         $this->bakongService = $bakongService;
-        $this->telegramService = $telegramService;
     }
 
     /**
@@ -148,6 +145,28 @@ class BakongPaymentController extends Controller
                 ], 400);
             }
 
+            // Reuse existing QR data if still valid (avoid immediate expiration and allow retry)
+            $existingQrData = Cache::get("qr_data_{$orderId}");
+            if ($existingQrData && now()->lt($existingQrData['expires_at'])) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'QR code already generated, still valid',
+                    'data' => [
+                        'qr_string' => $existingQrData['qr_string'],
+                        'md5' => $existingQrData['md5'],
+                        'amount' => $existingQrData['amount'],
+                        'currency' => $existingQrData['currency'],
+                        'order_id' => $orderId,
+                        'expires_at' => $existingQrData['expires_at']->toISOString(),
+                        'bill_number' => $existingQrData['bill_number'],
+                        'merchant_name' => $existingQrData['merchant_name'],
+                        'author_account' => $existingQrData['account_id'],
+                        'account_type' => $existingQrData['account_type'],
+                        'reason' => $existingQrData['reason']
+                    ]
+                ]);
+            }
+
             // Generate QR code using the appropriate account
             $currency = $validated['currency'] ?? 'USD';
             $billNumber = 'ORD-' . str_replace('pending_', '', $orderId);
@@ -162,8 +181,8 @@ class BakongPaymentController extends Controller
             );
 
             if ($result['success']) {
-                // Set QR expiration to 10 minutes from now
-                $expiresAt = now()->addMinutes(10);
+                // Set QR expiration to 15 minutes from now
+                $expiresAt = now()->addMinutes(15);
                 
                 // Store QR info in cache with the pending order ID
                 Cache::put("qr_data_{$orderId}", [
@@ -444,14 +463,14 @@ class BakongPaymentController extends Controller
                 
                 // Check if QR has expired
                 if (now()->isAfter($qrData['expires_at'])) {
-                    // Clean up expired data
-                    Cache::forget("pending_order_{$orderId}");
+                    // Keep pending order data available to allow re-generation, but remove expired QR payload
                     Cache::forget("qr_data_{$orderId}");
                     
                     return response()->json([
                         'success' => false,
-                        'message' => 'Payment expired. Please try again.',
-                        'expired' => true
+                        'message' => 'QR code has expired. Please refresh to generate a new QR code.',
+                        'expired' => true,
+                        'can_refresh' => true
                     ], 410);
                 }
                 
@@ -477,8 +496,6 @@ class BakongPaymentController extends Controller
                             'order_status' => $order->status,
                             'payment_status' => $order->payment_status
                         ]);
-                        
-                        // Note: Telegram notification is sent from OrderController::createFromPendingOrder()
                         
                         return response()->json([
                             'success' => true,
@@ -656,89 +673,4 @@ class BakongPaymentController extends Controller
             ], 500);
         }
     }
-
-    /**
-     * Test QR code generation (Debug endpoint)
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function testQRGeneration(Request $request)
-    {
-        try {
-            $user = Auth::user();
-            if ($user->role !== 'admin') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 403);
-            }
-
-            $validated = $request->validate([
-                'amount' => 'required|numeric|min:0.01',
-                'currency' => 'sometimes|in:USD,KHR',
-                'bill_number' => 'sometimes|string'
-            ]);
-
-            $amount = $validated['amount'];
-            $currency = $validated['currency'] ?? 'USD';
-            $billNumber = $validated['bill_number'] ?? 'TEST-' . time();
-
-            Log::info('Testing QR Generation', [
-                'amount' => $amount,
-                'currency' => $currency,
-                'bill_number' => $billNumber
-            ]);
-
-            $result = $this->bakongService->generateQRCode(
-                $amount,
-                $currency,
-                $billNumber,
-                'Test Store'
-            );
-
-            if ($result['success']) {
-                // Verify the generated QR code
-                $isValid = $this->bakongService->verifyQRCode($result['qr_string']);
-                
-                // Decode the QR code
-                $decoded = $this->bakongService->decodeQRCode($result['qr_string']);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'QR code generated successfully',
-                    'data' => [
-                        'qr_string' => $result['qr_string'],
-                        'md5' => $result['md5'],
-                        'amount' => $result['amount'],
-                        'currency' => $result['currency'],
-                        'is_valid' => $isValid,
-                        'decoded' => $decoded['success'] ? $decoded['data'] : null,
-                        'qr_length' => strlen($result['qr_string'])
-                    ]
-                ]);
-            }
-
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'] ?? 'Failed to generate QR code',
-                'error' => $result['error'] ?? 'Unknown error'
-            ], 500);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            Log::error('Test QR Generation Error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'An error occurred',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
 }

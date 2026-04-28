@@ -91,9 +91,7 @@ export default function GenresList() {
         {/* 6 Column Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {visibleGenres.map((genre) => {
-            const imageUrl = genre.image
-              ? `${API_URL}/storage/${genre.image}`
-              : FALLBACK_IMAGE_URL;
+            const imageUrl = genre.image_url || FALLBACK_IMAGE_URL;
 
             return (
               <Link

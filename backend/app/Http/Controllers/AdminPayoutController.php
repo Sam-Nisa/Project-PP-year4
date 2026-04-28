@@ -11,16 +11,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ImageKitService;
 
 class AdminPayoutController extends Controller
 {
     protected $payoutService;
     protected $bakongService;
+    protected $imageKit;
 
-    public function __construct(PayoutService $payoutService, BakongPaymentService $bakongService)
+    public function __construct(PayoutService $payoutService, BakongPaymentService $bakongService, ImageKitService $imageKit)
     {
         $this->payoutService = $payoutService;
         $this->bakongService = $bakongService;
+        $this->imageKit = $imageKit;
     }
 
     /**
@@ -188,8 +191,12 @@ class AdminPayoutController extends Controller
             // Handle payment proof image upload
             if ($request->hasFile('payment_proof')) {
                 $file = $request->file('payment_proof');
-                $path = $file->store('payment_proofs', 'public');
-                $updateData['payment_proof'] = $path;
+                $upload = $this->imageKit->upload(
+                    $file->getPathname(),
+                    time().'_'.$file->getClientOriginalName(),
+                    '/payouts/proofs'
+                );
+                $updateData['payment_proof'] = $upload->result->url;
             }
 
             $payout->update($updateData);

@@ -239,7 +239,7 @@ export default function AuthorPayoutsPage() {
                   <p className="text-sm font-semibold mb-2">Payment Proof Image:</p>
                   <div className="bg-gray-100 rounded p-4 flex justify-center">
                     <img
-                      src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${proofModal.payment_proof}`}
+                      src={proofModal.payment_proof.startsWith('http') ? proofModal.payment_proof : `${process.env.NEXT_PUBLIC_API_URL}/storage/${proofModal.payment_proof}`}
                       alt="Payment Proof"
                       className="max-w-full max-h-96 rounded"
                     />
@@ -255,7 +255,7 @@ export default function AuthorPayoutsPage() {
 
                 <div className="flex gap-2">
                   <a
-                    href={`${process.env.NEXT_PUBLIC_API_URL}/storage/${proofModal.payment_proof}`}
+                    href={proofModal.payment_proof.startsWith('http') ? proofModal.payment_proof : `${process.env.NEXT_PUBLIC_API_URL}/storage/${proofModal.payment_proof}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-center"

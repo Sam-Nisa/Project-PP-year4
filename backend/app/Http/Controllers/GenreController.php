@@ -8,10 +8,16 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-
+use App\Services\ImageKitService;
 
 class GenreController extends Controller
 {
+    protected $imageKit;
+
+    public function __construct(ImageKitService $imageKit)
+    {
+        $this->imageKit = $imageKit;
+    }
     // ✅ List all genres with subgenres and image URLs
     public function index()
     {
@@ -47,7 +53,7 @@ class GenreController extends Controller
     $request->validate([
         'name' => 'required|string|max:255',
         'parent_id' => 'nullable|exists:genres,id',
-        'image' => 'nullable|image|max:2048',
+        'image' => 'nullable|image|max:5120',
     ]);
 
     Log::info('Creating genre with data: ', $request->all());
@@ -68,7 +74,13 @@ class GenreController extends Controller
     ===================== */
     $imagePath = null;
     if ($request->hasFile('image')) {
-        $imagePath = $request->file('image')->store('genres', 'public');
+        $file = $request->file('image');
+        $upload = $this->imageKit->upload(
+            $file->getPathname(),
+            time().'_'.$file->getClientOriginalName(),
+            '/genres/images'
+        );
+        $imagePath = $upload->result->url;
     }
 
     /* =====================
@@ -106,7 +118,7 @@ public function update(Request $request, $id)
     $request->validate([
         'name' => 'sometimes|required|string|max:255',
         'parent_id' => 'nullable|exists:genres,id',
-        'image' => 'nullable|image|max:2048'
+        'image' => 'nullable|image|max:5120'
     ]);
 
     // Update fields
@@ -114,10 +126,16 @@ public function update(Request $request, $id)
     if ($request->has('parent_id')) $genre->parent_id = $request->parent_id;
 
     if ($request->hasFile('image')) {
-        if ($genre->image) {
+        if ($genre->image && !filter_var($genre->image, FILTER_VALIDATE_URL)) {
             Storage::disk('public')->delete($genre->image);
         }
-        $genre->image = $request->file('image')->store('genres', 'public');
+        $file = $request->file('image');
+        $upload = $this->imageKit->upload(
+            $file->getPathname(),
+            time().'_'.$file->getClientOriginalName(),
+            '/genres/images'
+        );
+        $genre->image = $upload->result->url;
     }
 
     $genre->save();
@@ -142,7 +160,7 @@ public function update(Request $request, $id)
             return response()->json(['error' => 'Genre not found'], 404);
         }
 
-        if ($genre->image) {
+        if ($genre->image && !filter_var($genre->image, FILTER_VALIDATE_URL)) {
             Storage::disk('public')->delete($genre->image);
         }
 
@@ -162,7 +180,7 @@ public function update(Request $request, $id)
             'parent_id' => $genre->parent_id,
             'slug' => $genre->slug,
             'image' => $genre->image,
-            'image_url' => $genre->image ? url("storage/{$genre->image}") : null,
+            'image_url' => $genre->image ? (filter_var($genre->image, FILTER_VALIDATE_URL) ? $genre->image : url("storage/{$genre->image}")) : null,
             'created_at' => $genre->created_at,
             'updated_at' => $genre->updated_at,
             'subgenres' => $genre->subgenres->map(function ($sub) {

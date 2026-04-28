@@ -90,6 +90,12 @@ const KHQRModal = ({
               </div>
             </div>
 
+            {paymentError && (
+              <div className="px-8 py-3 bg-yellow-50 border border-yellow-200 rounded-md mb-4 text-center">
+                <p className="text-sm font-medium text-yellow-700">{paymentError}</p>
+              </div>
+            )}
+
             {/* Dashed Perforation Line */}
             <div className="px-4 py-8">
               <div className="border-t-2 border-dashed border-gray-100 w-full"></div>
@@ -124,6 +130,15 @@ const KHQRModal = ({
               <p className="text-[11px] text-gray-300 mt-10 uppercase tracking-[0.2em] font-bold">
                 Scan with any mobile banking app
               </p>
+
+              {(paymentStatus === 'failed' || paymentError) && !isGeneratingQR && (
+                <button
+                  onClick={onRetry}
+                  className="mt-4 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Refresh QR Code
+                </button>
+              )}
             </div>
           </div>
         ) : (

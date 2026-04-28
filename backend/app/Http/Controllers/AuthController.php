@@ -9,9 +9,16 @@ use Illuminate\Support\Facades\Storage;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Illuminate\Support\Facades\Auth;
+use App\Services\ImageKitService;
 
 class AuthController extends Controller
 {
+    protected $imageKit;
+
+    public function __construct(ImageKitService $imageKit)
+    {
+        $this->imageKit = $imageKit;
+    }
     /**
      * Register a new user (default role = user).
      */
@@ -26,8 +33,13 @@ class AuthController extends Controller
     
         $avatarPath = null;
         if ($request->hasFile('avatar')) {
-            $avatarPath = $request->file('avatar')->store('avatars', 'public'); 
-            // stored in storage/app/public/avatars
+            $file = $request->file('avatar');
+            $upload = $this->imageKit->upload(
+                $file->getPathname(),
+                time().'_'.$file->getClientOriginalName(),
+                '/users/avatars'
+            );
+            $avatarPath = $upload->result->url;
         }
     
         $user = User::create([
@@ -163,8 +175,13 @@ class AuthController extends Controller
                 }
 
                 // Store new avatar
-                $avatarPath = $request->file('avatar')->store('avatars', 'public');
-                $validated['avatar'] = $avatarPath;
+                $file = $request->file('avatar');
+                $upload = $this->imageKit->upload(
+                    $file->getPathname(),
+                    time().'_'.$file->getClientOriginalName(),
+                    '/users/avatars'
+                );
+                $validated['avatar'] = $upload->result->url;
             }
 
             // Update user with validated data

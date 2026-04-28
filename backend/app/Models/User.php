@@ -38,8 +38,11 @@ class User extends Authenticatable implements JWTSubject
             return $this->attributes['avatar_url'];
         }
         
-        // Fallback to legacy avatar path
+        // Fallback to legacy avatar path or direct URL in avatar column
         if (!empty($this->attributes['avatar'])) {
+            if (filter_var($this->attributes['avatar'], FILTER_VALIDATE_URL)) {
+                return $this->attributes['avatar'];
+            }
             return asset('storage/' . $this->attributes['avatar']);
         }
         

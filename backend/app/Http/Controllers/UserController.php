@@ -8,9 +8,16 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ImageKitService;
 
 class UserController extends Controller
 {
+    protected $imageKit;
+
+    public function __construct(ImageKitService $imageKit)
+    {
+        $this->imageKit = $imageKit;
+    }
     /**
      * List all users.
      */
@@ -85,7 +92,13 @@ class UserController extends Controller
         // Handle avatar upload or URL
         $avatarPath = null;
         if ($request->hasFile('avatar')) {
-            $avatarPath = $request->file('avatar')->store('avatars', 'public');
+            $file = $request->file('avatar');
+            $upload = $this->imageKit->upload(
+                $file->getPathname(),
+                time().'_'.$file->getClientOriginalName(),
+                '/users/avatars'
+            );
+            $avatarPath = $upload->result->url;
         } elseif ($request->has('avatar') && filter_var($request->avatar, FILTER_VALIDATE_URL)) {
             $avatarPath = $request->avatar; // keep URL
         }
@@ -151,8 +164,13 @@ class UserController extends Controller
                 Storage::disk('public')->delete($user->avatar);
             }
     
-            $avatarPath = $request->file('avatar')->store('avatars', 'public');
-            $validated['avatar'] = $avatarPath;
+            $file = $request->file('avatar');
+            $upload = $this->imageKit->upload(
+                $file->getPathname(),
+                time().'_'.$file->getClientOriginalName(),
+                '/users/avatars'
+            );
+            $validated['avatar'] = $upload->result->url;
     
         } elseif ($request->has('avatar') && filter_var($request->avatar, FILTER_VALIDATE_URL)) {
             // If avatar is a URL, just store the URL
