@@ -290,6 +290,20 @@ const BookDetailsPage = ({ bookId = 1 }) => {
     }
   }, [book, user, addToCart, quantity, router]);
 
+  const handleChatWithAuthor = useCallback(() => {
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    let baseUrl = `/profile/${user.id}/messages`;
+    if (user.role === 'admin') {
+      baseUrl = '/admin/messages';
+    } else if (user.role === 'author') {
+      baseUrl = '/author/messages';
+    }
+    router.push(`${baseUrl}?contact=${book.author_id}`);
+  }, [user, book, router]);
+
   const handleReadSample = useCallback(() => {
     if (book?.pdf_file_url) {
       setShowPDFViewer(true);
@@ -412,7 +426,7 @@ const BookDetailsPage = ({ bookId = 1 }) => {
 
                 {/* Contact Author/Admin */}
                 <button 
-                  onClick={() => user ? router.push(`/profile/${user.id}/messages?contact=${book.author_id}`) : setShowLoginPrompt(true)} 
+                  onClick={handleChatWithAuthor} 
                   className="flex items-center gap-2 text-[#8B5CF6] border-2 border-[#8B5CF6] hover:bg-[#8B5CF6] hover:text-white font-bold rounded-full px-6 h-12 transition-colors ml-auto sm:ml-0"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">

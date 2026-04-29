@@ -15,9 +15,9 @@ class MessageController extends Controller
         $user = Auth::user();
         
         // Contacts are users who either sent a message to the auth user, or received a message from the auth user
-        $contactIds = Message::where('sender_id', $user->id)
+        $contactIds = Message::where('sender_id', $user->id)->where('deleted_by_sender', false)
             ->pluck('receiver_id')
-            ->merge(Message::where('receiver_id', $user->id)->pluck('sender_id'))
+            ->merge(Message::where('receiver_id', $user->id)->where('deleted_by_receiver', false)->pluck('sender_id'))
             ->unique();
             
         // If a specific contact_id is provided via URL
@@ -33,6 +33,7 @@ class MessageController extends Controller
             $contact->unread_count = Message::where('sender_id', $contact->id)
                 ->where('receiver_id', $user->id)
                 ->where('is_read', false)
+                ->where('deleted_by_receiver', false)
                 ->count();
         }
         
@@ -49,13 +50,15 @@ class MessageController extends Controller
             ->where('is_read', false)
             ->update(['is_read' => true]);
             
-        $messages = Message::where(function($q) use ($user, $contactId) {
+            $messages = Message::where(function($q) use ($user, $contactId) {
                 $q->where('sender_id', $user->id)
-                  ->where('receiver_id', $contactId);
+                  ->where('receiver_id', $contactId)
+                  ->where('deleted_by_sender', false);
             })
             ->orWhere(function($q) use ($user, $contactId) {
                 $q->where('sender_id', $contactId)
-                  ->where('receiver_id', $user->id);
+                  ->where('receiver_id', $user->id)
+                  ->where('deleted_by_receiver', false);
             })
             ->orderBy('created_at', 'asc')
             ->get();
@@ -117,13 +120,27 @@ class MessageController extends Controller
     {
         $userId = Auth::id();
         
-        Message::where(function ($query) use ($userId, $contactId) {
+        $messages = Message::where(function ($query) use ($userId, $contactId) {
             $query->where('sender_id', $userId)
                   ->where('receiver_id', $contactId);
         })->orWhere(function ($query) use ($userId, $contactId) {
             $query->where('sender_id', $contactId)
                   ->where('receiver_id', $userId);
-        })->delete();
+        })->get();
+
+        foreach ($messages as $message) {
+            if ($message->sender_id === $userId) {
+                $message->deleted_by_sender = true;
+            } else {
+                $message->deleted_by_receiver = true;
+            }
+            $message->save();
+
+            // If both parties deleted the conversation, hard delete the message
+            if ($message->deleted_by_sender && $message->deleted_by_receiver) {
+                $message->delete();
+            }
+        }
 
         return response()->json(['message' => 'Conversation deleted successfully']);
     }
