@@ -141,6 +141,15 @@ const Register = () => {
                 </span>
               </div>
 
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg transition-colors mb-6"
+              >
+                {loading ? "Creating account..." : "Sign Up"}
+              </button>
+
               <div className="flex justify-center space-x-4 mb-8">
                 <button
                   onClick={() => {
@@ -156,24 +165,8 @@ const Register = () => {
                   />
                   Login with Google
                 </button>
-                <button className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
-                  <img
-                    src="/login/facebook.png"
-                    alt="GitHub"
-                    className="w-8 h-8 mr-2"
-                  />
-                  login with facebook
-                </button>
               </div>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg transition-colors mb-6"
-              >
-                {loading ? "Creating account..." : "Sign Up"}
-              </button>
 
               {/* Error */}
               {error && (

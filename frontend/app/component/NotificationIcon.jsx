@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
 import api from "../utils/axios";
 import { useAuthStore } from "../store/authStore";
-
+import Pusher from 'pusher-js';
 export default function NotificationIcon({ iconColor = "text-white" }) {
   const { user, token } = useAuthStore();
   const [notifications, setNotifications] = useState([]);
@@ -12,12 +12,35 @@ export default function NotificationIcon({ iconColor = "text-white" }) {
   const dropdownRef = useRef(null);
 
   useEffect(() => {
+    let pusher = null;
+    let channel = null;
+
     if (user && token) {
       fetchNotifications();
-      // Polling every 30 seconds for new notifications
-      const interval = setInterval(fetchNotifications, 30000);
-      return () => clearInterval(interval);
+      
+      // Initialize Pusher for real-time notifications
+      Pusher.logToConsole = true;
+      pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY || 'your-pusher-app-key', {
+        cluster: process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER || 'your-pusher-cluster',
+        forceTLS: true
+      });
+
+      channel = pusher.subscribe(`notifications.${user.id}`);
+      
+      channel.bind('notification.sent', function(data) {
+        fetchNotifications();
+      });
     }
+
+    return () => {
+      if (channel) {
+        channel.unbind_all();
+        channel.unsubscribe();
+      }
+      if (pusher) {
+        pusher.disconnect();
+      }
+    };
   }, [user, token]);
 
   // Close dropdown when clicking outside

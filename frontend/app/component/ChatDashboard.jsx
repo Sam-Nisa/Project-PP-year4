@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import api from "../utils/axios";
 import { useAuthStore } from "../store/authStore";
+import Pusher from "pusher-js";
 import { 
   Search, 
   Send, 
@@ -35,30 +36,60 @@ export default function ChatDashboard() {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editedText, setEditedText] = useState("");
   const messagesEndRef = useRef(null);
-  const pollingInterval = useRef(null);
   const contactIdParam = searchParams.get('contact');
+  
+  // Use a ref to access the latest selectedContact inside the Pusher callback
+  const selectedContactRef = useRef(selectedContact);
+  useEffect(() => {
+    selectedContactRef.current = selectedContact;
+  }, [selectedContact]);
 
   useEffect(() => {
-    if (!isInitialized || !token) return;
+    if (!isInitialized || !token || !user) return;
     
     fetchContacts();
-    const contactInterval = setInterval(() => {
+    
+    // Initialize Pusher
+    Pusher.logToConsole = true;
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY || 'your-pusher-app-key', {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER || 'your-pusher-cluster',
+      forceTLS: true
+    });
+
+    // Subscribe to a public channel specific to the logged-in user
+    const channel = pusher.subscribe(`chat.${user.id}`);
+    
+    channel.bind('message.sent', function(data) {
+      const incomingMessage = data.message;
+      
+      // Update contacts (for unread counts)
       fetchContacts();
-    }, 5000);
+      
+      // If we are currently chatting with the sender, append the message
+      if (selectedContactRef.current && selectedContactRef.current.id === incomingMessage.sender_id) {
+        setMessages(prev => {
+          // Prevent duplicates
+          if (prev.some(m => m.id === incomingMessage.id)) return prev;
+          return [...prev, incomingMessage];
+        });
+        
+        // Mark as read immediately since we are viewing it
+        api.get(`/api/messages/${incomingMessage.sender_id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(err => console.error("Error marking read:", err));
+      }
+    });
+
     return () => {
-      clearInterval(contactInterval);
+      channel.unbind_all();
+      channel.unsubscribe();
+      pusher.disconnect();
     };
-  }, [isInitialized, token, contactIdParam]); // Added contactIdParam to trigger refetch when URL changes
+  }, [isInitialized, token, user, contactIdParam]); // contactIdParam to trigger fetchContacts on URL change
 
   useEffect(() => {
     if (selectedContact) {
       fetchMessages(selectedContact.id);
-      if (pollingInterval.current) clearInterval(pollingInterval.current);
-      pollingInterval.current = setInterval(() => {
-        fetchMessages(selectedContact.id, false);
-      }, 3000);
-    } else {
-      if (pollingInterval.current) clearInterval(pollingInterval.current);
     }
   }, [selectedContact]);
 

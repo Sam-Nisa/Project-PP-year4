@@ -158,15 +158,6 @@ export default function Login() {
                 />
                 Login with Google
               </button>
-
-              <button className="flex items-center border border-gray-300 rounded-lg px-3 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
-                <img
-                  src="/login/facebook.png"
-                  alt="GitHub"
-                  className="w-8 h-8 mr-2"
-                />
-                login with facebook
-              </button>
             </div>
 
             <p className="text-center text-gray-600">

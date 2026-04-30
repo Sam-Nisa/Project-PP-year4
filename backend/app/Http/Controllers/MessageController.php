@@ -84,6 +84,9 @@ class MessageController extends Controller
         if ($receiver) {
             $receiver->notify(new NewMessageNotification($message, Auth::user()));
         }
+
+        // Broadcast the message via Pusher
+        broadcast(new \App\Events\MessageSent($message))->toOthers();
         
         return response()->json($message, 201);
     }
