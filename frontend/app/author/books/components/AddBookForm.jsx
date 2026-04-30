@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Loader2, FileText, Image, X, User } from "lucide-react";
 import { useUploadStore } from "../../../store/upload";
+import { useGenreStore } from "../../../store/useGenreStore";
 
 export default function AddBookForm({ 
   genres, 
@@ -11,6 +12,7 @@ export default function AddBookForm({
   error 
 }) {
   const { uploadFile, uploadMultipleFiles, uploading, uploadProgress, error: uploadError, resetUpload } = useUploadStore();
+  const { createGenre } = useGenreStore();
   
   const [newBook, setNewBook] = useState({
     title: "",
@@ -33,6 +35,27 @@ export default function AddBookForm({
   const [imagePreviews, setImagePreviews] = useState([]);
   const [pdfPreview, setPdfPreview] = useState(null);
   const [uploadStep, setUploadStep] = useState(null); // Track upload progress
+
+  const [showAddGenre, setShowAddGenre] = useState(false);
+  const [newGenreName, setNewGenreName] = useState("");
+  const [addingGenre, setAddingGenre] = useState(false);
+
+  const handleAddGenre = async () => {
+    if (!newGenreName.trim()) return;
+    setAddingGenre(true);
+    try {
+      const created = await createGenre({ name: newGenreName });
+      if (created && created.id) {
+        setNewBook(prev => ({ ...prev, genre_id: created.id }));
+        setNewGenreName("");
+        setShowAddGenre(false);
+      }
+    } catch (err) {
+      alert("Failed to add genre");
+    } finally {
+      setAddingGenre(false);
+    }
+  };
 
 
   const handleChangeNewBook = (e) => {
@@ -205,22 +228,52 @@ export default function AddBookForm({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Genre <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="genre_id"
-              value={newBook.genre_id}
-              onChange={handleChangeNewBook}
-              className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            >
-              <option value="">Select Genre</option>
-              {(genres || []).map((genre) => (
-                <option key={genre.id} value={genre.id}>
-                  {genre.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Genre <span className="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowAddGenre(!showAddGenre)}
+                className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+              >
+                {showAddGenre ? "Cancel" : "+ Add Genre"}
+              </button>
+            </div>
+            
+            {showAddGenre ? (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="New Genre Name"
+                  value={newGenreName}
+                  onChange={(e) => setNewGenreName(e.target.value)}
+                  className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddGenre}
+                  disabled={addingGenre || !newGenreName.trim()}
+                  className="bg-blue-600 text-white px-4 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {addingGenre ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
+                </button>
+              </div>
+            ) : (
+              <select
+                name="genre_id"
+                value={newBook.genre_id}
+                onChange={handleChangeNewBook}
+                className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                <option value="">Select Genre</option>
+                {(genres || []).map((genre) => (
+                  <option key={genre.id} value={genre.id}>
+                    {genre.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>

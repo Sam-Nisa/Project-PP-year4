@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FaTachometerAlt, FaBook, FaCogs, FaChartLine, FaCreditCard, FaDollarSign, FaEnvelope } from "react-icons/fa";
+import { FaTachometerAlt, FaBook, FaCogs, FaChartLine, FaCreditCard, FaDollarSign, FaEnvelope, FaTags } from "react-icons/fa";
 import { useLanguageStore } from "../store/useLanguageStore";
 import { translations } from "../utils/translations";
 
@@ -10,9 +10,9 @@ export default function AuthorSidebar() {
   const pathname = usePathname();
   const { language } = useLanguageStore();
   const t = translations[language];
-
   const links = [
     { name: t.dashboard, href: "/author/dashboard", icon: <FaTachometerAlt color="#4E8D7C" /> },
+    { name: t.genres, href: "/author/manage-genres", icon: <FaTags color="#3B82F6" /> },
     { name: t.books, href: "/author/books", icon: <FaBook color="#EF4444" /> },
     { name: t.sales, href: "/author/sales", icon: <FaChartLine color="#EC4899" /> },
     { name: t.earnings, href: "/author/payouts", icon: <FaDollarSign color="#10B981" /> },

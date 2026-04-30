@@ -11,7 +11,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Notification;
 use App\Services\ImageKitService;
+use App\Notifications\AdminPaymentToAuthorNotification;
 
 class AdminPayoutController extends Controller
 {
@@ -205,6 +207,16 @@ class AdminPayoutController extends Controller
             $balance = OwnerBalance::where('owner_id', $payout->owner_id)->first();
             if ($balance) {
                 $balance->increment('total_withdrawn', $payout->amount);
+            }
+
+            // Notify Author
+            try {
+                $author = User::find($payout->owner_id);
+                if ($author) {
+                    $author->notify(new AdminPaymentToAuthorNotification($payout));
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to send AdminPaymentToAuthorNotification: ' . $e->getMessage());
             }
 
             Log::info('Admin confirmed payout', [

@@ -44,9 +44,9 @@ class GenreController extends Controller
 {
     $currentUser = JWTAuth::parseToken()->authenticate();
 
-    if ($currentUser->role !== 'admin') {
+    if ($currentUser->role !== 'admin' && $currentUser->role !== 'author') {
         return response()->json([
-            'error' => 'Unauthorized. Only admin can create genres.'
+            'error' => 'Unauthorized. Only admin and author can create genres.'
         ], 403);
     }
 

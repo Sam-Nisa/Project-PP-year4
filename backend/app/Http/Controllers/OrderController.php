@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
+use App\Models\User;
+use App\Notifications\OrderPaidNotification;
 
 class OrderController extends Controller
 {
@@ -241,6 +244,14 @@ class OrderController extends Controller
 
             DB::commit();
 
+            // Send notification to admins
+            try {
+                $admins = User::where('role', 'admin')->get();
+                Notification::send($admins, new OrderPaidNotification($order));
+            } catch (\Exception $e) {
+                Log::error('Failed to send OrderPaidNotification to admins: ' . $e->getMessage());
+            }
+
             return response()->json([
                 'message' => 'Order created successfully',
                 'order' => $order->load('items.book')
@@ -345,6 +356,14 @@ class OrderController extends Controller
             Cache::forget("pending_order_{$pendingOrderId}");
 
             DB::commit();
+
+            // Send notification to admins
+            try {
+                $admins = User::where('role', 'admin')->get();
+                Notification::send($admins, new OrderPaidNotification($order));
+            } catch (\Exception $e) {
+                Log::error('Failed to send OrderPaidNotification to admins: ' . $e->getMessage());
+            }
 
             // Send Telegram notification
             try {
