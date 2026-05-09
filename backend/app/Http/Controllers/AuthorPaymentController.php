@@ -147,9 +147,9 @@ class AuthorPaymentController extends Controller
             $validated = $request->validate([
                 'bakong_account_id' => 'required|string|max:255',
                 'bakong_merchant_name' => 'required|string|max:255',
-                'bakong_merchant_city' => 'required|string|max:255',
+                'bakong_merchant_city' => 'nullable|string|max:255',
                 'bakong_merchant_id' => 'nullable|string|max:255',
-                'bakong_acquiring_bank' => 'required|string|max:255',
+                'bakong_acquiring_bank' => 'nullable|string|max:255',
                 'bakong_mobile_number' => 'nullable|string|max:20',
             ]);
 

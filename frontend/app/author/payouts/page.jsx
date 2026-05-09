@@ -10,6 +10,10 @@ export default function AuthorPayoutsPage() {
   const [payouts, setPayouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [proofModal, setProofModal] = useState(null);
+  const [requestModal, setRequestModal] = useState(false);
+  const [requestAmount, setRequestAmount] = useState('');
+  const [requestMethod, setRequestMethod] = useState('bakong');
+  const [requesting, setRequesting] = useState(false);
   const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
@@ -72,9 +76,49 @@ export default function AuthorPayoutsPage() {
     }
   };
 
+  const handleRequestPayout = async (e) => {
+    e.preventDefault();
+    if (!requestAmount || isNaN(requestAmount) || Number(requestAmount) <= 0) {
+      alert('Please enter a valid amount.');
+      return;
+    }
+    if (Number(requestAmount) > Number(balance?.available_balance || 0)) {
+      alert('Amount exceeds available balance.');
+      return;
+    }
+
+    try {
+      setRequesting(true);
+      await request('/api/payouts/request', 'POST', {
+        amount: Number(requestAmount),
+        payment_method: requestMethod,
+      }, {}, token);
+      
+      alert('Payout requested successfully!');
+      setRequestModal(false);
+      setRequestAmount('');
+      fetchData();
+    } catch (error) {
+      console.error('Error requesting payout:', error);
+      alert('Failed to request payout: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setRequesting(false);
+    }
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">My Earnings</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">My Earnings</h1>
+        {token && balance?.available_balance > 0 && (
+          <button
+            onClick={() => setRequestModal(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium shadow-sm flex items-center gap-2"
+          >
+            Request Withdrawal
+          </button>
+        )}
+      </div>
 
       {!token ? (
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
@@ -269,6 +313,72 @@ export default function AuthorPayoutsPage() {
                     Close
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+          {/* Request Payout Modal */}
+          {requestModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                <h3 className="text-xl font-bold mb-4">Request Withdrawal</h3>
+                
+                <form onSubmit={handleRequestPayout}>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Available Balance
+                    </label>
+                    <div className="text-xl font-bold text-green-600">
+                      ${Number(balance?.available_balance || 0).toFixed(2)}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Amount to Withdraw ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="1"
+                      max={balance?.available_balance || 0}
+                      value={requestAmount}
+                      onChange={(e) => setRequestAmount(e.target.value)}
+                      className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter amount"
+                      required
+                    />
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Payment Method
+                    </label>
+                    <div className="w-full border rounded px-3 py-2 bg-gray-50 text-gray-600 cursor-not-allowed">
+                      Bakong
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      All payouts are processed via Bakong. Ensure your account is setup in <a href="/author/payment" className="text-blue-500 hover:underline">Payment Settings</a>.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRequestModal(false)}
+                      className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 transition"
+                      disabled={requesting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={requesting || !requestAmount || Number(requestAmount) <= 0 || Number(requestAmount) > Number(balance?.available_balance)}
+                      className="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                    >
+                      {requesting ? 'Submitting...' : 'Submit Request'}
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}

@@ -95,6 +95,24 @@ export default function AdminPayoutsNewPage() {
     }
   };
 
+  const handleCancelPayout = async (payoutId) => {
+    const reason = prompt('Please enter a reason for cancelling this payout (optional):');
+    if (reason === null) return; // User clicked Cancel in the prompt
+
+    try {
+      await request(`/api/admin/payouts/${payoutId}/cancel`, 'POST', { reason }, {}, token);
+      
+      alert('Payout cancelled and balance restored to author.');
+      fetchPayoutHistory();
+      if (activeTab === 'authors') {
+          fetchAuthors();
+      }
+    } catch (error) {
+      console.error('Error cancelling payout:', error);
+      alert('Failed to cancel payout: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
   const PayoutModal = ({ author, onClose }) => {
     const [amount, setAmount] = useState(author.available_balance);
     const [paymentMethod, setPaymentMethod] = useState(author.payment_method || 'bank_transfer');
@@ -628,7 +646,7 @@ export default function AdminPayoutsNewPage() {
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
             >
-              Payout History
+              Payout Requests & History
             </button>
           </div>
 
@@ -714,8 +732,8 @@ export default function AdminPayoutsNewPage() {
           {activeTab === 'history' && (
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="px-6 py-4 border-b bg-gray-50">
-                <h2 className="text-xl font-bold">Payout History</h2>
-                <p className="text-sm text-gray-600">All payout transactions</p>
+                <h2 className="text-xl font-bold">Payout Requests & History</h2>
+                <p className="text-sm text-gray-600">All payout transactions and pending requests from authors</p>
               </div>
 
               {loading ? (
@@ -757,6 +775,7 @@ export default function AdminPayoutsNewPage() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 py-1 text-xs rounded-full ${payout.status === 'completed' ? 'bg-green-100 text-green-800' :
                                 payout.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
+                                payout.status === 'pending' ? 'bg-orange-100 text-orange-800' :
                                   payout.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                                     'bg-gray-100 text-gray-800'
                               }`}>
@@ -785,13 +804,21 @@ export default function AdminPayoutsNewPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <div className="flex items-center gap-2">
-                              {payout.status === 'processing' && (
-                                <button
-                                  onClick={() => setShowConfirmModal(payout)}
-                                  className="text-green-600 hover:text-green-800 font-medium"
-                                >
-                                  Confirm
-                                </button>
+                              {(payout.status === 'processing' || payout.status === 'pending') && (
+                                <>
+                                  <button
+                                    onClick={() => setShowConfirmModal(payout)}
+                                    className="text-green-600 hover:text-green-800 font-medium"
+                                  >
+                                    Confirm
+                                  </button>
+                                  <button
+                                    onClick={() => handleCancelPayout(payout.id)}
+                                    className="text-red-600 hover:text-red-800 font-medium ml-2"
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
                               )}
                               {(payout.status === 'completed' || payout.status === 'cancelled') && (
                                 <button

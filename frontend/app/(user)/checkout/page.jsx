@@ -101,9 +101,7 @@ const CheckoutPage = () => {
     lastName: "",
     address: "",
     city: "",
-    state: "",
     country: "",
-    zipCode: "", // Add zip code field
     paymentMethod: "bakong", // Default to Bakong
   });
 
@@ -437,7 +435,6 @@ const CheckoutPage = () => {
           email: formData.email,
           address: formData.address,
           city: formData.city,
-          zip_code: formData.zipCode, // Add zip code
         }
       };
 
@@ -511,7 +508,7 @@ const CheckoutPage = () => {
         <div className="mb-8">
           <Link
             href={isBuyNow ? `/book/${buyNowProduct?.id}` : "/add-to-cart"}
-            className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-4"
+            className="inline-flex items-center space-x-2 text-[#8d705b] hover:text-[#8d705b] mb-4"
           >
             <ArrowLeftIcon className="w-5 h-5" />
             <span>{isBuyNow ? "Back to Product" : "Back to Cart"}</span>
@@ -553,7 +550,7 @@ const CheckoutPage = () => {
                 </h2>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm focus:outline-none font-medium  text-gray-700 mb-1">
                       First Name <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -571,7 +568,7 @@ const CheckoutPage = () => {
 
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium focus:outline-none text-gray-700 mb-1">
                       Last Name <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -588,7 +585,7 @@ const CheckoutPage = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                 <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium focus:outline-none text-gray-700 mb-1">
                     Address <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -602,7 +599,7 @@ const CheckoutPage = () => {
                 </div>
                 <div className="mt-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium focus:outline-none text-gray-700 mb-1">
                       City <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -617,34 +614,6 @@ const CheckoutPage = () => {
                 </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      State/Province
-                    </label>
-                    <input
-                      type="text"
-                      name="state"
-                      value={formData.state}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Zip Code <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="zipCode"
-                      value={formData.zipCode}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
                 
               </div>
 
@@ -654,7 +623,7 @@ const CheckoutPage = () => {
                   Payment Method
                 </h2>
                 <div className="space-y-3">
-                  <div className="p-4 border-2 border-blue-500 bg-blue-50 rounded-lg">
+                  <div className="p-4 border-2 border-[#E5DFD5] bg-[#FDFBF7] rounded-lg">
                     <div className="flex items-center">
                       <input
                         type="radio"
@@ -665,15 +634,15 @@ const CheckoutPage = () => {
                         className="mr-3"
                       />
                       <div className="flex items-center">
-                        <span className="font-medium text-blue-800">Bakong QR Payment</span>
-                        <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-1 rounded">Only Available</span>
+                        <span className="font-medium text-[#8d705b]">Bakong QR Payment</span>
+                        <span className="ml-2 text-xs bg-[#8d705b] text-white px-2 py-1 rounded">Only Available</span>
                       </div>
                     </div>
-                    <p className="text-sm text-blue-700 mt-2 ml-6">
+                    <p className="text-sm text-[#8d705b] mt-2 ml-6">
                       Secure instant payment via Cambodia's national payment system
                     </p>
                   </div>
-                </div>
+                  </div>
               </div>
 
               {/* Discount Code */}
@@ -709,14 +678,14 @@ const CheckoutPage = () => {
                       value={discountCode}
                       onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
                       placeholder="Enter discount code"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none   focus:border-transparent"
                       onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleApplyDiscount())}
                     />
                     <button
                       type="button"
                       onClick={handleApplyDiscount}
                       disabled={!discountCode.trim() || isApplyingDiscount}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-4 py-2 bg-[#A98B76] text-white rounded-lg hover:bg-[#8d705b] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {isApplyingDiscount ? "Applying..." : "Apply"}
                     </button>
@@ -728,8 +697,8 @@ const CheckoutPage = () => {
                 type="submit"
                 disabled={isSubmitting || isGeneratingQR}
                 className={`w-full font-medium py-3 px-4 rounded-lg transition-colors ${isSubmitting || isGeneratingQR
-                    ? "bg-gray-400 text-gray-700 cursor-not-allowed"
-                    : "bg-teal-600 hover:bg-teal-700 text-white"
+                  ? "bg-gray-400 text-gray-700 cursor-not-allowed"
+                  : "bg-[#A98B76] hover:bg-[#8f715c] text-white"
                   }`}
               >
                 {isSubmitting ? "Processing..." : isGeneratingQR ? "Generating QR..." : "Complete Order"}
@@ -805,59 +774,6 @@ const CheckoutPage = () => {
               })}
             </div>
 
-            {/* Payment Method Info */}
-            {checkoutItems.length > 0 && (
-              <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center space-x-2 mb-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <p className="text-sm font-medium text-blue-800">Bakong Payment</p>
-                </div>
-                {appliedDiscount ? (
-                  <div>
-                    <p className="text-sm text-blue-700">
-                      Payment will go to <strong>Admin Account</strong> (discount applied)
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      Merchant: NISA SAM • Account: nisa_sam@bkrt
-                    </p>
-                  </div>
-                ) : isMultiVendor ? (
-                  <div>
-                    <p className="text-sm text-blue-700">
-                      <strong>Multi-Vendor Order</strong> - Payment will go to Admin Account
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      Merchant: NISA SAM • Account: nisa_sam@bkrt
-                    </p>
-                    <div className="mt-2 p-2 bg-blue-100 rounded">
-                      <p className="text-xs text-blue-800 font-medium">📚 Authors in this order:</p>
-                      <p className="text-xs text-blue-700">
-                        {uniqueAuthors.join(', ')}
-                      </p>
-                      <p className="text-xs text-blue-600 mt-1">
-                        Admin will distribute payments to each author
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-sm text-blue-700">
-                      Payment destination will be determined based on book author
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      • Author books → Author's account<br/>
-                      • Admin books → Admin account (nisa_sam@bkrt)
-                    </p>
-                    {isBuyNow && buyNowProduct && (
-                      <p className="text-xs text-blue-600 mt-2 font-medium">
-                        📦 Buy Now: {buyNowProduct.title}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Totals */}
             <div className="space-y-3 border-t border-gray-200 pt-4">
               <div className="flex justify-between text-sm">
@@ -866,17 +782,17 @@ const CheckoutPage = () => {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Shipping</span>
-                <span className="font-medium text-green-600">Free</span>
+                <span className="font-medium text-[#A98B76]">Free</span>
               </div>
               {appliedDiscount && discountAmount > 0 && (
-                <div className="flex justify-between text-sm text-green-600">
+                <div className="flex justify-between text-sm text-[#A98B76]">
                   <span >Discount ({appliedDiscount.code})</span>
                   <span>-${discountAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-3">
                 <span>Total</span>
-                <span className="text-teal-600">${totalAmount.toFixed(2)}</span>
+                <span className="text-[#A98B76] text-xl">${totalAmount.toFixed(2)}</span>
               </div>
             </div>
 

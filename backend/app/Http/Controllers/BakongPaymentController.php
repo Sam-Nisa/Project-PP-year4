@@ -72,50 +72,31 @@ class BakongPaymentController extends Controller
                 $hasDiscountCode = !empty($order->discount_code) && $order->discount_code !== null;
             }
 
-            // Determine which account to use based on discount code and book author
+            // Determine which account to use
+            // ALWAYS use admin account for all payments (Admin will handle 10% commission later)
+            $bakongAccount = $this->getAdminBakongAccount();
+            $accountType = 'admin';
+            
             if ($hasDiscountCode) {
-                // If there's a discount code, always use admin account
-                $bakongAccount = $this->getAdminBakongAccount();
-                $accountType = 'admin';
                 $reason = 'discount_code_applied';
             } else {
-                // Try to get author's account first
-                $authorAccount = $this->getAuthorBakongAccount($orderItems, $orderId);
-                
-                if ($authorAccount) {
-                    // Check if this is actually admin account (book created by admin or multi-vendor)
-                    if ($authorAccount['account_id'] === config('services.bakong.account_id')) {
-                        $bakongAccount = $authorAccount;
-                        $accountType = 'admin';
-                        
-                        // Determine specific reason for admin account usage
-                        $authorIds = [];
-                        foreach ($orderItems as $item) {
-                            $bookId = $item['book_id'] ?? null;
-                            if ($bookId) {
-                                $book = \App\Models\Book::find($bookId);
-                                if ($book && $book->author_id) {
-                                    $authorIds[] = $book->author_id;
-                                }
-                            }
+                // Check if it's a multi-vendor order or single author order to set the reason
+                $authorIds = [];
+                foreach ($orderItems as $item) {
+                    $bookId = $item['book_id'] ?? null;
+                    if ($bookId) {
+                        $book = \App\Models\Book::find($bookId);
+                        if ($book && $book->author_id) {
+                            $authorIds[] = $book->author_id;
                         }
-                        $uniqueAuthors = array_unique($authorIds);
-                        
-                        if (count($uniqueAuthors) > 1) {
-                            $reason = 'multi_vendor_order';
-                        } else {
-                            $reason = 'book_created_by_admin';
-                        }
-                    } else {
-                        $bakongAccount = $authorAccount;
-                        $accountType = 'author';
-                        $reason = 'single_author_payment';
                     }
+                }
+                $uniqueAuthors = array_unique($authorIds);
+                
+                if (count($uniqueAuthors) > 1) {
+                    $reason = 'multi_vendor_order_admin_payment';
                 } else {
-                    // Fallback to admin account if author account not available
-                    $bakongAccount = $this->getAdminBakongAccount();
-                    $accountType = 'admin';
-                    $reason = 'author_account_not_configured';
+                    $reason = 'author_book_admin_payment';
                 }
             }
             

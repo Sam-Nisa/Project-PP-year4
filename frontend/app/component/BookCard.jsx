@@ -156,7 +156,7 @@ const BookCardComponent = ({ book }) => {
           {/* Wishlist */}
           <button
             onClick={toggleWishlist}
-            className="bg-white p-2 rounded-lg shadow hover:bg-gray-200"
+            className="bg-white p-2 flex-shrink-0 rounded-lg shadow hover:bg-gray-200"
           >
             {isCurrentlyWishlisted ? (
               <HeartSolidIcon className="w-5 h-5 text-red-500" />
@@ -169,13 +169,13 @@ const BookCardComponent = ({ book }) => {
           <button
             onClick={handleAddToCart}
             disabled={isAddingToCart}
-            className={`flex items-center gap-2 px-10 py-2 rounded-xl font-bold transition-all ${isAddingToCart
+            className={`flex flex-1 ml-2 items-center justify-center gap-1 sm:gap-2 px-2 py-2 rounded-xl font-bold transition-all ${isAddingToCart
               ? 'bg-[#7b583d] cursor-not-allowed'
               : 'bg-[#8d705b] hover:shadow-xl'
               } text-white`}
           >
-            <ShoppingCartIcon className="w-5 h-5" />
-            <span className="text-sm">{isAddingToCart ? 'Adding...' : 'Add to Cart'}</span>
+            <ShoppingCartIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-xs sm:text-sm whitespace-nowrap">{isAddingToCart ? 'Adding...' : 'Add to Cart'}</span>
           </button>
         </div>
       </div>

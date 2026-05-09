@@ -117,9 +117,9 @@ export default function Sidebar({ user, onLogout }) {
     // ... (rest of SidebarLink component remains the same)
     const baseClasses =
       "flex items-center w-full gap-3 px-4 py-3 transition duration-150 ease-in-out cursor-pointer";
-    const activeClasses = "bg-indigo-50 text-indigo-700 font-semibold border-r-4 border-indigo-600";
+    const activeClasses = "bg-[#A47251] text-white font-semibold border-r-4 border-[#A47251]";
     const inactiveClasses = "text-gray-600 hover:bg-gray-100";
-
+    
     return (
       <Link
         href={item.href}
@@ -154,7 +154,7 @@ export default function Sidebar({ user, onLogout }) {
                   />
                 </div>
               ) : (
-                <div className={`flex items-center justify-center bg-indigo-500 text-white font-bold rounded-full mb-2 uppercase ${collapsed ? "w-10 h-10 text-xl" : "w-16 h-16 text-2xl"} transition-all duration-300`}>
+                <div className={`flex items-center justify-center bg-[#A47251] text-white font-bold rounded-full mb-2 uppercase ${collapsed ? "w-10 h-10 text-xl" : "w-16 h-16 text-2xl"} transition-all duration-300`}>
                   {user.name ? user.name.charAt(0) : "?"}
                 </div>
               )}
@@ -167,7 +167,7 @@ export default function Sidebar({ user, onLogout }) {
           ) : (
             <Link
               href="/login"
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+              className="px-4 py-2 bg-[#A47251] text-white rounded hover:bg-[#a4725193] transition"
             >
               Login
             </Link>

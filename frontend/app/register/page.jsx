@@ -44,10 +44,10 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex justify-center items-center p-10">
-      <div className="flex w-full max-w-6xl bg-white rounded-2xl shadow-lg overflow-hidden">
+    <div className="min-h-screen bg-gray-100 flex justify-center items-center p-4 sm:p-8 md:p-10">
+      <div className="flex flex-col md:flex-row w-full max-w-6xl bg-white rounded-2xl shadow-lg overflow-hidden">
         {/* Left Section */}
-        <div className="w-1/2 bg-gradient-to-br from-blue-600 to-pink-800 flex flex-col justify-start items-center p-10 text-white relative">
+        <div className="hidden md:flex md:w-1/2 bg-[#A98B76] flex-col justify-start items-center p-10 text-white relative">
           <div className="absolute top-8 left-8 flex items-center space-x-2">
             <BookOpen className="h-8 w-8 text-yellow-400" />
             <span className="text-2xl font-bold">BookHaven</span>
@@ -70,9 +70,15 @@ const Register = () => {
         </div>
 
         {/* Right Section */}
-        <div className="w-1/2 flex flex-col justify-center items-center p-10 bg-white">
+        <div className="w-full md:w-1/2 flex flex-col justify-center items-center p-8 md:p-10 bg-white">
           <div className="w-full max-w-md">
-            <h1 className="text-3xl font-bold mb-8 text-center text-gray-800">
+            {/* Mobile Logo */}
+            <div className="md:hidden flex justify-center items-center space-x-2 mb-6">
+              <BookOpen className="h-8 w-8 text-[#A98B76]" />
+              <span className="text-2xl font-bold text-[#A98B76]">BookHaven</span>
+            </div>
+
+            <h1 className="text-2xl md:text-3xl font-bold mb-8 text-center text-gray-800">
               Create Your Account
             </h1>
 
@@ -85,7 +91,7 @@ const Register = () => {
                   placeholder="Full Name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border-b border-gray-300 focus:outline-none focus:border-purple-500 text-lg"
+                  className="w-full px-4 py-3 border-b border-gray-300 focus:outline-none focus:border-[#A98B76] text-lg"
                   required
                 />
               </div>
@@ -98,7 +104,7 @@ const Register = () => {
                   placeholder="Email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border-b border-gray-300 focus:outline-none focus:border-purple-500 text-lg"
+                  className="w-full px-4 py-3 border-b border-gray-300 focus:outline-none focus:border-[#A98B76] text-lg"
                   required
                 />
               </div>
@@ -111,7 +117,7 @@ const Register = () => {
                   placeholder="Password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border-b border-gray-300 focus:outline-none focus:border-purple-500 text-lg pr-10"
+                  className="w-full px-4 py-3 border-b border-gray-300 focus:outline-none focus:border-[#A98B76] text-lg pr-10"
                   required
                 />
                 <span
@@ -130,7 +136,7 @@ const Register = () => {
                   placeholder="Confirm Password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border-b border-gray-300 focus:outline-none focus:border-purple-500 text-lg pr-10"
+                  className="w-full px-4 py-3 border-b border-gray-300 focus:outline-none focus:border-[#A98B76] text-lg pr-10"
                   required
                 />
                 <span
@@ -145,9 +151,9 @@ const Register = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg transition-colors mb-6"
+                className="w-full bg-[#A98B76] hover:bg-[#896d59] text-white font-semibold py-3 rounded-lg transition-colors mb-6"
               >
-                {loading ? "Creating account..." : "Sign Up"}
+                {loading ? "Creating account..." : "Sign Up"} 
               </button>
 
               <div className="flex justify-center space-x-4 mb-8">
@@ -179,7 +185,7 @@ const Register = () => {
               Already have an account?{" "}
               <Link
                 href="/login"
-                className="text-blue-600 font-semibold hover:underline"
+                className="text-[#A98B76] font-semibold hover:underline"
               >
                 Log In
               </Link>

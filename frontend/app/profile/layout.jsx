@@ -19,7 +19,7 @@ export default function UserLayout({ children }) {
         <Sidebar user={user} onLogout={logout} />
 
         {/* Page content */}
-        <main className="flex-1 p-6 bg-gray-50">{children}</main>
+        <main className="flex-1 p-6 bg-white">{children}</main>
       </div>
 
       {/* Footer */}

@@ -41,7 +41,7 @@ export default function Header() {
   const { cartItems, cartCount, fetchCartCount } = useAddToCartStore();
   const { wishlists } = useWishlistStore();
   const { clearSearch } = useSearchStore();
-  
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isGenresDropdownOpen, setIsGenresDropdownOpen] = useState(false);
@@ -167,7 +167,9 @@ export default function Header() {
 
           {/* Actions */}
           <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
-            <LanguageSwitcher variant="dark" />
+            <div className="hidden sm:block">
+              <LanguageSwitcher variant="dark" />
+            </div>
             {/* Mobile Search Toggle */}
             <button
               onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
@@ -321,9 +323,8 @@ const DropdownNavLink = ({
     >
       {title}
       <ChevronDown
-        className={`ml-1 w-4 h-4 transition-transform ${
-          isOpen ? "rotate-180" : ""
-        }`}
+        className={`ml-1 w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""
+          }`}
       />
     </button>
 
@@ -407,17 +408,15 @@ const MobileMenu = ({
   <>
     {/* Backdrop */}
     <div
-      className={`fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
-        isOpen ? "opacity-100 z-40" : "opacity-0 pointer-events-none"
-      }`}
+      className={`fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${isOpen ? "opacity-100 z-40" : "opacity-0 pointer-events-none"
+        }`}
       onClick={onClose}
     ></div>
 
     {/* Sidebar */}
     <div
-      className={`fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-[#A47251] shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden z-50 ${
-        isOpen ? "translate-x-0" : "translate-x-full"
-      }`}
+      className={`fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-[#A47251] shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden z-50 ${isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
     >
       <div className="flex flex-col h-full">
         {/* Header */}
@@ -471,6 +470,9 @@ const MobileMenu = ({
 
           {/* User Section */}
           <div className="mt-6 px-4 pt-6 border-t border-white/20">
+            <div className="mb-4 sm:hidden">
+              <LanguageSwitcher variant="dark" />
+            </div>
             {!isInitialized || loading ? (
               <div className="px-4 py-3 bg-white/10 rounded-lg">
                 <div className="h-6 bg-white/20 rounded animate-pulse"></div>

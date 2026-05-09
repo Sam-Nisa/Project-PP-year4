@@ -53,7 +53,7 @@ export default function Profile() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="flex flex-col items-center p-6 bg-white rounded-xl shadow-lg">
-          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+          <Loader2 className="w-8 h-8 text-[#A47251] animate-spin" />
           <p className="mt-3 text-gray-700">Loading profile...</p>
         </div>
       </div>
@@ -84,7 +84,7 @@ export default function Profile() {
   const ProfileItem = ({ label, value, Icon }) => (
     <div className="flex items-start justify-between py-3 border-b border-gray-100 last:border-b-0">
       <div className="flex items-center">
-        <Icon className="w-5 h-5 text-indigo-500 mr-3 shrink-0" />
+        <Icon className="w-5 h-5 text-[#A47251] mr-3 shrink-0" />
         <span className="font-medium text-gray-700">{label}:</span>
       </div>
       <p className="text-gray-900 break-all ml-4 text-right">{value}</p>
@@ -95,7 +95,7 @@ export default function Profile() {
     <div className="min-h-screen flex justify-center py-10 sm:py-20 bg-gray-50">
       <div className="w-full max-w-2xl mx-4 bg-white shadow-2xl rounded-xl overflow-hidden">
         {/* 🔹 Header */}
-        <div className="bg-indigo-600 p-8 flex flex-col items-center">
+        <div className="bg-[#A47251] p-8 flex flex-col items-center">
           <div className="relative mb-4">
             {user.avatar_url ? (
               <img
@@ -117,7 +117,7 @@ export default function Profile() {
           <h2 className="text-3xl font-bold text-white">
             {user.name || "User"}
           </h2>
-          <p className="text-indigo-200">{user.role || "User"}</p>
+          <p className="text-white font-semibold">{user.role || "User"}</p>
         </div>
 
         {/* 🔹 Details */}

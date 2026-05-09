@@ -8,6 +8,8 @@ use App\Models\OwnerBalance;
 use App\Models\OrderItem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\User;
+use App\Notifications\PayoutRequestedNotification;
 
 class PayoutService
 {
@@ -41,6 +43,13 @@ class PayoutService
                 'owner_id' => $ownerId,
                 'amount' => $amount,
             ]);
+
+            // Notify all admins
+            $admins = User::where('role', 'admin')->get();
+            $author = User::find($ownerId);
+            foreach ($admins as $admin) {
+                $admin->notify(new PayoutRequestedNotification($payout, $author));
+            }
 
             DB::commit();
             return $payout;

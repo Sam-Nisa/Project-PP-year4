@@ -147,14 +147,6 @@ export default function AuthorDashboardPage() {
       iconBg: "bg-orange-500/10",
       iconColor: "text-orange-500",
     },
-    {
-      title: "Revenue",
-      value: `$${stats.totalRevenue || 0}`,
-      percent: `+${stats.revenueGrowth || "0%"}`,
-      icon: DollarSign,
-      iconBg: "bg-emerald-500/10",
-      iconColor: "text-emerald-500",
-    },
   ];
 
   // Book status distribution for pie chart

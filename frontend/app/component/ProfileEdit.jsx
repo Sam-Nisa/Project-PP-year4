@@ -72,7 +72,7 @@ export default function ProfileEdit({ user, onCancel, onSave, saving }) {
             {formData.name ? formData.name.charAt(0) : "?"}
           </div>
         )}
-        <label className="mt-4 cursor-pointer text-indigo-600 hover:underline text-sm">
+        <label className="mt-4 cursor-pointer text-[#A47251] hover:underline text-sm">
           Change Avatar
           <input type="file" name="avatar" onChange={handleChange} className="hidden" />
         </label>
@@ -85,7 +85,7 @@ export default function ProfileEdit({ user, onCancel, onSave, saving }) {
           name="name"
           value={formData.name}
           onChange={handleChange}
-          className="w-full px-4 py-2 border rounded-lg border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+          className="w-full px-4 py-2 border rounded-lg border-gray-300 focus:ring-2 focus:ring-[#A47251] focus:outline-none"
         />
       </div>
 <div className="mb-6">
@@ -95,7 +95,7 @@ export default function ProfileEdit({ user, onCancel, onSave, saving }) {
     name="email"
     value={formData.email}
     readOnly
-    className="w-full px-4 py-2 border rounded-lg border-gray-300 bg-gray-100 cursor-not-allowed focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+    className="w-full px-4 py-2 border rounded-lg border-gray-300 bg-gray-100 cursor-not-allowed focus:ring-2 focus:ring-[#A47251] focus:outline-none"
   />
 </div>
 
@@ -105,7 +105,7 @@ export default function ProfileEdit({ user, onCancel, onSave, saving }) {
           onClick={handleSubmit}
           disabled={saving}
           className={`flex-1 px-4 py-2 rounded-lg text-white font-semibold transition ${
-            saving ? "bg-indigo-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
+            saving ? "bg-indigo-300 cursor-not-allowed" : "bg-[#A47251] hover:bg-[#a4725193]"
           }`}
         >
           {saving ? "Saving..." : "Save Changes"}

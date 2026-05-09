@@ -27,14 +27,16 @@ class OrderController extends Controller
         try {
             $user = Auth::user();
             // Only show orders that are paid AND payment is completed
-            $orders = Order::with(['items.book' => function($query) {
-                $query->select('id', 'title', 'author_name', 'price', 'images_url');
-            }])
-            ->where('user_id', $user->id)
-            ->where('status', 'paid')
-            ->where('payment_status', 'completed')
-            ->orderBy('created_at', 'desc')
-            ->get();
+            $orders = Order::with([
+                'items.book' => function ($query) {
+                    $query->select('id', 'title', 'author_name', 'price', 'images_url');
+                }
+            ])
+                ->where('user_id', $user->id)
+                ->where('status', 'paid')
+                ->where('payment_status', 'completed')
+                ->orderBy('created_at', 'desc')
+                ->get();
 
             return response()->json([
                 'message' => 'Orders retrieved successfully',
@@ -64,7 +66,6 @@ class OrderController extends Controller
                 'shipping_address.email' => 'required|email',
                 'shipping_address.address' => 'required|string|max:500',
                 'shipping_address.city' => 'required|string|max:255',
-                'shipping_address.zip_code' => 'required|string|max:20',
             ]);
 
             // Get user's cart
@@ -84,7 +85,7 @@ class OrderController extends Controller
 
             foreach ($cart->items as $cartItem) {
                 $book = $cartItem->book;
-                
+
                 // Check stock availability
                 if ($book->stock < $cartItem->quantity) {
                     DB::rollBack();
@@ -128,10 +129,10 @@ class OrderController extends Controller
             // Handle discount code if provided
             $discountCode = null;
             $discountAmount = 0;
-            
+
             if ($request->discount_code) {
                 $discountCode = DiscountCode::where('code', strtoupper($request->discount_code))->first();
-                
+
                 if (!$discountCode || !$discountCode->canBeUsedByUser($user->id)) {
                     DB::rollBack();
                     return response()->json([
@@ -140,12 +141,12 @@ class OrderController extends Controller
                 }
 
                 $discountAmount = $discountCode->calculateDiscount($subtotal);
-                
+
                 if ($discountAmount <= 0) {
                     DB::rollBack();
                     $message = 'Discount code is valid but no discount applied';
                     if ($discountCode->minimum_amount && $subtotal < $discountCode->minimum_amount) {
-                        $message = "Minimum order amount of $" . number_format((float)$discountCode->minimum_amount, 2) . " required";
+                        $message = "Minimum order amount of $" . number_format((float) $discountCode->minimum_amount, 2) . " required";
                     }
                     return response()->json(['error' => $message], 422);
                 }
@@ -157,7 +158,7 @@ class OrderController extends Controller
             if ($request->payment_method === 'bakong') {
                 // Generate a unique pending order ID
                 $pendingOrderId = 'pending_' . time() . '_' . $user->id;
-                
+
                 // Store order data in cache for 15 minutes
                 $orderData = [
                     'user_id' => $user->id,
@@ -173,11 +174,11 @@ class OrderController extends Controller
                     'order_items' => $orderItems,
                     'cart_id' => $cart->id,
                 ];
-                
+
                 Cache::put("pending_order_{$pendingOrderId}", $orderData, now()->addMinutes(15));
-                
+
                 DB::commit();
-                
+
                 return response()->json([
                     'message' => 'Order prepared for payment',
                     'order' => [
@@ -275,7 +276,7 @@ class OrderController extends Controller
         try {
             // Get cached order data
             $orderData = Cache::get("pending_order_{$pendingOrderId}");
-            
+
             if (!$orderData) {
                 throw new \Exception('Pending order data not found or expired');
             }
@@ -323,7 +324,7 @@ class OrderController extends Controller
             $commissionService = new CommissionService();
             $commissionService->processOrderCommission($order);
             $commissionService->distributeEarnings($order);
-            
+
             Log::info('Commission processed and earnings distributed for pending order', [
                 'order_id' => $order->id,
                 'pending_order_id' => $pendingOrderId,
@@ -417,13 +418,13 @@ class OrderController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             Log::info('Admin orders endpoint called', [
                 'user_id' => $user?->id,
                 'user_role' => $user?->role,
                 'filters' => $request->all()
             ]);
-            
+
             // Check if user is admin
             if ($user->role !== 'admin') {
                 Log::warning('Unauthorized access to admin orders', ['user_id' => $user->id, 'role' => $user->role]);
@@ -437,11 +438,11 @@ class OrderController extends Controller
 
             // Build query for orders containing books created by admin
             $query = Order::with(['user:id,name,email', 'items.book:id,title,author_name,author_id'])
-                          ->where('status', 'paid')
-                          ->where('payment_status', 'completed')
-                          ->whereHas('items.book', function($q) use ($adminUserIds) {
-                              $q->whereIn('author_id', $adminUserIds);
-                          });
+                ->where('status', 'paid')
+                ->where('payment_status', 'completed')
+                ->whereHas('items.book', function ($q) use ($adminUserIds) {
+                    $q->whereIn('author_id', $adminUserIds);
+                });
 
             // Apply filters
             if ($request->status && $request->status !== 'all') {
@@ -462,12 +463,12 @@ class OrderController extends Controller
 
             if ($request->search) {
                 $search = $request->search;
-                $query->where(function($q) use ($search) {
+                $query->where(function ($q) use ($search) {
                     $q->where('id', 'like', "%{$search}%")
-                      ->orWhereHas('user', function($userQuery) use ($search) {
-                          $userQuery->where('name', 'like', "%{$search}%")
-                                   ->orWhere('email', 'like', "%{$search}%");
-                      });
+                        ->orWhereHas('user', function ($userQuery) use ($search) {
+                            $userQuery->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        });
                 });
             }
 
@@ -476,10 +477,10 @@ class OrderController extends Controller
 
             // Calculate stats for admin sales only
             $statsQuery = Order::where('status', 'paid')
-                              ->where('payment_status', 'completed')
-                              ->whereHas('items.book', function($q) use ($adminUserIds) {
-                                  $q->whereIn('author_id', $adminUserIds);
-                              });
+                ->where('payment_status', 'completed')
+                ->whereHas('items.book', function ($q) use ($adminUserIds) {
+                    $q->whereIn('author_id', $adminUserIds);
+                });
 
             // Apply same date filters to stats
             if ($request->start_date) {
@@ -490,19 +491,19 @@ class OrderController extends Controller
             }
 
             // Calculate admin-specific revenue (only from admin books)
-            $adminRevenue = OrderItem::whereHas('order', function($q) use ($request) {
-                                $q->where('status', 'paid')->where('payment_status', 'completed');
-                                if ($request->start_date) {
-                                    $q->whereDate('created_at', '>=', $request->start_date);
-                                }
-                                if ($request->end_date) {
-                                    $q->whereDate('created_at', '<=', $request->end_date);
-                                }
-                            })
-                            ->whereHas('book', function($q) use ($adminUserIds) {
-                                $q->whereIn('author_id', $adminUserIds);
-                            })
-                            ->sum('total');
+            $adminRevenue = OrderItem::whereHas('order', function ($q) use ($request) {
+                $q->where('status', 'paid')->where('payment_status', 'completed');
+                if ($request->start_date) {
+                    $q->whereDate('created_at', '>=', $request->start_date);
+                }
+                if ($request->end_date) {
+                    $q->whereDate('created_at', '<=', $request->end_date);
+                }
+            })
+                ->whereHas('book', function ($q) use ($adminUserIds) {
+                    $q->whereIn('author_id', $adminUserIds);
+                })
+                ->sum('total');
 
             $stats = [
                 'total_orders' => $statsQuery->count(),
@@ -538,13 +539,13 @@ class OrderController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             Log::info('Author sales endpoint called', [
                 'user_id' => $user?->id,
                 'user_role' => $user?->role,
                 'filters' => $request->all()
             ]);
-            
+
             // Check if user is author
             if ($user->role !== 'author') {
                 Log::warning('Unauthorized access to author sales', ['user_id' => $user->id, 'role' => $user->role]);
@@ -571,28 +572,28 @@ class OrderController extends Controller
             // Build query for order items of author's books
             $query = OrderItem::with([
                 'book:id,title,author_name,price',
-                'order' => function($q) {
+                'order' => function ($q) {
                     $q->select('id', 'user_id', 'created_at', 'status', 'payment_status')
-                      ->where('status', 'paid')
-                      ->where('payment_status', 'completed')
-                      ->with('user:id,name,email');
+                        ->where('status', 'paid')
+                        ->where('payment_status', 'completed')
+                        ->with('user:id,name,email');
                 }
             ])
-            ->whereIn('book_id', $authorBooks)
-            ->whereHas('order', function($q) {
-                $q->where('status', 'paid')
-                  ->where('payment_status', 'completed');
-            });
+                ->whereIn('book_id', $authorBooks)
+                ->whereHas('order', function ($q) {
+                    $q->where('status', 'paid')
+                        ->where('payment_status', 'completed');
+                });
 
             // Apply date filters
             if ($request->start_date) {
-                $query->whereHas('order', function($q) use ($request) {
+                $query->whereHas('order', function ($q) use ($request) {
                     $q->whereDate('created_at', '>=', $request->start_date);
                 });
             }
 
             if ($request->end_date) {
-                $query->whereHas('order', function($q) use ($request) {
+                $query->whereHas('order', function ($q) use ($request) {
                     $q->whereDate('created_at', '<=', $request->end_date);
                 });
             }
@@ -602,19 +603,19 @@ class OrderController extends Controller
 
             // Calculate stats
             $statsQuery = OrderItem::whereIn('book_id', $authorBooks)
-                                  ->whereHas('order', function($q) {
-                                      $q->where('status', 'paid')
-                                        ->where('payment_status', 'completed');
-                                  });
+                ->whereHas('order', function ($q) {
+                    $q->where('status', 'paid')
+                        ->where('payment_status', 'completed');
+                });
 
             // Apply same date filters to stats
             if ($request->start_date) {
-                $statsQuery->whereHas('order', function($q) use ($request) {
+                $statsQuery->whereHas('order', function ($q) use ($request) {
                     $q->whereDate('created_at', '>=', $request->start_date);
                 });
             }
             if ($request->end_date) {
-                $statsQuery->whereHas('order', function($q) use ($request) {
+                $statsQuery->whereHas('order', function ($q) use ($request) {
                     $q->whereDate('created_at', '<=', $request->end_date);
                 });
             }
@@ -653,7 +654,7 @@ class OrderController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             // Check if user is admin
             if ($user->role !== 'admin') {
                 return response()->json([
@@ -662,7 +663,7 @@ class OrderController extends Controller
             }
 
             $order = Order::with('items')->find($id);
-            
+
             if (!$order) {
                 return response()->json([
                     'error' => 'Order not found'
@@ -681,7 +682,7 @@ class OrderController extends Controller
 
             // Delete order items first (foreign key constraint)
             $order->items()->delete();
-            
+
             // Delete the order
             $order->delete();
 
@@ -714,9 +715,9 @@ class OrderController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $orderItem = OrderItem::with(['order', 'book'])->find($orderItemId);
-            
+
             if (!$orderItem) {
                 return response()->json([
                     'error' => 'Sale not found'
@@ -749,7 +750,7 @@ class OrderController extends Controller
 
             // Update order total
             $order = $orderItem->order;
-            $order->total_amount = (float)$order->total_amount - (float)$orderItem->total;
+            $order->total_amount = (float) $order->total_amount - (float) $orderItem->total;
             $order->save();
 
             // Delete the order item

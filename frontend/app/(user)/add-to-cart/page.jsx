@@ -19,7 +19,7 @@ import { useAuthStore } from "../../store/authStore";
 const calculateFinalPrice = (price, discountValue, discountType) => {
   const basePrice = parseFloat(price || 0);
   const discount = parseFloat(discountValue || 0);
-  
+
   if (discountType === "percentage" && discount > 0) {
     return basePrice - (basePrice * discount) / 100;
   } else if (discountType === "fixed" && discount > 0) {
@@ -44,19 +44,18 @@ const getBookImage = (images) => {
 // ✅ Memoized Cart Item Component
 const CartItem = memo(({ item, isUpdating, isRemoving, onQuantityChange, onRemove }) => {
   const isProcessing = isUpdating || isRemoving;
-  
-  const finalPrice = useMemo(() => 
+
+  const finalPrice = useMemo(() =>
     calculateFinalPrice(item.book?.price, item.book?.discount_value, item.book?.discount_type),
     [item.book?.price, item.book?.discount_value, item.book?.discount_type]
   );
-  
+
   const imageUrl = useMemo(() => getBookImage(item.book?.images_url), [item.book?.images_url]);
-  
+
   return (
     <div
-      className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 transition-all ${
-        isProcessing ? 'opacity-50 pointer-events-none' : ''
-      } ${isRemoving ? 'animate-pulse' : ''}`}
+      className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 transition-all ${isProcessing ? 'opacity-50 pointer-events-none' : ''
+        } ${isRemoving ? 'animate-pulse' : ''}`}
     >
       <div className="flex items-start space-x-4">
         {/* Book Image */}
@@ -182,18 +181,18 @@ const ShoppingCart = () => {
   // ✅ Optimized quantity change with instant feedback
   const handleQuantityChange = useCallback(async (item, newQuantity) => {
     if (newQuantity < 1) return;
-    
+
     // Prevent multiple updates on same item
     if (updatingItems.has(item.id)) return;
-    
+
     setUpdatingItems(prev => new Set(prev).add(item.id));
-    
+
     // ✅ Show toast immediately
     toast.success("Updating quantity...", {
       autoClose: 1000,
       hideProgressBar: true,
     });
-    
+
     try {
       await updateCartItem(item.book_id, newQuantity);
     } catch (error) {
@@ -211,15 +210,15 @@ const ShoppingCart = () => {
   const handleRemoveItem = useCallback(async (item) => {
     // Prevent multiple removes on same item
     if (removingItems.has(item.id)) return;
-    
+
     setRemovingItems(prev => new Set(prev).add(item.id));
-    
+
     // ✅ Show toast immediately
     toast.success("Removing item...", {
       autoClose: 1000,
       hideProgressBar: true,
     });
-    
+
     try {
       await removeFromCart(item.id);
     } catch (error) {

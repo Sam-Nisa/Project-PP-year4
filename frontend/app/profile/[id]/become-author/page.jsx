@@ -114,7 +114,7 @@ export default function BecomeAuthorPage() {
   if (status === 'pending') {
     return (
       <div className="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow mt-8 text-center">
-        <h2 className="text-2xl font-bold mb-4 text-blue-600">Request Pending</h2>
+        <h2 className="text-2xl font-bold mb-4 text-[#A47251]">Request Pending</h2>
         <p className="text-gray-600">Your request to become an author is currently under review by our admin team. You will be notified once a decision has been made.</p>
       </div>
     );
@@ -123,7 +123,7 @@ export default function BecomeAuthorPage() {
   if (status === 'approved') {
     return (
       <div className="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow mt-8 text-center">
-        <h2 className="text-2xl font-bold mb-4 text-green-600">Congratulations!</h2>
+        <h2 className="text-2xl font-bold mb-4 text-[#A47251]">Congratulations!</h2>
         <p className="text-gray-600">Your request has been approved. You are now an author!</p>
       </div>
     );
@@ -147,7 +147,7 @@ export default function BecomeAuthorPage() {
             value={formData.full_name}
             onChange={handleInputChange}
             required
-            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-[#A47251] focus:border-[#A47251]"
           />
         </div>
 
@@ -170,7 +170,7 @@ export default function BecomeAuthorPage() {
             required
             rows="3"
             placeholder="Tell us a little bit about yourself"
-            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-[#A47251] focus:border-[#A47251]"
           ></textarea>
         </div>
 
@@ -183,7 +183,7 @@ export default function BecomeAuthorPage() {
             required
             rows="3"
             placeholder="Why do you want to become an author?"
-            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-[#A47251] focus:border-[#A47251]"
           ></textarea>
         </div>
 
@@ -195,7 +195,7 @@ export default function BecomeAuthorPage() {
             onChange={handleInputChange}
             rows="3"
             placeholder="Any previous writing experience?"
-            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-[#A47251] focus:border-[#A47251]"
           ></textarea>
         </div>
 
@@ -210,7 +210,7 @@ export default function BecomeAuthorPage() {
               accept=".jpg,.jpeg,.png,.pdf"
               onChange={handleFileChange}
               required
-              className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+              className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#A47251] file:text-white hover:file:bg-[#a47251b4]"
             />
             {previews.id_card && (
               <div className="mt-2">
@@ -227,7 +227,7 @@ export default function BecomeAuthorPage() {
               name="portfolio"
               accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
               onChange={handleFileChange}
-              className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+              className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#A47251] file:text-white hover:file:bg-[#a47251b4]"
             />
             {previews.portfolio && (
               <div className="mt-2">
@@ -242,7 +242,7 @@ export default function BecomeAuthorPage() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-300 transition-colors"
+            className="bg-[#A47251] text-white px-6 py-3 rounded-lg font-bold hover:bg-[#a47251b4] focus:outline-none focus:ring-2 focus:ring-[#A47251] focus:ring-offset-2 disabled:bg-[#A47251] transition-colors"
           >
             {loading ? "Submitting..." : "Submit Request"}
           </button>

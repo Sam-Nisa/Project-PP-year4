@@ -89,7 +89,7 @@ const ContactUsPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-16">
+      <div className="bg-gradient-to-r from-[#A98B76] to-[#A98B76] text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Get in Touch</h1>
           <p className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto">
@@ -187,7 +187,7 @@ const ContactUsPage = () => {
                 className={`w-full flex items-center justify-center space-x-2 py-3 px-6 rounded-lg font-medium transition-colors ${
                   isSubmitting
                     ? "bg-gray-400 text-gray-700 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                    : "bg-[#A98B76] hover:bg-[#a98b76b4] text-white"
                 }`}
               >
                 <PaperAirplaneIcon className="w-5 h-5" />
@@ -304,7 +304,7 @@ const ContactUsPage = () => {
                 <h3 className="text-xl font-bold text-gray-900 mb-2">BookHaven Cambodia</h3>
                 <p className="text-gray-600">123 Monivong Boulevard, Daun Penh</p>
                 <p className="text-gray-600">Phnom Penh 12206, Cambodia</p>
-                <button className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button className="mt-4 px-6 py-2 bg-[#A98B76] text-white rounded-lg hover:bg-[#a98b76b4] transition-colors">
                   Get Directions
                 </button>
               </div>

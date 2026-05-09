@@ -21,7 +21,7 @@ const PasswordInput = ({ label, name, value, error, showPassword, toggleShow, on
         autoComplete="off"
         disabled={disabled}
         placeholder={`Enter ${label.toLowerCase()}`}
-        className={`w-full px-4 py-3 pr-12 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 ${
+        className={`w-full px-4 py-3 pr-12 border rounded-lg shadow-sm focus:ring-2 focus:ring-[#A47251] focus:border-[#A47251] outline-none transition-all duration-200 ${
           error 
             ? "border-red-400 bg-red-50 focus:ring-red-500 focus:border-red-500" 
             : "border-gray-300 bg-white hover:border-gray-400"
@@ -199,14 +199,11 @@ export default function ResetPassword() {
     <div className="w-full max-w-2xl mx-auto p-6">
       <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-6">
+        <div className="bg-[#A47251] px-8 py-6">
           <div className="flex items-center">
-            <div className="bg-white/20 p-3 rounded-lg mr-4">
-              <Shield className="w-8 h-8 text-white" />
-            </div>
             <div>
               <h2 className="text-2xl font-bold text-white">Change Password</h2>
-              <p className="text-purple-100 text-sm mt-1">
+              <p className="text-white font-semibold mt-1">
                 Keep your account secure with a strong password
               </p>
             </div>
@@ -269,14 +266,14 @@ export default function ResetPassword() {
 
           {/* Password Requirements */}
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm font-semibold text-blue-900 mb-2">Password Requirements:</p>
-            <ul className="text-sm text-blue-800 space-y-1">
+            <p className="text-sm font-semibold text-gray-900 mb-2">Password Requirements:</p>
+            <ul className="text-sm text-gray-800 space-y-1">
               <li className="flex items-center">
-                <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mr-2"></span>
+                <span className="w-1.5 h-1.5 bg-gray-600 rounded-full mr-2"></span>
                 At least 6 characters long
               </li>
               <li className="flex items-center">
-                <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mr-2"></span>
+                <span className="w-1.5 h-1.5 bg-gray-600 rounded-full mr-2"></span>
                 Different from your current password
               </li>
             </ul>
@@ -289,7 +286,7 @@ export default function ResetPassword() {
             className={`w-full flex items-center justify-center px-6 py-3.5 rounded-lg font-semibold text-white transition-all duration-200 shadow-lg ${
               saving
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 hover:shadow-xl transform hover:-translate-y-0.5"
+                : "bg-[#A47251] hover:bg-[#a47251b4] hover:shadow-xl transform hover:-translate-y-0.5"
             }`}
           >
             {saving ? (
