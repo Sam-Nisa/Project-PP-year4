@@ -93,7 +93,7 @@ class AuthorPaymentController extends Controller
                 'bank_name' => $validated['bank_name'],
                 'bank_account_number' => $validated['bank_account_number'],
                 'bank_account_name' => $validated['bank_account_name'],
-                'bank_branch' => $validated['bank_branch'],
+                'bank_branch' => $validated['bank_branch'] ?? null,
                 'payment_method' => 'bank',
                 'payment_verified' => false, // Reset verification when info changes
                 'payment_verified_at' => null,
@@ -162,10 +162,10 @@ class AuthorPaymentController extends Controller
             $user->update([
                 'bakong_account_id' => $validated['bakong_account_id'],
                 'bakong_merchant_name' => $validated['bakong_merchant_name'],
-                'bakong_merchant_city' => $validated['bakong_merchant_city'],
-                'bakong_merchant_id' => $validated['bakong_merchant_id'],
-                'bakong_acquiring_bank' => $validated['bakong_acquiring_bank'],
-                'bakong_mobile_number' => $validated['bakong_mobile_number'],
+                'bakong_merchant_city' => $validated['bakong_merchant_city'] ?? null,
+                'bakong_merchant_id' => $validated['bakong_merchant_id'] ?? null,
+                'bakong_acquiring_bank' => $validated['bakong_acquiring_bank'] ?? null,
+                'bakong_mobile_number' => $validated['bakong_mobile_number'] ?? null,
                 'payment_method' => 'bakong',
                 'bakong_account_verified' => false, // Reset verification when info changes
                 'bakong_verified_at' => null,

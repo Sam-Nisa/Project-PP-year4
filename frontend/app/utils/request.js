@@ -24,6 +24,13 @@ export const request = (url = "", method = "POST", data = {}, customConfig = {},
     .catch((error) => {
       if (error.response) {
         console.error("API response error:", error.response.data || error.response.statusText);
+        
+        // Handle 401 Unauthorized globally
+        if (error.response.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/login") {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          window.location.href = "/login";
+        }
       } else if (error.request) {
         console.error("No response received:", error.request);
       } else {

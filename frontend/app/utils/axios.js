@@ -9,9 +9,13 @@ request.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Optional: clear auth store
+      // Clear auth store to prevent infinite redirect loop
       if (typeof window !== "undefined") {
-        window.location.href = "/login"; // redirect to login
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login"; // redirect to login
+        }
       }
     }
     return Promise.reject(error);

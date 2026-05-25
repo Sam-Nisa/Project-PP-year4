@@ -145,7 +145,7 @@ const BestSellerPage = () => {
           onClick={() => handlePageChange(i)}
           className={`px-3 py-2 text-sm font-medium border ${
             i === currentPage
-              ? 'bg-blue-600 text-white border-blue-600'
+              ? 'bg-[#a47251] text-white border-[#a47251]'
               : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
           }`}
         >
@@ -177,7 +177,7 @@ const BestSellerPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r  from-blue-700 via-purple-800 to-pink-600 text-white">
+      <div className="bg-gradient-to-r    from-[#a47251] via-[#a47251] to-[#a47251] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
             <div className="flex justify-center mb-4">

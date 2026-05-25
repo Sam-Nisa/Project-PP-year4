@@ -7,25 +7,31 @@ export const useAuthStore = create((set, get) => ({
   token: null,
   loading: false,
   error: null,
-  isInitialized: false, // Track if store has loaded from sessionStorage
+  isInitialized: false, // Track if store has loaded from localStorage
 
-  // Load token + user from sessionStorage
+  // Load token + user from localStorage
 initializeStore: () => {
   if (typeof window !== "undefined" && !get().isInitialized) {
-    const storedToken = sessionStorage.getItem("token");
-    const storedUser = sessionStorage.getItem("user");
+    const storedToken = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
 
     let user = null;
     if (storedUser && storedUser !== "undefined") {
       try {
         user = JSON.parse(storedUser);
       } catch {
-        sessionStorage.removeItem("user");
+        localStorage.removeItem("user");
       }
     }
 
+    let token = storedToken;
+    if (token === "undefined" || token === "null" || token === "") {
+      token = null;
+      localStorage.removeItem("token");
+    }
+
     set({
-      token: storedToken,
+      token: token,
       user,
       isInitialized: true,
     });
@@ -46,8 +52,8 @@ initializeStore: () => {
       set({ user: data.user, token: data.token });
 
       if (typeof window !== "undefined") {
-        sessionStorage.setItem("token", data.token);
-        sessionStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
       }
 
       return data;
@@ -70,8 +76,8 @@ initializeStore: () => {
 
     set({ user: null, token: null });
     if (typeof window !== "undefined") {
-      sessionStorage.removeItem("token");
-      sessionStorage.removeItem("user");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
     }
 
     if (typeof window !== "undefined") {
@@ -91,7 +97,7 @@ initializeStore: () => {
       set({ user: response.data });
 
       if (typeof window !== "undefined") {
-        sessionStorage.setItem("user", JSON.stringify(response.data));
+        localStorage.setItem("user", JSON.stringify(response.data));
       }
     } catch (err) {
       console.error("Invalid token → clearing session", err);
@@ -99,8 +105,8 @@ initializeStore: () => {
       set({ user: null, token: null });
 
       if (typeof window !== "undefined") {
-        sessionStorage.removeItem("token");
-        sessionStorage.removeItem("user");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
       }
     }
   },
@@ -119,8 +125,8 @@ initializeStore: () => {
       set({ user: data.user, token: data.token });
 
       if (typeof window !== "undefined") {
-        sessionStorage.setItem("token", data.token);
-        sessionStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
       }
 
       return data;
@@ -137,7 +143,7 @@ initializeStore: () => {
     set({ loading: true, error: null });
 
     try {
-      sessionStorage.setItem("token", token);
+      localStorage.setItem("token", token);
       set({ token });
 
       const response = await request("/api/profile", "GET", {}, {
@@ -151,7 +157,7 @@ initializeStore: () => {
         isInitialized: true,
       });
 
-      sessionStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("user", JSON.stringify(userData));
 
       return userData;
     } catch (err) {
@@ -191,9 +197,9 @@ initializeStore: () => {
       const updatedUser = response.data || response;
       set({ user: updatedUser });
 
-      // Update sessionStorage
+      // Update localStorage
       if (typeof window !== "undefined") {
-        sessionStorage.setItem("user", JSON.stringify(updatedUser));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
       }
 
       return updatedUser;
@@ -222,9 +228,9 @@ initializeStore: () => {
       const updatedUser = { ...get().user, avatar_url: null };
       set({ user: updatedUser });
 
-      // Update sessionStorage
+      // Update localStorage
       if (typeof window !== "undefined") {
-        sessionStorage.setItem("user", JSON.stringify(updatedUser));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
       }
 
       return response;
@@ -273,4 +279,22 @@ initializeStore: () => {
 // Auto-initialize when the module loads (client-side only)
 if (typeof window !== "undefined") {
   useAuthStore.getState().initializeStore();
+
+  // Sync state across tabs
+  window.addEventListener("storage", (event) => {
+    if (event.key === "token" || event.key === "user") {
+      const storedToken = localStorage.getItem("token");
+      const storedUser = localStorage.getItem("user");
+      
+      let user = null;
+      if (storedUser && storedUser !== "undefined") {
+        try {
+          user = JSON.parse(storedUser);
+        } catch {
+          localStorage.removeItem("user");
+        }
+      }
+      useAuthStore.setState({ token: storedToken, user });
+    }
+  });
 }
